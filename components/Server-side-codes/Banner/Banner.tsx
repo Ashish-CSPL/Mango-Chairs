@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Image from "next/image";
 import { BannerData } from "@/types/Banner_datatypes";
@@ -12,12 +14,16 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
     ? bannerEndpoint.banners
     : [];
 
+  const handleScrollDown = () => {
+    window.scrollBy({ top: window.innerHeight * 0.6, behavior: "smooth" });
+  };
+
   return (
     <section className="w-full relative">
       {bannerDataArray.map((banner, index) => (
         <div
           key={index}
-          className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[90vh]"
+          className="relative w-full h-[50vh] sm:h-[60vh] md:h-[55vh] lg:h-[90vh]"
         >
           {/* Optimized Banner Image */}
           {banner.image && process.env.NEXT_PUBLIC_API_BASE_URL && (
@@ -30,10 +36,10 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
             />
           )}
 
-          {/* Overlay for better text contrast */}
+          {/* Overlay */}
           <div className="absolute inset-0 bg-black/30 z-0" />
 
-          {/* Text Over Banner */}
+          {/* Text Content */}
           <div
             className="
               absolute inset-0 z-10
@@ -43,22 +49,26 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
             "
           >
             {banner.heading && (
-              <p className="text-white font-semibold mb-2 sm:mb-4 text-base sm:text-lg md:text-xl lg:text-2xl">
+              <p className="text-white font-semibold mb-2 sm:mb-4 text-base sm:text-lg md:text-base lg:text-2xl">
                 {banner.heading}
               </p>
             )}
             {banner.description && (
-              <p className="text-white font-light max-w-3xl text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl leading-snug sm:leading-snug">
+              <p className="text-white font-light max-w-3xl text-xl sm:text-2xl md:text-2xl lg:text-4xl xl:text-5xl leading-snug sm:leading-snug">
                 {banner.description}
               </p>
             )}
           </div>
 
-          {/* Scroll Down Indicator */}
-          <div className="hidden sm:flex absolute bottom-6 left-1/2 transform -translate-x-1/2 cursor-default animate-bounce text-white z-20 items-center">
+          {/* Scroll Down Button */}
+          <button
+            onClick={handleScrollDown}
+            className="hidden sm:flex absolute bottom-6 left-1/2 transform -translate-x-1/2 cursor-pointer animate-bounce text-white z-20 items-center"
+            aria-label="Scroll Down"
+          >
             <p className="text-sm sm:text-base md:text-lg mr-2">Scroll Down</p>
             <ChevronsDown size={24} />
-          </div>
+          </button>
         </div>
       ))}
     </section>

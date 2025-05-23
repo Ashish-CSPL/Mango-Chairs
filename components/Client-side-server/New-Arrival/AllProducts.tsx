@@ -2,11 +2,12 @@
 
 import { useState, useRef } from "react";
 import Slider from "react-slick";
-// import "slick-carousel/slick/slick.css";
-// import "slick-carousel/slick/slick-theme.css";
 import Image from "next/image";
-import { Heart } from "lucide-react";
+import { Heart, ShoppingBag } from "lucide-react";
 import { Product } from "@/types/Products";
+import { useDispatch } from "react-redux";
+import { addToCart } from "@/app/Redux/Store/cartSlice";
+import toast from "react-hot-toast";
 
 interface ProductsPageProps {
   products: Product[];
@@ -17,6 +18,7 @@ export default function ProductsPage({ products }: ProductsPageProps) {
     {}
   );
   const sliderRef = useRef<Slider>(null);
+  const dispatch = useDispatch();
 
   const settings = {
     infinite: false,
@@ -44,6 +46,15 @@ export default function ProductsPage({ products }: ProductsPageProps) {
         },
       },
     ],
+  };
+
+  const handleAddToCart = (product: Product, variant: any) => {
+    const cartProduct = variant
+      ? { ...variant, parentProduct: product }
+      : product;
+
+    dispatch(addToCart(cartProduct));
+    toast.success("Product added successfully!");
   };
 
   return (
@@ -132,6 +143,13 @@ export default function ProductsPage({ products }: ProductsPageProps) {
                             </div>
                           ))}
                       </div>
+
+                      <button
+                        onClick={() => handleAddToCart(product, selected)}
+                        className="mt-2 bg-black text-white text-xs px-3 py-1 rounded-full hover:bg-gray-800"
+                      >
+                        Add to Cart
+                      </button>
                     </div>
 
                     <div className="text-yellow-500 text-sm sm:text-base whitespace-nowrap sm:mt-0">

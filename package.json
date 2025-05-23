@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
     "jsdom": "^26.1.0",
     "lucide": "^0.507.0",
     "lucide-react": "^0.507.0",
@@ -16,7 +17,10 @@
     "nuxt-keen-slider": "^1.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.5.2",
+    "react-redux": "^9.2.0",
     "react-slick": "^0.30.3",
+    "redux-persist": "^6.0.0",
     "slick-carousel": "^1.8.1",
     "swiper": "^11.2.6"
   },
