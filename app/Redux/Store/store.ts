@@ -1,5 +1,5 @@
-// src/app/Redux/Store/store.ts
-import { configureStore } from '@reduxjs/toolkit';
+// app/Redux/Store/store.ts
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import {
   persistStore,
   persistReducer,
@@ -12,35 +12,25 @@ import {
 } from 'redux-persist';
 import storage from 'redux-persist/lib/storage'; // defaults to localStorage for web
 
-// Import your auth slice reducer
-import authReducer from './authSlice';
+// Import your reducers
+import cartReducer from '../Store/cartSlice';
+import authReducer from '../Store/authSlice'; // Ensure this is imported
 
-// 🚨 You need to import your cart slice reducer here 🚨
-import cartReducer from './cartSlice'; // Assuming your cart slice is in cartSlice.ts
+const rootReducer = combineReducers({
+  cart: cartReducer,
+  auth: authReducer, // This would have been present even in a simpler auth setup
+});
 
-// Configuration for redux-persist for the 'auth' slice
-const authPersistConfig = {
-  key: 'auth',
+const persistConfig = {
+  key: 'root', // The key for the persist storage
   storage,
-  whitelist: ['someAuthDataToPersist'], // Adjust if you want to persist specific auth state parts
+  whitelist: ['cart'], // Adjust if 'auth' was previously whitelisted or not
 };
 
-// Configuration for redux-persist for the 'cart' slice (optional, but common)
-const cartPersistConfig = {
-  key: 'cart',
-  storage,
-  whitelist: ['cartItems', 'cartCount'], // Persist these parts of your cart state
-};
-
-// Create persisted reducers for slices you want to persist
-const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);
-const persistedCartReducer = persistReducer(cartPersistConfig, cartReducer); // Create persisted cart reducer
+const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
-  reducer: {
-    auth: persistedAuthReducer, // Use the persisted auth reducer
-    cart: persistedCartReducer, // 🚨 Include your persisted cart reducer here 🚨
-  },
+  reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
@@ -49,11 +39,7 @@ export const store = configureStore({
     }),
 });
 
-// Infer the `RootState` and `AppDispatch` types from the store itself
-export type RootState = ReturnType<typeof store.getState>;
-// This will now correctly infer:
-// { auth: AuthState & PersistPartial, cart: CartState & PersistPartial }
-
-export type AppDispatch = typeof store.dispatch;
-
 export const persistor = persistStore(store);
+
+export type RootState = ReturnType<typeof rootReducer>;
+export type AppDispatch = typeof store.dispatch;

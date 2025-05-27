@@ -6,7 +6,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { CircleUserRound, ShoppingBag, Menu, X, Search } from "lucide-react";
 import { useSelector } from "react-redux";
-import { RootState } from "@/app/Redux/Store/store";
+import { RootState } from "@/app/Redux/Store/store"; // Ensure this path is correct
+
+import { User } from "@/types/user";
 
 interface NavItem {
   pk: number;
@@ -29,9 +31,13 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   navData = [],
   categories = [],
 }) => {
-  // These lines should now correctly access state.cart
   const cartCount = useSelector((state: RootState) => state.cart.cartCount);
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
+  // Get user data from Redux state to check login status and retrieve profile info
+  // Explicitly type 'user' using the imported 'User' interface.
+  const { user }: { user: User | null } = useSelector(
+    (state: RootState) => state.auth
+  );
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -56,6 +62,18 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   const iconColor = !isScrolled && !isMobileMenuOpen ? "white" : "black";
   const dynamicTextColor =
     isScrolled || isMobileMenuOpen ? "text-black" : "text-white";
+
+  // Helper function to get the correct profile image URL
+  // It now correctly expects 'path' to be a string or undefined/null.
+  const getProfileImageUrl = (path: string | undefined | null) => {
+    // Added | null
+    if (!path) return "/default-profile-placeholder.png"; // Fallback to a default placeholder if no image
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      return path;
+    }
+    // Assuming process.env.NEXT_PUBLIC_API_BASE_URL is correctly set up for client-side
+    return `${process.env.NEXT_PUBLIC_API_BASE_URL}${path}`;
+  };
 
   const renderCategoryDropdown = () => (
     <div className="absolute left-1/2 top-full transform -translate-x-1/2 mt-2 z-50 w-[50vw] max-w-2xl bg-white/30 backdrop-blur-lg shadow-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl">
@@ -167,18 +185,18 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
       <nav
         className={`fixed left-0 right-0 z-50 transition-all duration-300
-      bg-white/10 backdrop-blur-md
-      ${isScrolled || isMobileMenuOpen ? "shadow-md" : "shadow-none"}
+        bg-white/10 backdrop-blur-md
+        ${isScrolled || isMobileMenuOpen ? "shadow-md" : "shadow-none"}
 
-      /* Mobile View */
-      sm:top-[10px] sm:mt-[10px]
+        /* Mobile View */
+        sm:top-[10px] sm:mt-[10px]
 
-      /* Tablet View */
-      md:top-[14px] md:mt-[8px]
+        /* Tablet View */
+        md:top-[14px] md:mt-[8px]
 
-      /* Laptop/Desktop View */
-      lg:top-[30px] lg:mt-[0px]
-    `}
+        /* Laptop/Desktop View */
+        lg:top-[30px] lg:mt-[0px]
+      `}
         style={{
           top: isScrolled || isMobileMenuOpen ? 0 : undefined,
           marginTop: isScrolled || isMobileMenuOpen ? 0 : undefined,
@@ -258,14 +276,34 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                     color={iconColor}
                   />
                 </Link>
-                {/* ShoppingBag with hover mini cart */}
+                {/* ShoppingBag with hover mini cart - CONDITIONAL RENDER HERE */}
                 <div
                   onMouseEnter={() => setShowMiniCart(true)}
                   onMouseLeave={() => setShowMiniCart(false)}
-                  className="relative cursor-pointer"
+                  className="relative cursor-pointer" // Keep relative for cart count position
                 >
                   <Link href="/cart">
-                    <ShoppingBag size={24} color={iconColor} />
+                    {user ? (
+                      <div className="flex flex-col items-center justify-center -space-y-1">
+                        <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300">
+                          <Image
+                            src={getProfileImageUrl(user.profile_picture)} // This line now works correctly
+                            alt={`${user.first_name || ""} ${
+                              user.last_name || ""
+                            } Profile`}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <span
+                          className={`text-[8px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[40px] text-center ${dynamicTextColor}`}
+                        >
+                          {user.first_name} {user.last_name?.charAt(0)}.
+                        </span>
+                      </div>
+                    ) : (
+                      <ShoppingBag size={24} color={iconColor} />
+                    )}
                     {cartCount > 0 && (
                       <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                         {cartCount}
@@ -292,16 +330,36 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 />
               </div>
 
-              <CircleUserRound size={24} color="black" />
+              <Link href="/Login">
+                <CircleUserRound size={24} color="black" />
+              </Link>
 
-              {/* ShoppingBag Icon with cart count */}
+              {/* ShoppingBag Icon with cart count - CONDITIONAL RENDER HERE */}
               <div
                 onMouseEnter={() => setShowMiniCart(true)}
                 onMouseLeave={() => setShowMiniCart(false)}
-                className="relative cursor-pointer"
+                className="relative cursor-pointer" // Keep relative for cart count position
               >
                 <Link href="/cart">
-                  <ShoppingBag size={24} color="black" />
+                  {user ? (
+                    <div className="flex flex-col items-center justify-center -space-y-1">
+                      <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300">
+                        <Image
+                          src={getProfileImageUrl(user.profile_picture)} // This line now works correctly
+                          alt={`${user.first_name || ""} ${
+                            user.last_name || ""
+                          } Profile`}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <span className="text-[8px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[40px] text-center text-black">
+                        {user.first_name} {user.last_name?.charAt(0)}.
+                      </span>
+                    </div>
+                  ) : (
+                    <ShoppingBag size={24} color="black" />
+                  )}
                   {cartCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {cartCount}
@@ -433,9 +491,30 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 style={{ borderRadius: 0 }}
               />
             </div>
-            <CircleUserRound size={24} color="black" />
+            <Link href="/Login">
+              <CircleUserRound size={24} color="black" />
+            </Link>
+            {/* Mobile ShoppingBag - CONDITIONAL RENDER HERE */}
             <Link href="/cart" className="relative">
-              <ShoppingBag size={24} color="black" />
+              {user ? (
+                <div className="flex flex-col items-center justify-center -space-y-1">
+                  <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300">
+                    <Image
+                      src={getProfileImageUrl(user.profile_picture)} // This line now works correctly
+                      alt={`${user.first_name || ""} ${
+                        user.last_name || ""
+                      } Profile`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <span className="text-[8px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[40px] text-center text-black">
+                    {user.first_name} {user.last_name?.charAt(0)}.
+                  </span>
+                </div>
+              ) : (
+                <ShoppingBag size={24} color="black" />
+              )}
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {cartCount}
