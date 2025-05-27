@@ -1,5 +1,5 @@
 import Image from "next/image";
-import fetchData from "@/api/fetchdata";
+import fetchData from "@/api/fetchdata"; // Ensure this path is correct
 
 export interface WhyChooseUs {
   id: number;
@@ -14,7 +14,8 @@ interface WhyChooseUsSectionProps {
 }
 
 export async function getWhyChooseUsData() {
-  const data = await fetchData("frontend/whychooseus_sections/");
+  // Already correctly uses "GET" as the method
+  const data = await fetchData("frontend/whychooseus_sections/", "GET");
   if (data && Array.isArray(data.whychooseus_sections)) {
     return data.whychooseus_sections;
   }
@@ -24,7 +25,7 @@ export async function getWhyChooseUsData() {
 export default function WhyChooseUsSection({
   whyChooseUsData,
 }: WhyChooseUsSectionProps) {
-  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL; // Make sure this environment variable is set
 
   return (
     <div className="bg-white w-full overflow-x-hidden">

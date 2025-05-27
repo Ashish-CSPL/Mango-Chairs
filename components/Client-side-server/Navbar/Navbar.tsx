@@ -1,3 +1,4 @@
+// components/Navbar/Navbar.client.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -28,8 +29,9 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   navData = [],
   categories = [],
 }) => {
+  // These lines should now correctly access state.cart
   const cartCount = useSelector((state: RootState) => state.cart.cartCount);
-  const cartItems = useSelector((state: RootState) => state.cart.cartItems); // Assuming you have cartItems in store for mini cart display
+  const cartItems = useSelector((state: RootState) => state.cart.cartItems);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -247,11 +249,15 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
               {/* Icons */}
               <div className="flex items-center space-x-4 relative">
-                <CircleUserRound
-                  className="cursor-pointer"
-                  size={24}
-                  color={iconColor}
-                />
+                <Link href="/Login">
+                  {" "}
+                  {/* Or some other profile page if no login */}
+                  <CircleUserRound
+                    className="cursor-pointer"
+                    size={24}
+                    color={iconColor}
+                  />
+                </Link>
                 {/* ShoppingBag with hover mini cart */}
                 <div
                   onMouseEnter={() => setShowMiniCart(true)}
