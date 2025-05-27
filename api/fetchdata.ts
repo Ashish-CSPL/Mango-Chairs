@@ -1,6 +1,6 @@
 const NEXT_PUBLIC_API_BASE_URL = "https://nxadmin.consociate.co.in";
 
-async function fetchData(endpoint: string) {
+async function fetchData(endpoint: string, p0: string) {
   try {
     const response = await fetch(`${NEXT_PUBLIC_API_BASE_URL}/${endpoint}`, {
       method: "GET",
