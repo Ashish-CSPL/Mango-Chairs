@@ -1,11 +1,9 @@
-// components/Client-side-server/Authentication/AuthForm.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/app/Redux/Store/store";
 import {
   registerUser,
   resetAuthStatus,
@@ -18,6 +16,7 @@ import {
   resetPassword,
   resetPasswordResetStatus,
 } from "@/app/Redux/Store/authSlice";
+import { AppDispatch, RootState } from "@/app/Redux/Store/store";
 
 export default function AuthForm() {
   const [isSignIn, setIsSignIn] = useState(true);
@@ -407,7 +406,7 @@ export default function AuthForm() {
           exit={{ opacity: 0, x: 50 }}
           transition={{ duration: 0.4 }}
           className={`px-6 pt-3 pb-4 flex flex-col justify-start items-center text-center overflow-hidden
-                         ${isSignIn || isForgotPassword ? "w-1/2" : "w-2/3"}`}
+                           ${isSignIn || isForgotPassword ? "w-1/2" : "w-2/3"}`}
         >
           {/* Logo */}
           <div className="my-1 flex-shrink-0">
@@ -461,7 +460,7 @@ export default function AuthForm() {
           {/* Form Fields Container */}
           <form
             className={`space-y-1 w-full text-left flex-grow-0 flex-shrink-0
-                          ${getFormWidthClass()}`}
+                         ${getFormWidthClass()}`}
             onSubmit={getFormSubmissionHandler()}
           >
             {/* Forgot Password Fields */}
@@ -500,12 +499,12 @@ export default function AuthForm() {
                             otpInputRefs.current[index] = el;
                           }}
                           disabled={loading === "pending"}
+                          required
                         />
                       ))}
                     </div>
                   </>
                 )}
-
                 {resetPasswordOTPVerified && (
                   <>
                     <div className="relative w-full mb-1">
@@ -616,6 +615,7 @@ export default function AuthForm() {
                           otpInputRefs.current[index] = el;
                         }}
                         disabled={loading === "pending"}
+                        required
                       />
                     ))}
                   </div>
@@ -650,6 +650,7 @@ export default function AuthForm() {
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
                         disabled={loading === "pending"}
+                        required
                       >
                         <option value="+91">+91</option>
                         <option value="+1">+1</option>
@@ -993,7 +994,7 @@ export default function AuthForm() {
           exit={{ opacity: 0, x: isSignIn ? -50 : 50 }}
           transition={{ duration: 0.4 }}
           className={`bg-[#52BA8C] text-white flex flex-col justify-center items-center p-6 relative
-                         ${isSignIn || isForgotPassword ? "w-1/2" : "w-1/3"}`}
+                           ${isSignIn || isForgotPassword ? "w-1/2" : "w-1/3"}`}
         >
           {isSignIn || isForgotPassword ? ( // Adjusted to show "Hello, Friend!" for sign-in and forgot password
             <>

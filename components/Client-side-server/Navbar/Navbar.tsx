@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { CircleUserRound, ShoppingBag, Menu, X, Search } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/app/Redux/Store/store";
+import store, { RootState } from "@/app/Redux/store"; // Corrected path
 import { User, logout } from "@/app/Redux/Store/authSlice";
 import { useRouter } from "next/navigation";
 
