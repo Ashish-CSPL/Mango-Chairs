@@ -7,7 +7,7 @@ import { Heart } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { Product, Variant } from "@/types/singleProduct"; // ✅ Import interfaces
+import { Product, Variant } from "@/types/Products";
 
 interface ProductCardProps {
   product: Product;

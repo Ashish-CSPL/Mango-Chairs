@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import fetchData from "@/api/fetchdata";
-import { Product } from "@/types/singleProduct";
 import SingleProduct from "@/components/Client-side-server/single-product-page/SingleProduct"
+import { Product } from "@/types/Products";
 
 interface PageProps {
   params: {

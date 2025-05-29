@@ -10,7 +10,8 @@ interface NavbarProps {
 }
 
 const Navbar = async ({ headerEndpoint, categoryEndpoint }: NavbarProps) => {
-  // These calls already correctly use "GET" as the method.
+  // Reverted calls to fetchData: Pass the string endpoint directly
+  // Assuming fetchData expects (url: string, method: string)
   const headerResponse = await fetchData(headerEndpoint, "GET");
   const navData = headerResponse?.headers || [];
 

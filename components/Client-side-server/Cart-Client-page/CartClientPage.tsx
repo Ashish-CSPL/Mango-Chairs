@@ -1,7 +1,7 @@
 "use client";
 
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/app/Redux/Store/store";
+
 import Image from "next/image";
 import {
   CartItem,
@@ -9,6 +9,7 @@ import {
   updateQuantity,
 } from "@/app/Redux/Store/cartSlice";
 import toast, { Toaster } from "react-hot-toast";
+import { RootState } from "@/app/Redux/Store/store";
 
 export default function CartClientPage() {
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);

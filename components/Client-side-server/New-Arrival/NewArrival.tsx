@@ -5,7 +5,8 @@ import "keen-slider/keen-slider.min.css";
 import { useKeenSlider } from "keen-slider/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Product } from "@/types/Products";
+// Make sure this imports from your unified 'product.ts'
+import { Product, Variant } from "@/types/Products";
 
 interface NewArrivalsProps {
   products: Product[];
@@ -15,8 +16,9 @@ export default function NewArrivals({ products }: NewArrivalsProps) {
   const [isClient, setIsClient] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [maxSlideIndex, setMaxSlideIndex] = useState(0);
+  // Correctly type selectedVariants: key can be number or string, value is Variant or null
   const [selectedVariants, setSelectedVariants] = useState<{
-    [productId: number]: any;
+    [productId: number | string]: Variant | null; // <-- CORRECTED TYPE HERE
   }>({});
 
   const [sliderRef, instanceRef] = useKeenSlider<HTMLDivElement>({
@@ -142,8 +144,8 @@ export default function NewArrivals({ products }: NewArrivalsProps) {
                     <div className="flex gap-1 mt-2 flex-wrap justify-center sm:justify-start">
                       {(product.variant_list || [])
                         .slice(0, 3)
-                        .map((variant: any) => (
-                          <div
+                        .map((variant: Variant) => (
+                          <div // <-- Removed 'any' from variant type here
                             key={variant.id}
                             title={variant.specification?.colour}
                             onClick={() =>

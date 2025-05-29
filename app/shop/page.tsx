@@ -6,7 +6,7 @@ import fetchData from "@/api/fetchdata";
 import ProductCard from "@/components/Common-Components/ProductCard";
 // Removed useDebounce import as it's now internal to PriceFilter
 import PriceFilter from "@/components/Common-Components/PriceFilter";
-import { Product } from "@/types/singleProduct";
+import { Product } from "@/types/Products";
 
 // Define interfaces for API response data and product structure
 interface ApiResponseData {
