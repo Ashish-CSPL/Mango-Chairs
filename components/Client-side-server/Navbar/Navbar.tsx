@@ -1,14 +1,14 @@
 // components/Navbar/Navbar.client.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { CircleUserRound, ShoppingBag, Menu, X, Search } from "lucide-react";
-import { useSelector } from "react-redux";
-import { RootState } from "@/app/Redux/Store/store"; // Ensure this path is correct
-
-import { User } from "@/types/user";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/app/Redux/Store/store";
+import { User, logout } from "@/app/Redux/Store/authSlice";
+import { useRouter } from "next/navigation";
 
 interface NavItem {
   pk: number;
@@ -31,20 +31,25 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   navData = [],
   categories = [],
 }) => {
+  const dispatch = useDispatch();
+  const router = useRouter();
+
+  const user = useSelector((state: RootState) => state.auth.user);
+  console.log("NAVBAR_INIT: User object from Redux state on render:", user);
+
   const cartCount = useSelector((state: RootState) => state.cart.cartCount);
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
-  // Get user data from Redux state to check login status and retrieve profile info
-  // Explicitly type 'user' using the imported 'User' interface.
-  const { user }: { user: User | null } = useSelector(
-    (state: RootState) => state.auth
-  );
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMobileDropdown, setShowMobileDropdown] = useState(false);
   const [showDesktopDropdown, setShowDesktopDropdown] = useState(false);
   const [showMiniCart, setShowMiniCart] = useState(false);
+  const [showLogoutDropdown, setShowLogoutDropdown] = useState(false); // State to control logout dropdown visibility
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Ref to attach to the user icon div, encompassing the dropdown as well
+  const userIconRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -53,6 +58,39 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Effect for handling clicks outside the user icon/logout dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // If the dropdown is not currently open, or the ref hasn't been set yet,
+      // or if the click occurred INSIDE the userIconRef (which contains both the trigger and dropdown),
+      // then we do nothing.
+      if (
+        !showLogoutDropdown ||
+        !userIconRef.current ||
+        userIconRef.current.contains(event.target as Node)
+      ) {
+        return;
+      }
+
+      // If the click is outside the ref AND the dropdown is open, then close it.
+      console.log(
+        "NAVBAR_CLICK_OUTSIDE: Clicked outside user icon, closing dropdown."
+      );
+      setShowLogoutDropdown(false);
+    };
+
+    // Only attach the event listener WHEN the `showLogoutDropdown` state is true.
+    if (showLogoutDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    // Cleanup function: remove the listener when the component unmounts
+    // or when `showLogoutDropdown` changes to false
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLogoutDropdown]); // This effect re-runs whenever `showLogoutDropdown` changes
 
   const handleCloseMenu = () => {
     setIsMobileMenuOpen(false);
@@ -63,23 +101,45 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   const dynamicTextColor =
     isScrolled || isMobileMenuOpen ? "text-black" : "text-white";
 
-  // Helper function to get the correct profile image URL
-  // It now correctly expects 'path' to be a string or undefined/null.
   const getProfileImageUrl = (path: string | undefined | null) => {
-    // Added | null
-    if (!path) return "/default-profile-placeholder.png"; // Fallback to a default placeholder if no image
+    const BASE_URL =
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      "https://nxadmin.consociate.co.in";
+    if (!path) {
+      return "/default-profile-placeholder.png"; // Fallback to a default image if path is null/undefined
+    }
     if (path.startsWith("http://") || path.startsWith("https://")) {
       return path;
     }
-    // Assuming process.env.NEXT_PUBLIC_API_BASE_URL is correctly set up for client-side
-    return `${process.env.NEXT_PUBLIC_API_BASE_URL}${path}`;
+    return `${BASE_URL}${path}`;
+  };
+
+  const handleLogout = () => {
+    console.log("NAVBAR_LOGOUT_HANDLER: handleLogout function called!");
+
+    dispatch(logout()); // Dispatch the logout action
+
+    // Optional: A small delay to ensure Redux state update and localStorage clear
+    // before redirection, though usually not strictly necessary with Redux Persist.
+    setTimeout(() => {
+      console.log(
+        "NAVBAR: Redux state immediately AFTER dispatch(logout()) and short delay:",
+        user
+      );
+      setShowLogoutDropdown(false); // Close dropdown
+      router.push("/Login"); // Redirect to login page
+      console.log("NAVBAR: Redirected to /Login.");
+    }, 50);
   };
 
   const renderCategoryDropdown = () => (
     <div className="absolute left-1/2 top-full transform -translate-x-1/2 mt-2 z-50 w-[50vw] max-w-2xl bg-white/30 backdrop-blur-lg shadow-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl">
       {categories?.map((cat) => {
         const imageSrc = cat.image.startsWith("/")
-          ? `${process.env.NEXT_PUBLIC_API_BASE_URL}${cat.image}`
+          ? `${
+              process.env.NEXT_PUBLIC_API_BASE_URL ||
+              "https://nxadmin.consociate.co.in"
+            }${cat.image}`
           : cat.image;
         return (
           <Link
@@ -102,7 +162,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     </div>
   );
 
-  // Mini cart content shown on hover
   const renderMiniCart = () => (
     <div
       onMouseLeave={() => setShowMiniCart(false)}
@@ -187,25 +246,17 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
         className={`fixed left-0 right-0 z-50 transition-all duration-300
         bg-white/10 backdrop-blur-md
         ${isScrolled || isMobileMenuOpen ? "shadow-md" : "shadow-none"}
-
-        /* Mobile View */
         sm:top-[10px] sm:mt-[10px]
-
-        /* Tablet View */
         md:top-[14px] md:mt-[8px]
-
-        /* Laptop/Desktop View */
         lg:top-[30px] lg:mt-[0px]
-      `}
+        `}
         style={{
           top: isScrolled || isMobileMenuOpen ? 0 : undefined,
           marginTop: isScrolled || isMobileMenuOpen ? 0 : undefined,
         }}
       >
-        {/* Main Container */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 relative">
-            {/* Logo */}
             <Link href="/">
               <div className="relative w-40 h-16 lg:w-52 lg:h-20 ml-[-8px] sm:ml-0 lg:ml-[-40px]">
                 <Image
@@ -219,7 +270,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               </div>
             </Link>
 
-            {/* Desktop Nav */}
             <ul className="hidden lg:flex items-center space-x-8 group relative">
               {navData?.map((navItem, index) =>
                 index === 1 ? (
@@ -250,9 +300,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               )}
             </ul>
 
-            {/* Desktop Search + Icons (Laptop View Only) - NO Hamburger on lg */}
             <div className="hidden lg:flex items-center space-x-6">
-              {/* Search */}
               <div className="flex items-center border border-transparent bg-white px-2 py-1 max-w-[280px] flex-shrink-0">
                 <Search color="black" size={18} />
                 <input
@@ -265,59 +313,95 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 />
               </div>
 
-              {/* Icons */}
-              <div className="flex items-center space-x-4 relative">
-                <Link href="/Login">
-                  {" "}
-                  {/* Or some other profile page if no login */}
-                  <CircleUserRound
-                    className="cursor-pointer"
-                    size={24}
-                    color={iconColor}
-                  />
-                </Link>
-                {/* ShoppingBag with hover mini cart - CONDITIONAL RENDER HERE */}
-                <div
-                  onMouseEnter={() => setShowMiniCart(true)}
-                  onMouseLeave={() => setShowMiniCart(false)}
-                  className="relative cursor-pointer" // Keep relative for cart count position
-                >
-                  <Link href="/cart">
-                    {user ? (
-                      <div className="flex flex-col items-center justify-center -space-y-1">
-                        <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300">
-                          <Image
-                            src={getProfileImageUrl(user.profile_picture)} // This line now works correctly
-                            alt={`${user.first_name || ""} ${
-                              user.last_name || ""
-                            } Profile`}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <span
-                          className={`text-[8px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[40px] text-center ${dynamicTextColor}`}
-                        >
-                          {user.first_name} {user.last_name?.charAt(0)}.
-                        </span>
-                      </div>
-                    ) : (
-                      <ShoppingBag size={24} color={iconColor} />
-                    )}
-                    {cartCount > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                        {cartCount}
-                      </span>
-                    )}
+              {/* User Icon and Logout Dropdown (Desktop) */}
+              <div ref={userIconRef} className="relative cursor-pointer">
+                {user ? ( // Conditional rendering based on `user` state
+                  <div
+                    // Changed -space-y-1 to space-y-1 to add space
+                    className="flex flex-col items-center justify-center space-y-1"
+                    onClick={(event) => {
+                      event.stopPropagation(); // Prevents click from bubbling to document and closing immediately
+                      console.log("CLICK_TEST: User icon clicked! (Desktop)");
+                      setShowLogoutDropdown(!showLogoutDropdown); // Toggle dropdown visibility
+                      console.log(
+                        "NAVBAR_USER_ICON_CLICKED: Toggling logout dropdown. New state:",
+                        !showLogoutDropdown
+                      );
+                    }}
+                  >
+                    {/* Reduced image size from w-8 h-8 to w-7 h-7 */}
+                    <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-300">
+                      <Image
+                        src={getProfileImageUrl(user.profile_picture)}
+                        alt={`${user.first_name || ""} ${
+                          user.last_name || ""
+                        } Profile`}
+                        fill
+                        className="object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src =
+                            "/default-profile-placeholder.png"; // Fallback image on error
+                        }}
+                      />
+                    </div>
+                    <span
+                      className={`text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[60px] text-center ${dynamicTextColor}`}
+                    >
+                      {user.first_name} {user.last_name?.charAt(0)}.
+                    </span>
+                  </div>
+                ) : (
+                  <Link href="/Login" className="flex items-center gap-1">
+                    <CircleUserRound // Show this icon when not logged in
+                      className="cursor-pointer"
+                      size={24}
+                      color={iconColor}
+                    />
+                    <span
+                      className={`text-sm font-semibold ${dynamicTextColor} hidden sm:inline`}
+                    >
+                      Sign In / Sign Up
+                    </span>
                   </Link>
-                  {showMiniCart && renderMiniCart()}
-                </div>
+                )}
+                {showLogoutDropdown &&
+                  user && ( // Show dropdown only if `showLogoutDropdown` is true AND `user` is logged in
+                    <div className="absolute right-0 mt-2 w-32 bg-white shadow-lg rounded-md overflow-hidden z-50">
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation(); // Prevents click from bubbling and triggering outside click
+                          console.log(
+                            "NAVBAR_LOGOUT_BUTTON_CLICKED: Logout button was clicked! (Desktop)"
+                          );
+                          handleLogout(); // Call the actual logout handler
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+              </div>
+
+              <div
+                onMouseEnter={() => setShowMiniCart(true)}
+                onMouseLeave={() => setShowMiniCart(false)}
+                className="relative cursor-pointer"
+              >
+                <Link href="/cart">
+                  <ShoppingBag size={24} color={iconColor} />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+                {showMiniCart && renderMiniCart()}
               </div>
             </div>
 
-            {/* Tablet View: Search + Icons + Hamburger */}
+            {/* Mobile/Tablet Icons (Search, User, Cart, Menu Toggle) */}
             <div className="hidden md:flex lg:hidden items-center space-x-4 flex-1 justify-end">
-              {/* Search bar with reduced width */}
               <div className="flex items-center border border-transparent bg-white px-2 py-1 max-w-[180px] flex-shrink-0">
                 <Search color="black" size={18} />
                 <input
@@ -330,36 +414,75 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 />
               </div>
 
-              <Link href="/Login">
-                <CircleUserRound size={24} color="black" />
-              </Link>
+              {/* Mobile/Tablet User Icon and Logout Dropdown */}
+              <div ref={userIconRef} className="relative cursor-pointer">
+                {user ? ( // Conditional rendering based on `user` state
+                  <div
+                    // Changed -space-y-1 to space-y-1 to add space
+                    className="flex flex-col items-center justify-center space-y-1"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      console.log("CLICK_TEST: User icon clicked! (Mobile)");
+                      setShowLogoutDropdown(!showLogoutDropdown);
+                      console.log(
+                        "NAVBAR_USER_ICON_CLICKED (Mobile): Toggling logout dropdown. New state:",
+                        !showLogoutDropdown
+                      );
+                    }}
+                  >
+                    {/* Reduced image size from w-8 h-8 to w-7 h-7 */}
+                    <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-300">
+                      <Image
+                        src={getProfileImageUrl(user.profile_picture)}
+                        alt={`${user.first_name || ""} ${
+                          user.last_name || ""
+                        } Profile`}
+                        fill
+                        className="object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src =
+                            "/default-profile-placeholder.png";
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[60px] text-center text-black">
+                      {user.first_name} {user.last_name?.charAt(0)}.
+                    </span>
+                  </div>
+                ) : (
+                  <Link href="/Login" className="flex items-center gap-1">
+                    <CircleUserRound size={24} color="black" />
+                    <span className="text-sm font-semibold text-black hidden sm:inline">
+                      Sign In / Sign Up
+                    </span>
+                  </Link>
+                )}
+                {showLogoutDropdown &&
+                  user && ( // Show dropdown only if `showLogoutDropdown` is true AND `user` is logged in
+                    <div className="absolute right-0 mt-2 w-32 bg-white shadow-lg rounded-md overflow-hidden z-50">
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          console.log(
+                            "NAVBAR_LOGOUT_BUTTON_CLICKED (Mobile Menu): Logout button was clicked!"
+                          );
+                          handleLogout();
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+              </div>
 
-              {/* ShoppingBag Icon with cart count - CONDITIONAL RENDER HERE */}
               <div
                 onMouseEnter={() => setShowMiniCart(true)}
                 onMouseLeave={() => setShowMiniCart(false)}
-                className="relative cursor-pointer" // Keep relative for cart count position
+                className="relative cursor-pointer"
               >
                 <Link href="/cart">
-                  {user ? (
-                    <div className="flex flex-col items-center justify-center -space-y-1">
-                      <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300">
-                        <Image
-                          src={getProfileImageUrl(user.profile_picture)} // This line now works correctly
-                          alt={`${user.first_name || ""} ${
-                            user.last_name || ""
-                          } Profile`}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <span className="text-[8px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[40px] text-center text-black">
-                        {user.first_name} {user.last_name?.charAt(0)}.
-                      </span>
-                    </div>
-                  ) : (
-                    <ShoppingBag size={24} color="black" />
-                  )}
+                  <ShoppingBag size={24} color="black" />
                   {cartCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {cartCount}
@@ -369,7 +492,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 {showMiniCart && renderMiniCart()}
               </div>
 
-              {/* Hamburger Icon */}
               <button
                 className="ml-2 text-black lg:hidden"
                 aria-label="Toggle menu"
@@ -379,9 +501,9 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               </button>
             </div>
 
-            {/* Mobile View Hamburger Only */}
+            {/* Mobile-only menu toggle (small screens) */}
             <button
-              className="md:hidden text-white"
+              className="md:hidden text-white" // Default color for mobile button when not scrolled
               aria-label="Toggle menu"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
@@ -390,7 +512,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile menu overlay */}
         <div
           className={`fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity duration-300 z-40 ${
             isMobileMenuOpen
@@ -400,6 +522,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
           onClick={handleCloseMenu}
         />
 
+        {/* Mobile Menu Content */}
         <div
           className={`mobile-menu fixed top-0 left-0 right-0 bg-white shadow-lg z-50 p-6 flex flex-col space-y-6
           ${isMobileMenuOpen ? "open" : ""}`}
@@ -441,7 +564,10 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   >
                     {categories?.map((cat) => {
                       const imageSrc = cat.image.startsWith("/")
-                        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}${cat.image}`
+                        ? `${
+                            process.env.NEXT_PUBLIC_API_BASE_URL ||
+                            "https://nxadmin.consociate.co.in"
+                          }${cat.image}`
                         : cat.image;
                       return (
                         <Link
@@ -478,7 +604,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
             )}
           </ul>
 
-          {/* Mobile search + icons */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center border border-transparent bg-gray-100 px-2 py-1 flex-grow">
               <Search color="black" size={18} />
@@ -491,30 +616,69 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 style={{ borderRadius: 0 }}
               />
             </div>
-            <Link href="/Login">
-              <CircleUserRound size={24} color="black" />
-            </Link>
-            {/* Mobile ShoppingBag - CONDITIONAL RENDER HERE */}
-            <Link href="/cart" className="relative">
-              {user ? (
-                <div className="flex flex-col items-center justify-center -space-y-1">
-                  <div className="relative w-6 h-6 rounded-full overflow-hidden border border-gray-300">
+            {/* Mobile Menu User Icon and Logout Dropdown */}
+            <div ref={userIconRef} className="relative cursor-pointer">
+              {user ? ( // Conditional rendering based on `user` state
+                <div
+                  // Changed -space-y-1 to space-y-1 to add space
+                  className="flex flex-col items-center justify-center space-y-1"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    console.log("CLICK_TEST: User icon clicked! (Mobile Menu)");
+                    setShowLogoutDropdown(!showLogoutDropdown);
+                    console.log(
+                      "NAVBAR_USER_ICON_CLICKED (Mobile Menu): Toggling logout dropdown. New state:",
+                      !showLogoutDropdown
+                    );
+                  }}
+                >
+                  {/* Reduced image size from w-8 h-8 to w-7 h-7 */}
+                  <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-300">
                     <Image
-                      src={getProfileImageUrl(user.profile_picture)} // This line now works correctly
+                      src={getProfileImageUrl(user.profile_picture)}
                       alt={`${user.first_name || ""} ${
                         user.last_name || ""
                       } Profile`}
                       fill
                       className="object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "/default-profile-placeholder.png";
+                      }}
                     />
                   </div>
-                  <span className="text-[8px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[40px] text-center text-black">
+                  <span className="text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[60px] text-center text-black">
                     {user.first_name} {user.last_name?.charAt(0)}.
                   </span>
                 </div>
               ) : (
-                <ShoppingBag size={24} color="black" />
+                <Link href="/Login" className="flex items-center gap-1">
+                  <CircleUserRound size={24} color="black" />
+                  <span className="text-sm font-semibold text-black hidden sm:inline">
+                    Sign In / Sign Up
+                  </span>
+                </Link>
               )}
+              {showLogoutDropdown &&
+                user && ( // Show dropdown only if `showLogoutDropdown` is true AND `user` is logged in
+                  <div className="absolute right-0 mt-2 w-32 bg-white shadow-lg rounded-md overflow-hidden z-50">
+                    <button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        console.log(
+                          "NAVBAR_LOGOUT_BUTTON_CLICKED (Mobile Menu): Logout button was clicked!"
+                        );
+                        handleLogout();
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+            </div>
+            <Link href="/cart" className="relative">
+              <ShoppingBag size={24} color="black" />
               {cartCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {cartCount}

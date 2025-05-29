@@ -1,4 +1,4 @@
-// components/AuthForm.tsx
+// components/Client-side-server/Authentication/AuthForm.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -13,6 +13,10 @@ import {
   sendOtp,
   verifyOtp,
   loginUser,
+  forgotPassword,
+  verifyResetPasswordOtp,
+  resetPassword,
+  resetPasswordResetStatus,
 } from "@/app/Redux/Store/authSlice";
 
 export default function AuthForm() {
@@ -20,7 +24,14 @@ export default function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Local states for form inputs (all new fields included)
+  // NEW: State for Forgot Password functionality
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetPasswordEmail, setResetPasswordEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [newPasswordError, setNewPasswordError] = useState(""); // For password validation feedback
+
+  // Local states for form inputs (all existing fields included)
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -33,7 +44,7 @@ export default function AuthForm() {
   const [pincode, setPincode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPasswordForSignUp, setConfirmPasswordForSignUp] = useState(""); // Renamed to avoid conflict
 
   const [otpDigits, setOtpDigits] = useState<string[]>(new Array(6).fill(""));
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -47,6 +58,9 @@ export default function AuthForm() {
     error,
     registrationSuccess,
     token,
+    resetPasswordOTPSent,
+    resetPasswordOTPVerified,
+    passwordResetSuccess,
   } = useSelector((state: RootState) => state.auth);
 
   // --- DEBUGGING: Log current state to console ---
@@ -61,14 +75,29 @@ export default function AuthForm() {
       "error:",
       error,
       "token:",
-      token
+      token,
+      "resetPasswordOTPSent:",
+      resetPasswordOTPSent,
+      "resetPasswordOTPVerified:",
+      resetPasswordOTPVerified,
+      "passwordResetSuccess:",
+      passwordResetSuccess
     );
-  }, [otpSent, isEmailVerified, loading, error, token]);
+  }, [
+    otpSent,
+    isEmailVerified,
+    loading,
+    error,
+    token,
+    resetPasswordOTPSent,
+    resetPasswordOTPVerified,
+    passwordResetSuccess,
+  ]);
   // --- END DEBUGGING ---
 
-  // Effect to reset form and auth status when switching between sign-in/sign-up
+  // Effect to reset form and auth status when switching between sign-in/sign-up/forgot password
   useEffect(() => {
-    dispatch(resetAuthStatus());
+    dispatch(resetAuthStatus()); // Resets all auth-related states, including password reset ones
     setFirstName("");
     setLastName("");
     setPhoneNumber("");
@@ -81,9 +110,13 @@ export default function AuthForm() {
     setPincode("");
     setEmail("");
     setPassword("");
-    setConfirmPassword("");
+    setConfirmPasswordForSignUp("");
     setOtpDigits(new Array(6).fill(""));
-  }, [isSignIn, dispatch]);
+    setResetPasswordEmail("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setNewPasswordError(""); // Clear password error on form switch
+  }, [isSignIn, isForgotPassword, dispatch]);
 
   // Effect to handle successful registration
   useEffect(() => {
@@ -94,9 +127,41 @@ export default function AuthForm() {
     }
   }, [registrationSuccess, dispatch]);
 
+  // NEW: Effect to handle successful password reset
+  useEffect(() => {
+    if (passwordResetSuccess) {
+      alert(
+        "Password has been reset successfully! Please sign in with your new password."
+      );
+      setIsSignIn(true); // Switch to sign-in form
+      setIsForgotPassword(false); // Exit forgot password mode
+      dispatch(resetPasswordResetStatus()); // Reset password reset specific states
+    }
+  }, [passwordResetSuccess, dispatch]);
+
+  // NEW: Password validation logic
+  const validateNewPassword = (value: string) => {
+    if (value.length < 8) {
+      return "Password must be at least 8 characters long.";
+    }
+    if (!/[A-Z]/.test(value)) {
+      return "Password must contain at least one uppercase letter.";
+    }
+    if (!/[a-z]/.test(value)) {
+      return "Password must contain at least one lowercase letter.";
+    }
+    if (!/[0-9]/.test(value)) {
+      return "Password must contain at least one number.";
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) {
+      return "Password must contain at least one special character.";
+    }
+    return ""; // No error
+  };
+
   // --- Handlers for Form Actions ---
 
-  // Handles click on "Send OTP" button
+  // Handles click on "Send OTP" button (for registration)
   const handleSendOtp = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!email) {
@@ -135,7 +200,7 @@ export default function AuthForm() {
     }
   };
 
-  // Handles click on "Verify OTP" button
+  // Handles click on "Verify OTP" button (for registration)
   const handleVerifyOtp = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     const fullOtp = otpDigits.join("");
@@ -146,7 +211,7 @@ export default function AuthForm() {
     dispatch(verifyOtp({ email, otp: fullOtp }));
   };
 
-  // UPDATED: Handles the final "Register" form submission to include OTP
+  // Handles the final "Register" form submission to include OTP
   const handleRegister = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -164,7 +229,7 @@ export default function AuthForm() {
       !pincode ||
       !email ||
       !password ||
-      !confirmPassword
+      !confirmPasswordForSignUp
     ) {
       alert("Please fill in all required fields.");
       return;
@@ -181,7 +246,7 @@ export default function AuthForm() {
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (password !== confirmPasswordForSignUp) {
       alert("Password and Confirm Password do not match.");
       return;
     }
@@ -199,12 +264,12 @@ export default function AuthForm() {
       pincode,
       email,
       password,
-      otp: fullOtp, // NEW: Include the OTP here
+      otp: fullOtp, // Include the OTP here
     };
     dispatch(registerUser(registrationData));
   };
 
-  // Handles the "Sign In" form submission (remains unchanged)
+  // Handles the "Sign In" form submission
   const handleSignIn = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email || !password) {
@@ -214,20 +279,135 @@ export default function AuthForm() {
     dispatch(loginUser({ email, password }));
   };
 
+  // NEW: Handler to initiate Forgot Password flow
+  const handleForgotPasswordClick = (
+    e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>
+  ) => {
+    e.preventDefault();
+    setIsSignIn(false);
+    setIsForgotPassword(true);
+    dispatch(resetAuthStatus());
+    setEmail("");
+    setOtpDigits(new Array(6).fill(""));
+    setResetPasswordEmail("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setNewPasswordError(""); // Clear password error
+  };
+
+  // NEW: Handler for sending OTP for password reset
+  const handleSendOtpForResetPassword = (
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.preventDefault();
+    if (!resetPasswordEmail) {
+      alert("Please enter your email to reset password.");
+      return;
+    }
+    dispatch(forgotPassword({ email: resetPasswordEmail }));
+  };
+
+  // NEW: Handler for verifying OTP for password reset
+  const handleVerifyOtpForResetPassword = (
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.preventDefault();
+    const fullOtp = otpDigits.join("");
+    // --- DEBUGGING: Log OTP before sending ---
+    console.log("OTP for verifyResetPasswordOtp:", fullOtp);
+    // --- END DEBUGGING ---
+    if (!resetPasswordEmail || fullOtp.length !== otpDigits.length) {
+      alert("Please enter your email and a complete OTP.");
+      return;
+    }
+    dispatch(
+      verifyResetPasswordOtp({ email: resetPasswordEmail, otp: fullOtp })
+    );
+  };
+
+  // NEW: Handler for final password reset
+  const handleFinalResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const passwordValidationError = validateNewPassword(newPassword);
+    if (passwordValidationError) {
+      setNewPasswordError(passwordValidationError);
+      return;
+    }
+    setNewPasswordError(""); // Clear error if validation passes
+
+    if (!newPassword || !confirmNewPassword) {
+      alert("Please enter and confirm your new password.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      alert("New password and Confirm New Password do not match."); // Client-side check
+      return;
+    }
+    if (!resetPasswordOTPVerified) {
+      alert("Please verify OTP before resetting your password.");
+      return;
+    }
+
+    // --- DEBUGGING: Log the payload before dispatching ---
+    const payloadForReset = {
+      email: resetPasswordEmail,
+      otp: otpDigits.join(""), // Ensure OTP is correctly joined here
+      newPassword: newPassword,
+      confirmNewPassword: confirmNewPassword,
+    };
+    console.log("Dispatching resetPassword with payload:", payloadForReset);
+    // --- END DEBUGGING ---
+
+    dispatch(resetPassword(payloadForReset));
+  };
+
+  // Determine the current form title
+  const getFormTitle = () => {
+    if (isForgotPassword) {
+      if (!resetPasswordOTPSent) {
+        return "Forgot Password";
+      } else if (resetPasswordOTPSent && !resetPasswordOTPVerified) {
+        return "Verify OTP";
+      } else {
+        return "Set New Password";
+      }
+    }
+    return isSignIn ? "Sign in to Account" : "Create Account";
+  };
+
+  // Determine the current form submission handler
+  const getFormSubmissionHandler = () => {
+    if (isForgotPassword) {
+      return handleFinalResetPassword;
+    }
+    return isSignIn ? handleSignIn : handleRegister;
+  };
+
+  // Determine the current form layout class
+  const getFormWidthClass = () => {
+    if (isForgotPassword) {
+      return "max-w-[280px]"; // Forgot password will have a similar width to sign-in
+    }
+    return isSignIn ? "max-w-[280px]" : "max-w-lg";
+  };
+
   // --- Component Render ---
   return (
     <div className="w-full min-h-screen flex items-center justify-center bg-gray-100">
       {/* Main Container - Fixed Height */}
       <div className="w-[900px] h-[400px] bg-white rounded-lg shadow-lg flex overflow-hidden">
-        {/* Left Panel (Sign In / Sign Up Form) */}
+        {/* Left Panel (Sign In / Sign Up / Forgot Password Form) */}
         <motion.div
-          key={isSignIn ? "signin" : "signup"}
+          key={
+            isForgotPassword ? "forgotpassword" : isSignIn ? "signin" : "signup"
+          }
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 50 }}
           transition={{ duration: 0.4 }}
           className={`px-6 pt-3 pb-4 flex flex-col justify-start items-center text-center overflow-hidden
-                       ${isSignIn ? "w-1/2" : "w-2/3"}`}
+                         ${isSignIn || isForgotPassword ? "w-1/2" : "w-2/3"}`}
         >
           {/* Logo */}
           <div className="my-1 flex-shrink-0">
@@ -237,7 +417,7 @@ export default function AuthForm() {
           {/* Heading with underline */}
           <div className="mb-2 text-center flex-shrink-0">
             <h2 className="text-xl font-bold text-green-600 inline-block">
-              {isSignIn ? "Sign in to Account" : "Create Account"}
+              {getFormTitle()}
             </h2>
             <div
               className="h-[2px] bg-orange-500 mt-1 mx-auto"
@@ -245,43 +425,150 @@ export default function AuthForm() {
             ></div>
           </div>
 
-          {/* Social Icons */}
-          <div className="flex items-center gap-3 mb-2 flex-shrink-0">
-            <Image
-              src="/facebook.svg"
-              alt="Facebook"
-              width={25}
-              height={25}
-              className="cursor-pointer"
-            />
-            <Image
-              src="/linkedin.svg"
-              alt="LinkedIn"
-              width={25}
-              height={25}
-              className="cursor-pointer"
-            />
-            <Image
-              src="/google.svg"
-              alt="Google"
-              width={25}
-              height={25}
-              className="cursor-pointer"
-            />
-          </div>
+          {/* Social Icons (Hidden for Forgot Password flow) */}
+          {!isForgotPassword && (
+            <>
+              <div className="flex items-center gap-3 mb-2 flex-shrink-0">
+                <Image
+                  src="/facebook.svg"
+                  alt="Facebook"
+                  width={25}
+                  height={25}
+                  className="cursor-pointer"
+                />
+                <Image
+                  src="/linkedin.svg"
+                  alt="LinkedIn"
+                  width={25}
+                  height={25}
+                  className="cursor-pointer"
+                />
+                <Image
+                  src="/google.svg"
+                  alt="Google"
+                  width={25}
+                  height={25}
+                  className="cursor-pointer"
+                />
+              </div>
 
-          <p className="text-xs text-gray-500 mb-2 flex-shrink-0">
-            or use your email account
-          </p>
+              <p className="text-xs text-gray-500 mb-2 flex-shrink-0">
+                or use your email account
+              </p>
+            </>
+          )}
 
           {/* Form Fields Container */}
           <form
             className={`space-y-1 w-full text-left flex-grow-0 flex-shrink-0
-                         ${isSignIn ? "max-w-[280px]" : "max-w-lg"}`}
-            onSubmit={isSignIn ? handleSignIn : handleRegister}
+                          ${getFormWidthClass()}`}
+            onSubmit={getFormSubmissionHandler()}
           >
+            {/* Forgot Password Fields */}
+            {isForgotPassword && (
+              <>
+                {!resetPasswordOTPSent && (
+                  <div className="relative w-full mb-1">
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      value={resetPasswordEmail}
+                      onChange={(e) => setResetPasswordEmail(e.target.value)}
+                      disabled={loading === "pending"}
+                      required
+                    />
+                  </div>
+                )}
+
+                {resetPasswordOTPSent && !resetPasswordOTPVerified && (
+                  <>
+                    <p className="text-xs text-gray-500 text-center mb-2">
+                      Please enter the 6-digit OTP sent to your email.
+                    </p>
+                    <div className="flex justify-center gap-1 mb-1">
+                      {otpDigits.map((digit, index) => (
+                        <input
+                          key={index}
+                          type="text"
+                          maxLength={1}
+                          value={digit}
+                          onChange={(e) => handleOtpChange(e, index)}
+                          onKeyDown={(e) => handleOtpKeyDown(e, index)}
+                          className="w-8 h-8 text-center text-md border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          ref={(el) => {
+                            otpInputRefs.current[index] = el;
+                          }}
+                          disabled={loading === "pending"}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {resetPasswordOTPVerified && (
+                  <>
+                    <div className="relative w-full mb-1">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="New Password"
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-10"
+                        value={newPassword}
+                        onChange={(e) => {
+                          setNewPassword(e.target.value);
+                          setNewPasswordError(
+                            validateNewPassword(e.target.value)
+                          );
+                        }}
+                        disabled={loading === "pending"}
+                        required
+                      />
+                      <Image
+                        src={showPassword ? "/eye-open.svg" : "/eye-closed.svg"}
+                        alt="Toggle password visibility"
+                        width={18}
+                        height={18}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer z-10"
+                        onClick={() => setShowPassword(!showPassword)}
+                      />
+                    </div>
+                    {newPasswordError && (
+                      <p className="text-red-500 text-xs text-left -mt-1 mb-1">
+                        {newPasswordError}
+                      </p>
+                    )}
+                    <div className="relative w-full mb-1">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm New Password"
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm pr-10"
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        disabled={loading === "pending"}
+                        required
+                      />
+                      <Image
+                        src={
+                          showConfirmPassword
+                            ? "/eye-open.svg"
+                            : "/eye-closed.svg"
+                        }
+                        alt="Toggle password visibility"
+                        width={18}
+                        height={18}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer z-10"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
             {/* Sign Up Fields (conditionally rendered) */}
-            {!isSignIn && (
+            {!isSignIn && !isForgotPassword && (
               <>
                 {/* Email Field and OTP related info */}
                 <div className="relative w-full mb-1">
@@ -470,8 +757,10 @@ export default function AuthForm() {
                         type={showConfirmPassword ? "text" : "password"}
                         placeholder="Confirm Password"
                         className="w-full px-2 py-0.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-xs pr-8"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        value={confirmPasswordForSignUp}
+                        onChange={(e) =>
+                          setConfirmPasswordForSignUp(e.target.value)
+                        }
                         disabled={loading === "pending"}
                         required
                       />
@@ -496,7 +785,7 @@ export default function AuthForm() {
             )}
 
             {/* Sign In Fields (conditionally rendered) */}
-            {isSignIn && (
+            {isSignIn && !isForgotPassword && (
               <>
                 <input
                   type="email"
@@ -531,7 +820,11 @@ export default function AuthForm() {
                     <input type="checkbox" disabled={loading === "pending"} />{" "}
                     Remember me
                   </label>
-                  <a href="#" className="text-green-600 hover:underline">
+                  <a
+                    href="#"
+                    className="text-green-600 hover:underline"
+                    onClick={handleForgotPasswordClick} // Updated to call new handler
+                  >
                     Forgot Password?
                   </a>
                 </div>
@@ -542,14 +835,63 @@ export default function AuthForm() {
             {error && (
               <p className="text-red-500 text-xs mt-1 text-center">{error}</p>
             )}
-            {registrationSuccess && !isSignIn && (
+            {registrationSuccess && !isSignIn && !isForgotPassword && (
               <p className="text-green-600 text-xs mt-1 text-center">
                 Registration successful! Redirecting...
               </p>
             )}
+            {passwordResetSuccess && isForgotPassword && (
+              <p className="text-green-600 text-xs mt-1 text-center">
+                Password reset successful! Redirecting to sign in...
+              </p>
+            )}
 
-            {/* Action Buttons based on Sign In / Sign Up state */}
-            {isSignIn ? (
+            {/* Action Buttons based on current state */}
+            {isForgotPassword ? (
+              <>
+                {!resetPasswordOTPSent && (
+                  <button
+                    type="button"
+                    onClick={handleSendOtpForResetPassword}
+                    className="bg-green-600 text-white py-1.5 mt-2 rounded-full w-full hover:bg-green-700 transition text-sm"
+                    disabled={loading === "pending" || !resetPasswordEmail}
+                  >
+                    {loading === "pending" ? "Sending OTP..." : "Send OTP"}
+                  </button>
+                )}
+                {resetPasswordOTPSent && !resetPasswordOTPVerified && (
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtpForResetPassword}
+                    className="bg-green-600 text-white py-1.5 mt-2 rounded-full w-full hover:bg-green-700 transition text-sm"
+                    disabled={
+                      loading === "pending" || otpDigits.join("").length !== 6
+                    }
+                  >
+                    {loading === "pending" ? "Verifying OTP..." : "Verify OTP"}
+                  </button>
+                )}
+                {resetPasswordOTPVerified && (
+                  <button
+                    type="submit"
+                    className="bg-green-600 text-white py-1.5 mt-2 rounded-full w-full hover:bg-green-700 transition text-sm"
+                    disabled={loading === "pending" || newPasswordError !== ""}
+                  >
+                    {loading === "pending" ? "Resetting..." : "Reset Password"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="text-green-600 text-xs mt-2 w-full hover:underline"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setIsSignIn(true);
+                  }}
+                >
+                  Back to Sign In
+                </button>
+              </>
+            ) : isSignIn ? (
               <button
                 type="submit"
                 className="bg-green-600 text-white py-1.5 mt-2 rounded-full w-full hover:bg-green-700 transition text-sm"
@@ -599,7 +941,7 @@ export default function AuthForm() {
 
           {/* Switch Form Link */}
           <div className="mt-2 text-xs flex-shrink-0">
-            {isSignIn ? (
+            {isSignIn && !isForgotPassword ? (
               <>
                 Don't have an account?{" "}
                 <span
@@ -609,12 +951,26 @@ export default function AuthForm() {
                   Create Account
                 </span>
               </>
-            ) : (
+            ) : !isSignIn && !isForgotPassword ? (
               <>
                 Already have an account?{" "}
                 <span
                   className="cursor-pointer text-green-600 hover:underline"
                   onClick={() => setIsSignIn(true)}
+                >
+                  Sign In
+                </span>
+              </>
+            ) : (
+              // In forgot password mode, provide a back to sign in option
+              <>
+                Remember your password?{" "}
+                <span
+                  className="cursor-pointer text-green-600 hover:underline"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setIsSignIn(true);
+                  }}
                 >
                   Sign In
                 </span>
@@ -625,15 +981,21 @@ export default function AuthForm() {
 
         {/* Right Panel (Promotional/Switch View) */}
         <motion.div
-          key={isSignIn ? "right-signin" : "right-signup"}
+          key={
+            isForgotPassword
+              ? "right-forgotpassword"
+              : isSignIn
+              ? "right-signin"
+              : "right-signup"
+          }
           initial={{ opacity: 0, x: isSignIn ? 50 : -50 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: isSignIn ? -50 : 50 }}
           transition={{ duration: 0.4 }}
           className={`bg-[#52BA8C] text-white flex flex-col justify-center items-center p-6 relative
-                       ${isSignIn ? "w-1/2" : "w-1/3"}`}
+                         ${isSignIn || isForgotPassword ? "w-1/2" : "w-1/3"}`}
         >
-          {isSignIn ? (
+          {isSignIn || isForgotPassword ? ( // Adjusted to show "Hello, Friend!" for sign-in and forgot password
             <>
               <h2 className="text-3xl font-bold mb-4">Hello, Friend!</h2>
               <div
@@ -641,14 +1003,32 @@ export default function AuthForm() {
                 style={{ width: "60px" }}
               ></div>
               <p className="text-sm text-center max-w-xs mb-8">
-                Fill up personal information and start journey with us.
+                {isForgotPassword
+                  ? "Enter your email to receive a password reset OTP."
+                  : "Fill up personal information and start journey with us."}
               </p>
-              <button
-                className="border-2 border-white text-white py-2 px-8 rounded-full hover:bg-white hover:text-[#52BA8C] transition-colors duration-300"
-                onClick={() => setIsSignIn(false)}
-              >
-                Sign Up
-              </button>
+              {!isForgotPassword && (
+                <button
+                  className="border-2 border-white text-white py-2 px-8 rounded-full hover:bg-white hover:text-[#52BA8C] transition-colors duration-300"
+                  onClick={() => {
+                    setIsSignIn(false);
+                    setIsForgotPassword(false);
+                  }}
+                >
+                  Sign Up
+                </button>
+              )}
+              {isForgotPassword && (
+                <button
+                  className="border-2 border-white text-white py-2 px-8 rounded-full hover:bg-white hover:text-[#52BA8C] transition-colors duration-300"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setIsSignIn(true);
+                  }}
+                >
+                  Back to Sign In
+                </button>
+              )}
             </>
           ) : (
             <>

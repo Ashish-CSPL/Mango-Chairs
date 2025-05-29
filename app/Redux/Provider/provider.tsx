@@ -1,12 +1,15 @@
-// /Redux/Provider/provider.tsx
+// app/Redux/Provider/provider.tsx
 "use client";
 
-import { ReactNode } from "react";
 import { Provider } from "react-redux";
-import { store, persistor } from "../Store/store";
+import { store, persistor } from "@/app/Redux/Store/store";
 import { PersistGate } from "redux-persist/integration/react";
 
-export default function ReduxProvider({ children }: { children: ReactNode }) {
+interface ReduxProviderProps {
+  children: React.ReactNode;
+}
+
+export function Providers({ children }: ReduxProviderProps) {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>

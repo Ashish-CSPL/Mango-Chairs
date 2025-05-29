@@ -3,11 +3,11 @@ import { Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Server-side-codes/NavbarServer/Navbar";
 import Footer from "@/components/Server-side-codes/Footer/Footer";
-import Providers from "./Redux/Provider/provider"; // <- default import here
-
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { Toaster } from "react-hot-toast";
+
+import { Providers } from "@/app/Redux/Provider/provider"; // Correct named import and path
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],

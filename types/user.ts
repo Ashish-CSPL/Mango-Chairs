@@ -20,6 +20,6 @@ export interface User {
   state?: string;
   country?: string;
   zipcode?: string;
-  profile_picture?: string | null; // <-- CORRECTED TYPE: This must be a string or null
+  profile_picture?: string; // <-- CORRECTED TYPE: This must be a string or null
                                   //    Use 'string | undefined' if it's never explicitly null.
 }
