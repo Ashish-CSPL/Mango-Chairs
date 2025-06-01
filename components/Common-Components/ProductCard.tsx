@@ -1,13 +1,16 @@
+// ProductCard.tsx
 "use client";
 
 import Image from "next/image";
-import { useDispatch } from "react-redux";
-import { addToCart } from "@/app/Redux/Store/cartSlice";
 import { Heart } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { Product, Variant } from "@/types/Products";
+
+// --- REDUX IMPORTS ---
+import { useDispatch } from "react-redux";
+import { addToCart } from "@/app/Redux/Store/cartSlice"; // Adjust this path if it's different
 
 interface ProductCardProps {
   product: Product;
@@ -15,6 +18,8 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+
+  // --- Initialize Redux dispatch ---
   const dispatch = useDispatch();
 
   const displayImage =
@@ -29,7 +34,11 @@ export default function ProductCard({ product }: ProductCardProps) {
       ? { ...selectedVariant, parentProduct: product }
       : product;
 
+    // --- Dispatch the Redux action here! ---
+    console.log("Adding to cart (Dispatching Redux action):", cartProduct); // Updated log for clarity
     dispatch(addToCart(cartProduct));
+    // --- End of Redux dispatch ---
+
     toast.success("Product added successfully!");
   };
 

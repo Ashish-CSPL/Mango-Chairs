@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 // Ensure you import from your unified types/product.ts file
-import { Product, Variant } from "@/types/product";
+import { Product, Variant } from "@/types/Products";
 
 interface Props {
   product: Product;

@@ -1,14 +1,24 @@
 // components/Navbar/Navbar.client.tsx
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { CircleUserRound, ShoppingBag, Menu, X, Search } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import { User, logout } from "@/app/Redux/Store/authSlice";
+import {
+  CircleUserRound,
+  ShoppingBag,
+  Menu,
+  X,
+  Search,
+  LogOut,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { RootState } from "@/app/Redux/Store/store";
+import { NEXT_PUBLIC_API_BASE_URL } from "@/api/fetchdata";
+
+// --- REDUX IMPORTS ---
+import { useSelector } from "react-redux";
+import { selectCartCount } from "@/app/Redux/Store/cartSlice"; // Adjust path if necessary
+import { RootState } from "@/app/Redux/Store/store"; // Adjust path if necessary
 
 interface NavItem {
   pk: number;
@@ -27,30 +37,79 @@ interface NavbarClientProps {
   categories: Category[];
 }
 
+// Define a type for the stored user data structure
+interface UserData {
+  first_name?: string; // Made optional as it might be missing or null
+  last_name?: string;
+  profile_picture?: string; // URL string for the profile picture (could be relative or absolute)
+  email: string; // Including email just in case needed for display or debugging
+  // Add other fields you might store, e.g., id, phone_number
+}
+
 const NavbarClient: React.FC<NavbarClientProps> = ({
   navData = [],
   categories = [],
 }) => {
-  const dispatch = useDispatch();
   const router = useRouter();
 
-  const user = useSelector((state: RootState) => state.auth.user);
-  console.log("NAVBAR_INIT: User object from Redux state on render:", user);
+  // --- Authentication State Management ---
+  const [userToken, setUserToken] = useState<string | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
-  const cartCount = useSelector((state: RootState) => state.cart.cartCount);
+  // Effect to load user data from localStorage on component mount
+  useEffect(() => {
+    // Ensure this runs only in the browser environment
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("userToken");
+      const storedUserData = localStorage.getItem("userData");
+      if (token && storedUserData) {
+        setUserToken(token);
+        try {
+          // Attempt to parse the stored user data JSON
+          const parsedUserData = JSON.parse(storedUserData);
+          setUserData(parsedUserData);
+          console.log(
+            "Navbar: Loaded userData from localStorage:",
+            parsedUserData
+          ); // Debugging log
+        } catch (e) {
+          console.error("Failed to parse user data from localStorage", e);
+          // If parsing fails, clear invalid data to prevent persistent errors
+          localStorage.removeItem("userToken");
+          localStorage.removeItem("userData");
+          setUserToken(null);
+          setUserData(null);
+        }
+      }
+    }
+  }, []); // Empty dependency array means this effect runs once after the initial render
+
+  // Handles user logout
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("userToken"); // Remove token from storage
+      localStorage.removeItem("userData"); // Remove user data from storage
+    }
+    setUserToken(null); // Clear token state
+    setUserData(null); // Clear user data state
+    router.push("/login"); // Redirect to the login page
+  };
+
+  // --- REDUX CART STATE INTEGRATION ---
+  // Use useSelector to get the actual cart count from the Redux store
+  const cartCount = useSelector(selectCartCount);
+  // Use useSelector to get the actual cart items array from the Redux store
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
 
+  // --- Existing Navbar States & Handlers ---
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMobileDropdown, setShowMobileDropdown] = useState(false);
   const [showDesktopDropdown, setShowDesktopDropdown] = useState(false);
   const [showMiniCart, setShowMiniCart] = useState(false);
-  const [showLogoutDropdown, setShowLogoutDropdown] = useState(false); // State to control logout dropdown visibility
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Ref to attach to the user icon div, encompassing the dropdown as well
-  const userIconRef = useRef<HTMLDivElement>(null);
-
+  // Effect to handle scroll-based styling
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 0);
@@ -59,88 +118,27 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Effect for handling clicks outside the user icon/logout dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // If the dropdown is not currently open, or the ref hasn't been set yet,
-      // or if the click occurred INSIDE the userIconRef (which contains both the trigger and dropdown),
-      // then we do nothing.
-      if (
-        !showLogoutDropdown ||
-        !userIconRef.current ||
-        userIconRef.current.contains(event.target as Node)
-      ) {
-        return;
-      }
-
-      // If the click is outside the ref AND the dropdown is open, then close it.
-      console.log(
-        "NAVBAR_CLICK_OUTSIDE: Clicked outside user icon, closing dropdown."
-      );
-      setShowLogoutDropdown(false);
-    };
-
-    // Only attach the event listener WHEN the `showLogoutDropdown` state is true.
-    if (showLogoutDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    // Cleanup function: remove the listener when the component unmounts
-    // or when `showLogoutDropdown` changes to false
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showLogoutDropdown]); // This effect re-runs whenever `showLogoutDropdown` changes
-
+  // Closes mobile menu and dropdowns
   const handleCloseMenu = () => {
     setIsMobileMenuOpen(false);
     setShowMobileDropdown(false);
   };
 
-  const iconColor = !isScrolled && !isMobileMenuOpen ? "white" : "black";
+  // Determine icon and text color based on scroll state and login status
+  // This logic ensures icons are visible against varying background colors
+  const iconColor =
+    !isScrolled && !isMobileMenuOpen && !userToken ? "white" : "black";
   const dynamicTextColor =
     isScrolled || isMobileMenuOpen ? "text-black" : "text-white";
 
-  const getProfileImageUrl = (path: string | undefined | null) => {
-    const BASE_URL =
-      process.env.NEXT_PUBLIC_API_BASE_URL ||
-      "https://nxadmin.consociate.co.in";
-    if (!path) {
-      return "/default-profile-placeholder.png"; // Fallback to a default image if path is null/undefined
-    }
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path;
-    }
-    return `${BASE_URL}${path}`;
-  };
-
-  const handleLogout = () => {
-    console.log("NAVBAR_LOGOUT_HANDLER: handleLogout function called!");
-
-    dispatch(logout()); // Dispatch the logout action
-
-    // Optional: A small delay to ensure Redux state update and localStorage clear
-    // before redirection, though usually not strictly necessary with Redux Persist.
-    setTimeout(() => {
-      console.log(
-        "NAVBAR: Redux state immediately AFTER dispatch(logout()) and short delay:",
-        user
-      );
-      setShowLogoutDropdown(false); // Close dropdown
-      router.push("/Login"); // Redirect to login page
-      console.log("NAVBAR: Redirected to /Login.");
-    }, 50);
-  };
-
+  // Renders the desktop category dropdown
   const renderCategoryDropdown = () => (
     <div className="absolute left-1/2 top-full transform -translate-x-1/2 mt-2 z-50 w-[50vw] max-w-2xl bg-white/30 backdrop-blur-lg shadow-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl">
       {categories?.map((cat) => {
-        const imageSrc = cat.image.startsWith("/")
-          ? `${
-              process.env.NEXT_PUBLIC_API_BASE_URL ||
-              "https://nxadmin.consociate.co.in"
-            }${cat.image}`
-          : cat.image;
+        // Construct correct image URL: if relative, append to base domain
+        const imageSrc = cat.image.startsWith("http")
+          ? cat.image
+          : `${NEXT_PUBLIC_API_BASE_URL.replace("/api/v1", "")}${cat.image}`;
         return (
           <Link
             key={cat.id}
@@ -162,6 +160,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     </div>
   );
 
+  // Renders the mini cart dropdown
   const renderMiniCart = () => (
     <div
       onMouseLeave={() => setShowMiniCart(false)}
@@ -189,7 +188,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
               </div>
               <p className="text-sm font-semibold">
-                ₹{item.price * item.quantity}
+                ₹{(item.price * item.quantity).toFixed(2)}{" "}
+                {/* Ensure price is formatted */}
               </p>
             </li>
           ))}
@@ -206,6 +206,31 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
       </Link>
     </div>
   );
+
+  // Helper function to get the full profile image URL
+  const getProfileImageUrl = (path?: string) => {
+    if (!path) {
+      console.log("Navbar: No profile picture path provided."); // Debugging log
+      return "/images/default-profile.png"; // Fallback if no path is provided
+    }
+
+    // If the path is already an absolute URL, use it directly
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      console.log("Navbar: Absolute profile image URL:", path); // Debugging log
+      return path;
+    }
+
+    // Construct the full URL for relative paths:
+    // Remove '/api/v1' from the base URL to get the domain root, then append the path.
+    // Example: https://nxadmin.consociate.co.in/api/v1 becomes https://nxadmin.consociate.co.in
+    // Then append /media/profiles/image.jpg
+    const baseUrlParts = NEXT_PUBLIC_API_BASE_URL.split("/api/v1");
+    const imageUrl = `${baseUrlParts[0]}${
+      path.startsWith("/") ? path : `/${path}`
+    }`; // Ensure leading slash for path
+    console.log("Navbar: Constructed relative profile image URL:", imageUrl); // Debugging log
+    return imageUrl;
+  };
 
   return (
     <>
@@ -251,6 +276,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
         lg:top-[30px] lg:mt-[0px]
         `}
         style={{
+          // Adjust top/marginTop for a sticky effect without initial offset
           top: isScrolled || isMobileMenuOpen ? 0 : undefined,
           marginTop: isScrolled || isMobileMenuOpen ? 0 : undefined,
         }}
@@ -264,15 +290,16 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   alt="Mango Logo"
                   fill
                   className="object-contain"
-                  priority
+                  priority // Prioritize loading for LCP
                   style={{ objectFit: "contain" }}
                 />
               </div>
             </Link>
 
+            {/* Desktop Navigation Links */}
             <ul className="hidden lg:flex items-center space-x-8 group relative">
               {navData?.map((navItem, index) =>
-                index === 1 ? (
+                index === 1 ? ( // Assuming second item is 'Shop By Category'
                   <li
                     key={navItem.pk}
                     className="relative group"
@@ -300,6 +327,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               )}
             </ul>
 
+            {/* Desktop Right Section: Search, User, Cart */}
             <div className="hidden lg:flex items-center space-x-6">
               <div className="flex items-center border border-transparent bg-white px-2 py-1 max-w-[280px] flex-shrink-0">
                 <Search color="black" size={18} />
@@ -313,46 +341,38 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 />
               </div>
 
-              {/* User Icon and Logout Dropdown (Desktop) */}
-              <div ref={userIconRef} className="relative cursor-pointer">
-                {user ? ( // Conditional rendering based on `user` state
-                  <div
-                    // Changed -space-y-1 to space-y-1 to add space
-                    className="flex flex-col items-center justify-center space-y-1"
-                    onClick={(event) => {
-                      event.stopPropagation(); // Prevents click from bubbling to document and closing immediately
-                      console.log("CLICK_TEST: User icon clicked! (Desktop)");
-                      setShowLogoutDropdown(!showLogoutDropdown); // Toggle dropdown visibility
-                      console.log(
-                        "NAVBAR_USER_ICON_CLICKED: Toggling logout dropdown. New state:",
-                        !showLogoutDropdown
-                      );
-                    }}
-                  >
-                    {/* Reduced image size from w-8 h-8 to w-7 h-7 */}
-                    <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-300">
-                      <Image
-                        src={getProfileImageUrl(user.profile_picture)}
-                        alt={`${user.first_name || ""} ${
-                          user.last_name || ""
-                        } Profile`}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src =
-                            "/default-profile-placeholder.png"; // Fallback image on error
-                        }}
-                      />
-                    </div>
-                    <span
-                      className={`text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[60px] text-center ${dynamicTextColor}`}
-                    >
-                      {user.first_name} {user.last_name?.charAt(0)}.
-                    </span>
+              {/* Conditional User Display (Logged In vs. Logged Out) */}
+              {userToken && userData ? (
+                // If user is logged in
+                <div className="relative flex items-center gap-2 group">
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white cursor-pointer">
+                    <Image
+                      src={getProfileImageUrl(userData.profile_picture)}
+                      alt={userData.first_name || "User"}
+                      fill
+                      className="object-cover"
+                      unoptimized // Use unoptimized for external images to avoid Next.js Image component optimization issues
+                    />
                   </div>
-                ) : (
-                  <Link href="/Login" className="flex items-center gap-1">
-                    <CircleUserRound // Show this icon when not logged in
+                  {/* DISPLAY USER NAME HERE */}
+                  <span className={`text-sm font-semibold ${dynamicTextColor}`}>
+                    Hi, {userData.first_name || "User"}{" "}
+                    {/* Fallback to 'User' if first_name is missing */}
+                  </span>
+                  {/* Logout Button */}
+                  <button
+                    onClick={handleLogout}
+                    className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500 ${dynamicTextColor}`}
+                  >
+                    <LogOut size={20} />
+                    <span className="hidden sm:inline">Logout</span>
+                  </button>
+                </div>
+              ) : (
+                // If user is not logged in
+                <div className="relative cursor-pointer">
+                  <Link href="/login" className="flex items-center gap-1">
+                    <CircleUserRound
                       className="cursor-pointer"
                       size={24}
                       color={iconColor}
@@ -363,26 +383,10 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                       Sign In / Sign Up
                     </span>
                   </Link>
-                )}
-                {showLogoutDropdown &&
-                  user && ( // Show dropdown only if `showLogoutDropdown` is true AND `user` is logged in
-                    <div className="absolute right-0 mt-2 w-32 bg-white shadow-lg rounded-md overflow-hidden z-50">
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation(); // Prevents click from bubbling and triggering outside click
-                          console.log(
-                            "NAVBAR_LOGOUT_BUTTON_CLICKED: Logout button was clicked! (Desktop)"
-                          );
-                          handleLogout(); // Call the actual logout handler
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  )}
-              </div>
+                </div>
+              )}
 
+              {/* Shopping Cart Icon */}
               <div
                 onMouseEnter={() => setShowMiniCart(true)}
                 onMouseLeave={() => setShowMiniCart(false)}
@@ -414,67 +418,40 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 />
               </div>
 
-              {/* Mobile/Tablet User Icon and Logout Dropdown */}
-              <div ref={userIconRef} className="relative cursor-pointer">
-                {user ? ( // Conditional rendering based on `user` state
-                  <div
-                    // Changed -space-y-1 to space-y-1 to add space
-                    className="flex flex-col items-center justify-center space-y-1"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      console.log("CLICK_TEST: User icon clicked! (Mobile)");
-                      setShowLogoutDropdown(!showLogoutDropdown);
-                      console.log(
-                        "NAVBAR_USER_ICON_CLICKED (Mobile): Toggling logout dropdown. New state:",
-                        !showLogoutDropdown
-                      );
-                    }}
-                  >
-                    {/* Reduced image size from w-8 h-8 to w-7 h-7 */}
-                    <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-300">
-                      <Image
-                        src={getProfileImageUrl(user.profile_picture)}
-                        alt={`${user.first_name || ""} ${
-                          user.last_name || ""
-                        } Profile`}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src =
-                            "/default-profile-placeholder.png";
-                        }}
-                      />
-                    </div>
-                    <span className="text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[60px] text-center text-black">
-                      {user.first_name} {user.last_name?.charAt(0)}.
-                    </span>
+              {/* Conditional User Display for Mobile/Tablet */}
+              {userToken && userData ? (
+                <div className="relative flex items-center gap-2 group">
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-black cursor-pointer">
+                    <Image
+                      src={getProfileImageUrl(userData.profile_picture)}
+                      alt={userData.first_name || "User"}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
                   </div>
-                ) : (
-                  <Link href="/Login" className="flex items-center gap-1">
+                  {/* DISPLAY USER NAME HERE */}
+                  <span className={`text-sm font-semibold text-black`}>
+                    Hi, {userData.first_name || "User"}{" "}
+                    {/* Fallback to 'User' */}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500 text-black`}
+                  >
+                    <LogOut size={20} />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative cursor-pointer">
+                  <Link href="/login" className="flex items-center gap-1">
                     <CircleUserRound size={24} color="black" />
                     <span className="text-sm font-semibold text-black hidden sm:inline">
                       Sign In / Sign Up
                     </span>
                   </Link>
-                )}
-                {showLogoutDropdown &&
-                  user && ( // Show dropdown only if `showLogoutDropdown` is true AND `user` is logged in
-                    <div className="absolute right-0 mt-2 w-32 bg-white shadow-lg rounded-md overflow-hidden z-50">
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          console.log(
-                            "NAVBAR_LOGOUT_BUTTON_CLICKED (Mobile Menu): Logout button was clicked!"
-                          );
-                          handleLogout();
-                        }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  )}
-              </div>
+                </div>
+              )}
 
               <div
                 onMouseEnter={() => setShowMiniCart(true)}
@@ -519,14 +496,14 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
           }`}
-          onClick={handleCloseMenu}
+          onClick={handleCloseMenu} // Close menu when clicking outside
         />
 
         {/* Mobile Menu Content */}
         <div
           className={`mobile-menu fixed top-0 left-0 right-0 bg-white shadow-lg z-50 p-6 flex flex-col space-y-6
           ${isMobileMenuOpen ? "open" : ""}`}
-          style={{ top: 64 }}
+          style={{ top: 64 }} // Position below the main nav bar
         >
           <ul className="flex flex-col space-y-6">
             {navData?.map((navItem, index) =>
@@ -563,18 +540,17 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                     }`}
                   >
                     {categories?.map((cat) => {
-                      const imageSrc = cat.image.startsWith("/")
-                        ? `${
-                            process.env.NEXT_PUBLIC_API_BASE_URL ||
-                            "https://nxadmin.consociate.co.in"
-                          }${cat.image}`
-                        : cat.image;
+                      const imageSrc = cat.image.startsWith("http")
+                        ? cat.image
+                        : `${NEXT_PUBLIC_API_BASE_URL.replace("/api/v1", "")}${
+                            cat.image
+                          }`;
                       return (
                         <Link
                           key={cat.id}
                           href={`/category/${cat.id}`}
                           className="flex items-center gap-3 py-2 text-black hover:text-orange-500"
-                          onClick={handleCloseMenu}
+                          onClick={handleCloseMenu} // Close menu when category is clicked
                         >
                           <div className="w-20 h-20 relative flex-shrink-0">
                             <Image
@@ -582,6 +558,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                               alt={cat.title}
                               fill
                               className="rounded-md object-cover"
+                              unoptimized
                             />
                           </div>
                           <span className="font-semibold">{cat.title}</span>
@@ -595,7 +572,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   <Link
                     href={navItem.link}
                     className="font-semibold text-black hover:text-orange-500"
-                    onClick={handleCloseMenu}
+                    onClick={handleCloseMenu} // Close menu when link is clicked
                   >
                     {navItem.name}
                   </Link>
@@ -616,67 +593,42 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 style={{ borderRadius: 0 }}
               />
             </div>
-            {/* Mobile Menu User Icon and Logout Dropdown */}
-            <div ref={userIconRef} className="relative cursor-pointer">
-              {user ? ( // Conditional rendering based on `user` state
-                <div
-                  // Changed -space-y-1 to space-y-1 to add space
-                  className="flex flex-col items-center justify-center space-y-1"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    console.log("CLICK_TEST: User icon clicked! (Mobile Menu)");
-                    setShowLogoutDropdown(!showLogoutDropdown);
-                    console.log(
-                      "NAVBAR_USER_ICON_CLICKED (Mobile Menu): Toggling logout dropdown. New state:",
-                      !showLogoutDropdown
-                    );
-                  }}
-                >
-                  {/* Reduced image size from w-8 h-8 to w-7 h-7 */}
-                  <div className="relative w-7 h-7 rounded-full overflow-hidden border border-gray-300">
-                    <Image
-                      src={getProfileImageUrl(user.profile_picture)}
-                      alt={`${user.first_name || ""} ${
-                        user.last_name || ""
-                      } Profile`}
-                      fill
-                      className="object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src =
-                          "/default-profile-placeholder.png";
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[60px] text-center text-black">
-                    {user.first_name} {user.last_name?.charAt(0)}.
-                  </span>
+            {/* Conditional User Display for Mobile Menu */}
+            {userToken && userData ? (
+              <div className="relative flex items-center gap-2 group text-black">
+                <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-black cursor-pointer">
+                  <Image
+                    src={getProfileImageUrl(userData.profile_picture)}
+                    alt={userData.first_name || "User"}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
                 </div>
-              ) : (
-                <Link href="/Login" className="flex items-center gap-1">
+                {/* DISPLAY USER NAME HERE */}
+                <span className={`text-sm font-semibold`}>
+                  Hi, {userData.first_name || "User"} {/* Fallback to 'User' */}
+                </span>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    handleCloseMenu();
+                  }} // Also close mobile menu on logout
+                  className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500`}
+                >
+                  <LogOut size={20} />
+                </button>
+              </div>
+            ) : (
+              <div className="relative cursor-pointer">
+                <Link href="/login" className="flex items-center gap-1">
                   <CircleUserRound size={24} color="black" />
                   <span className="text-sm font-semibold text-black hidden sm:inline">
                     Sign In / Sign Up
                   </span>
                 </Link>
-              )}
-              {showLogoutDropdown &&
-                user && ( // Show dropdown only if `showLogoutDropdown` is true AND `user` is logged in
-                  <div className="absolute right-0 mt-2 w-32 bg-white shadow-lg rounded-md overflow-hidden z-50">
-                    <button
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        console.log(
-                          "NAVBAR_LOGOUT_BUTTON_CLICKED (Mobile Menu): Logout button was clicked!"
-                        );
-                        handleLogout();
-                      }}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Logout
-                    </button>
-                  </div>
-                )}
-            </div>
+              </div>
+            )}
             <Link href="/cart" className="relative">
               <ShoppingBag size={24} color="black" />
               {cartCount > 0 && (

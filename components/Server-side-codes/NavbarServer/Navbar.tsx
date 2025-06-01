@@ -1,6 +1,6 @@
 // components/Navbar/Navbar.server.tsx
 import React from "react";
-import NavbarClient from "@/components/Client-side-server/Navbar/Navbar";
+import NavbarClient from "@/components/Client-side-server/Navbar/components/NavbarClient";
 import fetchData from "@/api/fetchdata"; // Make sure this path is correct
 import CouponBanner from "@/components/Server-side-codes/CouponBanner/CouponBanner";
 
@@ -10,12 +10,12 @@ interface NavbarProps {
 }
 
 const Navbar = async ({ headerEndpoint, categoryEndpoint }: NavbarProps) => {
-  // Reverted calls to fetchData: Pass the string endpoint directly
-  // Assuming fetchData expects (url: string, method: string)
-  const headerResponse = await fetchData(headerEndpoint, "GET");
+  // Call fetchData with only the endpoint string
+  // Your fetchData function internally uses "GET" method.
+  const headerResponse = await fetchData(headerEndpoint);
   const navData = headerResponse?.headers || [];
 
-  const categoryResponse = await fetchData(categoryEndpoint, "GET");
+  const categoryResponse = await fetchData(categoryEndpoint);
   const categories = categoryResponse?.product_categories || [];
 
   return (

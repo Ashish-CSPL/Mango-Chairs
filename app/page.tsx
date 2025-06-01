@@ -24,6 +24,8 @@ import "slick-carousel/slick/slick-theme.css";
 
 const Home = async () => {
   // Fetch all data in parallel
+  // Inside app/page.tsx
+
   const [
     bannerData,
     categoryData,
@@ -32,8 +34,8 @@ const Home = async () => {
     testimonials,
     whyChooseUsData,
   ] = await Promise.all([
-    fetchData("frontend/banners"),
-    fetchData("frontend/categories"),
+    fetchData("frontend/banners", "GET"),
+    fetchData("frontend/categories", "GET"),
     fetchNewArrivals(),
     fetchAllProducts(),
     getTestimonials(),

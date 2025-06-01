@@ -1,25 +1,29 @@
 // src/types/user.ts
 
-/**
- * Defines the structure for a user object in your application.
- *
- * IMPORTANT: The 'profile_picture' field is defined as 'string | null',
- * ensuring TypeScript understands it's a property holding a string (or null),
- * not a method. This directly resolves your error.
- */
 export interface User {
+  full_name: string; // This is good, keep as string
+  username: string;
   id?: string;
   email: string;
   first_name?: string;
   last_name?: string;
   phone_number?: string;
-  country_code_for_phone_number?: string; // e.g., "+91"
+  country_code_for_phone_number?: string;
   address?: string;
   locality?: string;
   city?: string;
   state?: string;
   country?: string;
   zipcode?: string;
-  profile_picture?: string; // <-- CORRECTED TYPE: This must be a string or null
-                                  //    Use 'string | undefined' if it's never explicitly null.
+  profile_picture?: string | null;
+}
+
+export interface UserState {
+  profile_picture?: string | null;
+  full_name: string; // <--- CHANGE THIS TO BE REQUIRED (remove '?')
+  username: string;
+  email: string;
+  id: string;
+  token: string;
+  is_verified: boolean;
 }
