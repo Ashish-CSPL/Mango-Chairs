@@ -1,4 +1,4 @@
-// ProductCard.tsx
+// components/ProductCard.tsx
 "use client";
 
 import Image from "next/image";
@@ -6,7 +6,7 @@ import { Heart } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { Product, Variant } from "@/types/Products";
+import { Product, Variant } from "@/types/Products"; // Make sure this path is correct
 
 // --- REDUX IMPORTS ---
 import { useDispatch } from "react-redux";
@@ -35,7 +35,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       : product;
 
     // --- Dispatch the Redux action here! ---
-    console.log("Adding to cart (Dispatching Redux action):", cartProduct); // Updated log for clarity
+    console.log("Adding to cart (Dispatching Redux action):", cartProduct);
     dispatch(addToCart(cartProduct));
     // --- End of Redux dispatch ---
 
@@ -49,7 +49,24 @@ export default function ProductCard({ product }: ProductCardProps) {
           className="p-1 flex items-center justify-center relative"
           style={{ borderBottom: "1px solid #C5C5C5" }}
         >
-          <Link href={`/product/${product.slug}`}>
+          {/* Link for the main product image */}
+          {/* ⭐ The product.slug is used here, ensuring a valid URL IF product.slug is provided to ProductCard ⭐ */}
+          {product.slug ? (
+            <Link href={`/product/${product.slug}`}>
+              <Image
+                src={`https://nxadmin.consociate.co.in${displayImage}`}
+                width={300}
+                height={300}
+                className="object-cover rounded mb-3"
+                alt={product.name}
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "https://placehold.co/300x300/cccccc/333333?text=No+Image";
+                }}
+              />
+            </Link>
+          ) : (
+            // Fallback if no slug (e.g., just render image without link)
             <Image
               src={`https://nxadmin.consociate.co.in${displayImage}`}
               width={300}
@@ -61,7 +78,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                   "https://placehold.co/300x300/cccccc/333333?text=No+Image";
               }}
             />
-          </Link>
+          )}
 
           <div className="absolute top-1 right-1 z-20 bg-white p-1 rounded-full shadow hover:text-red-500 h-8 w-8 flex items-center justify-center">
             <button>
@@ -73,11 +90,18 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between items-center text-center sm:text-left px-2 py-1">
           <div className="flex flex-col p-0 sm:p-2 md:p-2">
             <h2 className="line-clamp-1 text-sm font-semibold">
-              <Link href={`/product/${product.slug}`}>
-                <h2 className="line-clamp-1 text-sm font-semibold hover:underline">
+              {/* Link for the product name/title */}
+              {product.slug ? (
+                <Link href={`/product/${product.slug}`}>
+                  <h2 className="line-clamp-1 text-sm font-semibold hover:underline">
+                    {product.name}
+                  </h2>
+                </Link>
+              ) : (
+                <h2 className="line-clamp-1 text-sm font-semibold">
                   {product.name}
                 </h2>
-              </Link>
+              )}
             </h2>
             <p className="text-xs sm:text-sm text-[#f83a3a]">
               ₹{displayPrice}
