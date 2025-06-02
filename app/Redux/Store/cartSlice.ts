@@ -1,114 +1,79 @@
-"use client";
-
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+// Removed `ReactNode` import as it's not used in this file for `CartItem`
+// import { ReactNode } from "react";
 
+// Ensure this CartItem interface matches what you dispatch from ProductCard.tsx
 export interface CartItem {
-  id: number;
+  title: any;
+  isRare: any;
+  regularPrice: any;
+  isOnSale: boolean;
+  id: string | number; // This needs to be string | number to match your product/variant IDs
   name: string;
-  title?: string;
   image: string;
-  price: number; // Sale price
+  price: number; // Keep price as number for calculations
   quantity: number;
-  isRare?: boolean;
-  regularPrice?: number; // Original price
-  isOnSale?: boolean;
+  slug?: string; // Optional: for linking back to product page
+  selectedVariantId?: string | number; // Optional: to track which variant was added
+  color?: string; // Optional: variant specific detail
+  size?: string; // Optional: variant specific detail
+  stock?: number; // Optional: stock of the item at the time of adding
+  // If you need these, ensure they are passed from ProductCard and are part of the API Product/Variant types
+  // isRare?: boolean;
+  // title?: string; // If 'title' is distinct from 'name'
 }
 
 interface CartState {
-  items: any;
   cartItems: CartItem[];
-  cartCount: number;
 }
 
 const initialState: CartState = {
   cartItems: [],
-  cartCount: 0,
-  items: undefined
 };
 
 const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    addToCart(state, action: PayloadAction<any>) {
-      const item = action.payload;
-
-      // Safe parsing of prices
-      const rawSellingPrice = item.selling_price || item.parentProduct?.selling_price;
-      const parsedSellingPrice = typeof rawSellingPrice === "string" ? parseFloat(rawSellingPrice) : rawSellingPrice;
-      const finalSellingPrice = !isNaN(parsedSellingPrice) ? parsedSellingPrice : 0;
-
-      const rawOriginalPrice = item.original_price || item.parentProduct?.original_price;
-      const parsedOriginalPrice = typeof rawOriginalPrice === "string" ? parseFloat(rawOriginalPrice) : rawOriginalPrice;
-      const finalOriginalPrice = !isNaN(parsedOriginalPrice) ? parsedOriginalPrice : finalSellingPrice;
-
-      const isOnSale = finalSellingPrice < finalOriginalPrice;
-
-      // Build full image URL
-      const rawImage = item.images?.[0] || item.parentProduct?.images?.[0] || "/default-image.jpg";
-      const fullImage = rawImage.startsWith("http")
-        ? rawImage
-        : `https://nxadmin.consociate.co.in${rawImage}`;
-
-      const cartItem: CartItem = {
-        id: item.id,
-        name: String(item.name || item.parentProduct?.name || "Unnamed Product"),
-        title: String(item.title || item.parentProduct?.title || ""),
-        image: fullImage,
-        price: finalSellingPrice,
-        quantity: 1,
-        isRare: item.isRare || false,
-        regularPrice: finalOriginalPrice,
-        isOnSale,
-      };
-
+    addToCart: (state, action: PayloadAction<CartItem>) => {
+      const newItem = action.payload;
+      // Find an existing item that matches by ID AND (if applicable) selected variant ID
       const existingItem = state.cartItems.find(
-        (cartItemInState) => cartItemInState.id === cartItem.id
+        (item) =>
+          item.id === newItem.id &&
+          item.selectedVariantId === newItem.selectedVariantId
       );
 
       if (existingItem) {
-        existingItem.quantity += 1;
+        // If it exists, increment quantity (default to 1 if newItem.quantity is not provided)
+        existingItem.quantity += newItem.quantity || 1;
       } else {
-        state.cartItems.push(cartItem);
+        // If it's a new item, add it with the specified quantity or default to 1
+        state.cartItems.push({ ...newItem, quantity: newItem.quantity || 1 });
       }
-
-      // Update cart count
-      state.cartCount = state.cartItems.reduce(
-        (total, item) => total + item.quantity,
-        0
+    },
+    removeFromCart: (state, action: PayloadAction<string | number>) => {
+      state.cartItems = state.cartItems.filter(
+        (item) => item.id !== action.payload
       );
     },
-
-    removeFromCart(state, action: PayloadAction<number>) {
-      const idToRemove = action.payload;
-      state.cartItems = state.cartItems.filter((item) => item.id !== idToRemove);
-      state.cartCount = state.cartItems.reduce(
-        (total, item) => total + item.quantity,
-        0
-      );
-    },
-
-    updateQuantity(state, action: PayloadAction<{ id: number; change: number }>) {
+    updateQuantity: (
+      state,
+      action: PayloadAction<{ id: string | number; change: number }>
+    ) => {
       const { id, change } = action.payload;
-      const existingItem = state.cartItems.find((item) => item.id === id);
+      const itemToUpdate = state.cartItems.find((item) => item.id === id);
 
-      if (existingItem) {
-        existingItem.quantity += change;
-        if (existingItem.quantity <= 0) {
+      if (itemToUpdate) {
+        itemToUpdate.quantity += change;
+        if (itemToUpdate.quantity <= 0) {
           state.cartItems = state.cartItems.filter((item) => item.id !== id);
         }
       }
-
-      state.cartCount = state.cartItems.reduce(
-        (total, item) => total + item.quantity,
-        0
-      );
     },
   },
 });
 
 export const { addToCart, removeFromCart, updateQuantity } = cartSlice.actions;
-
-export const selectCartCount = (state: { cart: CartState }) => state.cart.cartCount;
 
 export default cartSlice.reducer;

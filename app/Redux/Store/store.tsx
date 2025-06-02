@@ -1,8 +1,7 @@
 // app/Redux/Store/store.ts
-import { combineReducers, configureStore } from "@reduxjs/toolkit";
-import cartReducer from "./cartSlice";
-import authReducer from "../Slices/authSlice"; // Import your new auth slice
-
+// (Assuming this file exists and sets up your Redux store with persist)
+// This is just a placeholder.
+import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import {
   persistStore,
   persistReducer,
@@ -13,22 +12,22 @@ import {
   PURGE,
   REGISTER,
 } from "redux-persist";
-import storage from "redux-persist/lib/storage";
+import storage from "redux-persist/lib/storage"; // defaults to localStorage for web
 
-// Configuration for redux-persist
-const persistConfig = {
-  key: "root",
-  storage,
-  // Only persist the 'cart' and 'auth' slices
-  whitelist: ["cart", "auth"],
-};
+import authReducer from "../Slices/authSlice";
+import cartReducer from "@/app/Redux/Store/cartSlice"; // Make sure cartSlice is correctly imported
 
-const appReducer = combineReducers({
+const rootReducer = combineReducers({
+  auth: authReducer,
   cart: cartReducer,
-  auth: authReducer, // Add the auth reducer here
 });
 
-const rootReducer = appReducer;
+const persistConfig = {
+  key: "root",
+  version: 1,
+  storage,
+  whitelist: ["cart", "auth"], // Specify which reducers to persist
+};
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
@@ -42,17 +41,7 @@ export const store = configureStore({
     }),
 });
 
-export const persistor = persistStore(store, {}, () => {
-  console.log("STORE: Redux-Persist rehydration complete.");
-  console.log(
-    "STORE: Current cart state after rehydration:",
-    store.getState().cart
-  );
-  console.log(
-    "STORE: Current auth state after rehydration:",
-    store.getState().auth
-  );
-});
+export const persistor = persistStore(store);
 
-export type RootState = ReturnType<typeof store.getState>;
+export type RootState = ReturnType<typeof rootReducer>;
 export type AppDispatch = typeof store.dispatch;

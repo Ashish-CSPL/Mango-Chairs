@@ -1,96 +1,233 @@
-// app/product/[slug]/page.tsx
-import React from "react";
-import fetchData from "@/api/fetchdata"; // Assuming this can fetch single products
-import { Product } from "@/types/Products"; // Adjust path if needed
+// app/shop/page.tsx
 
-interface ProductPageProps {
-  params: {
-    slug: string; // The slug captured from the URL (e.g., 'symphony')
+import React from "react";
+import fetchData from "@/api/fetchdata";
+import Link from "next/link";
+import { Product, ProductsApiResponse } from "@/types/Products";
+import ProductCard from "@/components/Common-Components/ProductCard";
+export const metadata = {
+  title: "Our Shop - NextGen Store",
+  description:
+    "Browse our collection of high-quality products and find what you need.",
+};
+
+interface ShopPageProps {
+  searchParams: {
+    page?: string;
+    page_size?: string;
   };
 }
 
-// You might want to make this a server component for better performance (default in App Router)
-export default async function ProductPage({ params }: ProductPageProps) {
-  const { slug } = params;
-  let product: Product | null = null;
+export default async function ShopPage({ searchParams }: ShopPageProps) {
+  const currentPage = parseInt(searchParams.page || "1", 10);
+  const pageSize = parseInt(searchParams.page_size || "10", 10);
+
+  let products: Product[] = [];
+  let totalPages = 0;
   let error: string | null = null;
 
   try {
-    // Assuming your fetchData function can fetch a single product by slug
-    // You'll likely need a specific API endpoint for single product details.
-    // For example: `frontend/products/by-slug/${slug}` or `frontend/products/?slug=${slug}`
-    const response = await fetchData(`frontend/products/by-slug/${slug}`); // <-- Adjust this API endpoint!
-    if (response && response.product) {
-      // Assuming the response has a 'product' field
-      product = response.product;
-    } else if (
-      response &&
-      Array.isArray(response.products) &&
-      response.products.length > 0
-    ) {
-      // If your API returns an array for a slug query
-      product = response.products[0];
+    console.log(
+      `ShopPage: Attempting to fetch products for page ${currentPage}, page_size ${pageSize}`
+    );
+
+    const data: ProductsApiResponse = await fetchData(
+      "frontend/products/",
+      "GET",
+      {
+        params: {
+          page: currentPage,
+          page_size: pageSize,
+        },
+        // Ensure cache control is appropriate for dynamic data
+        cache: "no-store",
+      }
+    );
+
+    console.log("ShopPage: Fetched raw data from API:", data);
+
+    if (data && Array.isArray(data.products)) {
+      products = data.products;
+      totalPages = data.total_pages; // Get total_pages directly from API
     } else {
-      error = "Product not found.";
+      console.error(
+        "ShopPage: API response for products is not in expected format:",
+        data
+      );
+      error =
+        "API response for products is not in expected format. Check backend endpoint.";
     }
+
+    console.log(
+      "ShopPage: Extracted products for rendering:",
+      products.length,
+      "items found."
+    );
   } catch (err: any) {
-    console.error("Failed to fetch product:", err);
-    error = err.message || "Failed to load product details.";
+    console.error("ShopPage: Failed to fetch products:", err);
+    error = err.message || "Failed to load products. Please try again later.";
   }
 
-  if (error) {
-    return (
-      <div className="flex justify-center items-center min-h-[50vh] text-center text-red-600 text-xl">
-        {error}
-        <p className="mt-4 text-gray-700 text-base">
-          Please check the product URL or try again later.
-        </p>
-      </div>
-    );
-  }
+  // --- New Pagination Logic ---
+  const getPaginationItems = (
+    currentPage: number,
+    totalPages: number,
+    range: number = 2 // Number of pages to show around the current page
+  ) => {
+    const items: (number | string)[] = [];
+    const showEllipses = totalPages > 7; // Adjust this threshold as needed
 
-  if (!product) {
-    return (
-      <div className="flex justify-center items-center min-h-[50vh] text-center text-gray-600 text-xl">
-        Loading product...
-      </div>
-    );
-  }
+    if (!showEllipses) {
+      // If few pages, show all
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(i);
+      }
+      return items;
+    }
 
-  // Render your product details here using the 'product' data
+    // Always show first page
+    items.push(1);
+
+    // Calculate start and end for the main range
+    let start = Math.max(2, currentPage - range);
+    let end = Math.min(totalPages - 1, currentPage + range);
+
+    // Adjust start and end if current page is near boundaries
+    if (currentPage <= range + 1) {
+      end = 2 * range + 1; // Show more pages at the beginning
+    } else if (currentPage >= totalPages - range) {
+      start = totalPages - 2 * range; // Show more pages at the end
+    }
+
+    // Add first ellipsis if needed
+    if (start > 2) {
+      items.push("...");
+    }
+
+    // Add pages in the main range
+    for (let i = start; i <= end; i++) {
+      if (i > 1 && i < totalPages) {
+        // Ensure not to duplicate first/last page
+        items.push(i);
+      }
+    }
+
+    // Add second ellipsis if needed
+    if (end < totalPages - 1) {
+      items.push("...");
+    }
+
+    // Always show last page
+    if (totalPages > 1) {
+      // Only add if there's more than 1 page
+      items.push(totalPages);
+    }
+
+    // Filter out duplicates (e.g., if totalPages is small and ellipses calculation overlaps)
+    // This simple filter ensures uniqueness and maintains order.
+    return items.filter((value, index, self) => self.indexOf(value) === index);
+  };
+
+  const paginationItems = getPaginationItems(currentPage, totalPages);
+
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-4xl font-bold mb-4">{product.name}</h1>
-      <p className="text-gray-700 mb-6">
-        {product.description || "No description available."}
-      </p>
+    <div className="container mx-auto p-8 max-w-7xl">
+      <h1 className="text-4xl font-bold mb-8 text-center text-gray-900">
+        Our Products
+      </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          {product.images && product.images[0] && (
-            <img
-              src={`https://nxadmin.consociate.co.in${product.images[0]}`}
-              alt={product.name}
-              className="w-full h-auto rounded-lg shadow-lg"
-            />
+      {error ? (
+        <div className="flex justify-center items-center min-h-[50vh] text-center text-red-600 text-xl p-4 bg-red-50 rounded-lg">
+          <p>{error}</p>
+        </div>
+      ) : (
+        <>
+          {products.length === 0 ? (
+            <div className="flex flex-col justify-center items-center min-h-[50vh] text-center text-gray-600 text-xl p-4 bg-gray-50 rounded-lg">
+              <p>No products found.</p>
+              <p className="mt-2 text-lg text-gray-500">
+                Your backend API might not be returning any products, or there
+                are no products matching filters.
+              </p>
+              <p className="mt-1 text-base text-gray-400">
+                Please check your backend server logs and database.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
           )}
-        </div>
-        <div>
-          <p className="text-3xl font-semibold text-green-600 mb-4">
-            ₹{product.selling_price || "N/A"}
-            {product.base_price &&
-              product.base_price !== product.selling_price && (
-                <span className="line-through text-lg ml-2 text-gray-500">
-                  ₹{product.base_price}
-                </span>
+
+          {/* Pagination Controls - UPDATED */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-12 space-x-2 sm:space-x-4">
+              {/* Previous Button */}
+              <Link
+                href={{
+                  pathname: "/shop",
+                  query: { page: currentPage - 1, page_size: pageSize },
+                }}
+                className={`flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-lg text-lg font-medium transition-colors duration-200 shadow-md ${
+                  currentPage === 1
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-gray-700 text-white hover:bg-gray-800"
+                }`}
+                aria-disabled={currentPage === 1}
+                tabIndex={currentPage === 1 ? -1 : undefined}
+              >
+                &lt;
+              </Link>
+
+              {/* Page Number and Ellipses */}
+              {paginationItems.map((item, index) =>
+                item === "..." ? (
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 text-lg font-semibold text-gray-700 bg-gray-100 rounded-lg"
+                  >
+                    ...
+                  </span>
+                ) : (
+                  <Link
+                    key={item}
+                    href={{
+                      pathname: "/shop",
+                      query: { page: item, page_size: pageSize },
+                    }}
+                    className={`flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-lg text-lg font-medium transition-colors duration-200 shadow-md ${
+                      item === currentPage
+                        ? "bg-orange-500 text-white" // Highlight current page
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {item}
+                  </Link>
+                )
               )}
-          </p>
-          {/* Add more product details here, e.g., variants, add to cart button, etc. */}
-          <button className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-            Add to Cart
-          </button>
-        </div>
-      </div>
+
+              {/* Next Button */}
+              <Link
+                href={{
+                  pathname: "/shop",
+                  query: { page: currentPage + 1, page_size: pageSize },
+                }}
+                className={`flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-lg text-lg font-medium transition-colors duration-200 shadow-md ${
+                  currentPage === totalPages
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-gray-700 text-white hover:bg-gray-800"
+                }`}
+                aria-disabled={currentPage === totalPages}
+                tabIndex={currentPage === totalPages ? -1 : undefined}
+              >
+                &gt;
+              </Link>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -13,12 +13,12 @@ import {
   LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { NEXT_PUBLIC_API_BASE_URL } from "@/api/fetchdata";
+// REMOVED: import { NEXT_PUBLIC_API_BASE_URL } from "@/api/fetchdata"; // THIS LINE IS INCORRECT AND REMOVED
 
 // --- REDUX IMPORTS ---
 import { useSelector } from "react-redux";
-import { selectCartCount } from "@/app/Redux/Store/cartSlice"; // Adjust path if necessary
 import { RootState } from "@/app/Redux/Store/store"; // Adjust path if necessary
+import { CartItem } from "@/app/Redux/Store/cartSlice"; // Import CartItem for stronger typing
 
 interface NavItem {
   pk: number;
@@ -45,6 +45,15 @@ interface UserData {
   email: string; // Including email just in case needed for display or debugging
   // Add other fields you might store, e.g., id, phone_number
 }
+
+// --- REDUX SELECTOR FUNCTION ---
+// This function takes the RootState and calculates the total quantity of items in the cart
+const selectCartCount = (state: RootState): number => {
+  return state.cart.cartItems.reduce(
+    (total: number, item: CartItem) => total + item.quantity,
+    0
+  );
+};
 
 const NavbarClient: React.FC<NavbarClientProps> = ({
   navData = [],
@@ -138,7 +147,10 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
         // Construct correct image URL: if relative, append to base domain
         const imageSrc = cat.image.startsWith("http")
           ? cat.image
-          : `${NEXT_PUBLIC_API_BASE_URL.replace("/api/v1", "")}${cat.image}`;
+          : `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api/v1", "")}${
+              cat.image
+            }`;
+        // Corrected: Use process.env.NEXT_PUBLIC_API_BASE_URL directly here
         return (
           <Link
             key={cat.id}
@@ -170,29 +182,34 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
       <h3 className="font-semibold text-lg mb-3 border-b pb-2">Cart Items</h3>
       {cartItems && cartItems.length > 0 ? (
         <ul className="max-h-64 overflow-y-auto">
-          {cartItems.map((item: any, index: number) => (
-            <li
-              key={index}
-              className="flex items-center gap-3 mb-3 border-b pb-2 last:border-none"
-            >
-              <div className="w-12 h-12 relative flex-shrink-0">
-                <Image
-                  src={item.image || "/placeholder.png"}
-                  alt={item.name || "Product"}
-                  fill
-                  className="object-cover rounded"
-                />
-              </div>
-              <div className="flex-grow">
-                <p className="text-sm font-medium">{item.name}</p>
-                <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
-              </div>
-              <p className="text-sm font-semibold">
-                ₹{(item.price * item.quantity).toFixed(2)}{" "}
-                {/* Ensure price is formatted */}
-              </p>
-            </li>
-          ))}
+          {cartItems.map(
+            (
+              item: CartItem,
+              index: number // Use CartItem type here
+            ) => (
+              <li
+                key={index}
+                className="flex items-center gap-3 mb-3 border-b pb-2 last:border-none"
+              >
+                <div className="w-12 h-12 relative flex-shrink-0">
+                  <Image
+                    src={item.image || "/placeholder.png"}
+                    alt={item.name || "Product"}
+                    fill
+                    className="object-cover rounded"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <p className="text-sm font-medium">{item.name}</p>
+                  <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+                </div>
+                <p className="text-sm font-semibold">
+                  ₹{(item.price * item.quantity).toFixed(2)}{" "}
+                  {/* Ensure price is formatted */}
+                </p>
+              </li>
+            )
+          )}
         </ul>
       ) : (
         <p className="text-sm text-gray-500">Your cart is empty.</p>
@@ -224,7 +241,17 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     // Remove '/api/v1' from the base URL to get the domain root, then append the path.
     // Example: https://nxadmin.consociate.co.in/api/v1 becomes https://nxadmin.consociate.co.in
     // Then append /media/profiles/image.jpg
-    const baseUrlParts = NEXT_PUBLIC_API_BASE_URL.split("/api/v1");
+    // Corrected: Use process.env.NEXT_PUBLIC_API_BASE_URL directly here
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+    if (!baseUrl) {
+      console.error(
+        "Navbar Error: NEXT_PUBLIC_API_BASE_URL is not defined for image URL construction."
+      );
+      return "/images/default-profile.png"; // Fallback if URL is missing
+    }
+
+    const baseUrlParts = baseUrl.split("/api/v1");
     const imageUrl = `${baseUrlParts[0]}${
       path.startsWith("/") ? path : `/${path}`
     }`; // Ensure leading slash for path
@@ -394,6 +421,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               >
                 <Link href="/cart">
                   <ShoppingBag size={24} color={iconColor} />
+                  {/* Now cartCount is correctly typed as number */}
                   {cartCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {cartCount}
@@ -420,7 +448,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
               {/* Conditional User Display for Mobile/Tablet */}
               {userToken && userData ? (
-                <div className="relative flex items-center gap-2 group">
+                <div className="relative flex items-center gap-2 group text-black">
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-black cursor-pointer">
                     <Image
                       src={getProfileImageUrl(userData.profile_picture)}
@@ -431,7 +459,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                     />
                   </div>
                   {/* DISPLAY USER NAME HERE */}
-                  <span className={`text-sm font-semibold text-black`}>
+                  <span className={`text-sm font-semibold`}>
                     Hi, {userData.first_name || "User"}{" "}
                     {/* Fallback to 'User' */}
                   </span>
@@ -542,9 +570,11 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                     {categories?.map((cat) => {
                       const imageSrc = cat.image.startsWith("http")
                         ? cat.image
-                        : `${NEXT_PUBLIC_API_BASE_URL.replace("/api/v1", "")}${
-                            cat.image
-                          }`;
+                        : `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(
+                            "/api/v1",
+                            ""
+                          )}${cat.image}`;
+                      // Corrected: Use process.env.NEXT_PUBLIC_API_BASE_URL directly here
                       return (
                         <Link
                           key={cat.id}

@@ -1,4 +1,3 @@
-// components/ProductCard.tsx
 "use client";
 
 import Image from "next/image";
@@ -6,11 +5,11 @@ import { Heart } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { Product, Variant } from "@/types/Products"; // Make sure this path is correct
+import { Product, Variant } from "@/types/Products"; // Correct path and exports assumed
 
 // --- REDUX IMPORTS ---
 import { useDispatch } from "react-redux";
-import { addToCart } from "@/app/Redux/Store/cartSlice"; // Adjust this path if it's different
+import { addToCart, CartItem } from "@/app/Redux/Store/cartSlice"; // <-- CartItem imported here
 
 interface ProductCardProps {
   product: Product;
@@ -19,25 +18,50 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
 
-  // --- Initialize Redux dispatch ---
   const dispatch = useDispatch();
 
+  // Determine the image to display: selected variant's first image, or product's first image, or a placeholder
   const displayImage =
     selectedVariant?.images?.[0] || product.images?.[0] || "/placeholder.png";
 
+  // Determine the price to display: selected variant's selling price, or product's selling price
   const displayPrice =
     selectedVariant?.selling_price ?? product.selling_price ?? "0";
-  const basePrice = product.base_price ?? "0";
+  const basePrice = product.base_price ?? "0"; // Base price always comes from the main product
 
   const handleAddToCart = () => {
-    const cartProduct = selectedVariant
-      ? { ...selectedVariant, parentProduct: product }
-      : product;
+    // Determine the actual item data (product or selected variant) to add to cart
+    // If a variant is selected, use its details; otherwise, use the main product's details.
+    const itemToAdd = selectedVariant || product;
 
-    // --- Dispatch the Redux action here! ---
-    console.log("Adding to cart (Dispatching Redux action):", cartProduct);
-    dispatch(addToCart(cartProduct));
-    // --- End of Redux dispatch ---
+    // Construct the CartItem object with necessary properties.
+    // Ensure that `id`, `name`, `image`, `price`, and `quantity` are always present.
+    const cartItem: CartItem = {
+      // Use the variant's ID if a variant is selected, otherwise the product's ID.
+      id: itemToAdd.id,
+      // Use the variant's name if available, otherwise the product's name.
+      // Type assertion `as Product` or `as Variant` helps TypeScript understand the properties.
+      name: (itemToAdd as Product).name || product.name,
+      // Construct the full image URL.
+      image: `https://nxadmin.consociate.co.in${displayImage}`,
+      // Convert the display price to a number.
+      price: parseFloat(displayPrice.toString()),
+      quantity: 1, // Always add 1 item to cart on click
+
+      // Include optional properties for richer cart experience
+      slug: product.slug, // The product's slug is used for linking back to the product page from cart
+      selectedVariantId: selectedVariant?.id, // ID of the selected variant, if any
+      color: selectedVariant?.specification?.colour,
+      size: selectedVariant?.specification?.size,
+      stock: itemToAdd.stock,
+      title: undefined,
+      isRare: undefined,
+      regularPrice: undefined,
+      isOnSale: false,
+    };
+
+    console.log("Adding to cart (Dispatching Redux action):", cartItem);
+    dispatch(addToCart(cartItem));
 
     toast.success("Product added successfully!");
   };
@@ -49,8 +73,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           className="p-1 flex items-center justify-center relative"
           style={{ borderBottom: "1px solid #C5C5C5" }}
         >
-          {/* Link for the main product image */}
-          {/* ⭐ The product.slug is used here, ensuring a valid URL IF product.slug is provided to ProductCard ⭐ */}
+          {/* Link to product details page if slug exists */}
           {product.slug ? (
             <Link href={`/product/${product.slug}`}>
               <Image
@@ -66,7 +89,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               />
             </Link>
           ) : (
-            // Fallback if no slug (e.g., just render image without link)
+            // Fallback if no slug (though typically products will have slugs)
             <Image
               src={`https://nxadmin.consociate.co.in${displayImage}`}
               width={300}
@@ -80,6 +103,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             />
           )}
 
+          {/* Wishlist Button */}
           <div className="absolute top-1 right-1 z-20 bg-white p-1 rounded-full shadow hover:text-red-500 h-8 w-8 flex items-center justify-center">
             <button>
               <Heart size={16} strokeWidth={1.5} />
@@ -90,7 +114,6 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between items-center text-center sm:text-left px-2 py-1">
           <div className="flex flex-col p-0 sm:p-2 md:p-2">
             <h2 className="line-clamp-1 text-sm font-semibold">
-              {/* Link for the product name/title */}
               {product.slug ? (
                 <Link href={`/product/${product.slug}`}>
                   <h2 className="line-clamp-1 text-sm font-semibold hover:underline">
@@ -112,10 +135,11 @@ export default function ProductCard({ product }: ProductCardProps) {
               )}
             </p>
 
+            {/* Variant selection (colors/images) */}
             <div className="flex gap-1 mt-1 flex-wrap">
               {product.variant_list?.slice(0, 3).map((variant, index) => (
                 <div
-                  key={variant.id ?? index}
+                  key={variant.id ?? `variant-${index}`} // Use variant ID or a unique index for key
                   title={variant.specification?.colour}
                   onClick={() => setSelectedVariant(variant)}
                   className={`w-8 h-8 border-[1px] border-[#C5C5C5] cursor-pointer rounded-full overflow-hidden flex items-center justify-center hover:border-blue-400 ${
@@ -137,6 +161,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               ))}
             </div>
 
+            {/* Add to Cart button */}
             <button
               onClick={handleAddToCart}
               className="mt-2 bg-black text-white text-xs px-3 py-1 rounded-full hover:bg-gray-800"
@@ -145,6 +170,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             </button>
           </div>
 
+          {/* Star Rating Placeholder */}
           <div className="text-yellow-500 text-sm sm:text-base whitespace-nowrap sm:mt-0">
             ★★★★<span className="text-gray-300">★</span>
           </div>

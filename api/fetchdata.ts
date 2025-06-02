@@ -1,60 +1,82 @@
-// app/API_Calls/fetchData.ts
-
-export const NEXT_PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
-
-async function fetchData(endpoint: string, method: string = 'GET', data?: any) {
-  // Construct the full URL for the API call
-  const url = `${NEXT_PUBLIC_API_BASE_URL}/${endpoint}`;
-
-  // Initialize headers with common ones like 'Accept'
-  const headers: HeadersInit = {
-    'Accept': 'application/json', // Indicates client prefers JSON response
-  };
-
-  // If there's data and the method is typically sending a body (POST, PUT, PATCH),
-  // set the Content-Type to application/json.
-  if (data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  // Define the request options
-  const options: RequestInit = {
-    method: method, // HTTP method (GET, POST, etc.)
-    headers: headers, // Request headers
-    // For methods that send a body, stringify the data to JSON.
-    // Otherwise, 'body' should be undefined.
-    body: data && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase()) ? JSON.stringify(data) : undefined,
-  };
-
-  try {
-    // Perform the fetch request
-    const response = await fetch(url, options);
-
-    // Check if the response was successful (status code 2xx)
-    if (!response.ok) {
-      const errorText = await response.text(); // Read the response body as text
-      let errorMessage = `HTTP error! status: ${response.status} - ${response.statusText}`;
-
-      try {
-        // Attempt to parse the error response as JSON to get detailed messages
-        const errorJson = JSON.parse(errorText);
-        // Look for common error fields like 'message' or 'detail' from Django REST Framework
-        errorMessage = errorJson.message || errorJson.detail || JSON.stringify(errorJson);
-      } catch {
-        // If the error response is not JSON, use the raw text or a default message
-        errorMessage = errorText || errorMessage;
-      }
-      // Throw an error to be caught by the calling function
-      throw new Error(errorMessage);
-    }
-
-    // If successful, parse and return the JSON response
-    return response.json();
-  } catch (error: any) {
-    // Log and re-throw the error for centralized error handling in components
-    console.error(`Error in fetchData for ${endpoint}:`, error);
-    throw error;
-  }
+interface FetchOptions extends RequestInit {
+  params?: Record<string, any>; // Used for GET request query parameters
+  body?: any; // Allow any type for body, as it will be JSON.stringified
 }
 
-export default fetchData;
+export default async function fetchData<T>(
+  endpoint: string,
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  options?: FetchOptions
+): Promise<T> {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (!baseUrl) {
+    console.error("fetchData Error: NEXT_PUBLIC_API_BASE_URL is not defined.");
+    // Throw an error early if the base URL isn't configured, as this is a critical dependency.
+    throw new Error(
+      "API base URL is not configured. Please check your .env.local file."
+    );
+  }
+
+  let url = `${baseUrl}/${endpoint}`;
+
+  if (options?.params && method === "GET") {
+    const queryParams = new URLSearchParams(options.params).toString();
+    url += `?${queryParams}`;
+  }
+
+  // --- Debugging Logs ---
+  // These logs are helpful for development but consider removing or
+  // making them conditional (e.g., based on NODE_ENV) for production.
+  console.log("fetchData: Request URL:", url);
+  console.log("fetchData: Request Method:", method);
+  console.log("fetchData: Request Options (excluding stringified body):", {
+    headers: options?.headers,
+    cache: options?.cache,
+  });
+  if (method !== "GET" && options?.body) {
+    console.log("fetchData: Request Body (before stringify):", options.body);
+  }
+  // --- End Debugging Logs ---
+
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        // Add authorization header if needed here
+        ...options?.headers,
+      },
+      body:
+        method !== "GET" && options?.body
+          ? JSON.stringify(options.body)
+          : undefined,
+      cache: options?.cache || "no-store", // Default to no-store if not specified
+    });
+
+    console.log("fetchData: Response Status:", response.status);
+
+    if (!response.ok) {
+      const errorDetail = await response
+        .json()
+        .catch(() => ({ detail: "Unknown error or non-JSON response" }));
+      console.error("fetchData: API Error Response:", errorDetail);
+      throw new Error(
+        errorDetail.detail || `API Error: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: T = await response.json();
+    console.log("fetchData: API Response Data (Success):", data);
+    return data;
+  } catch (error: any) {
+    // Catch fetch-specific errors (network issues, JSON parsing errors)
+    console.error(
+      "fetchData: Fetching failed due to network or parsing error:",
+      error
+    );
+    throw new Error(
+      `Network or parsing error: ${error.message || "An unknown error occurred."}`
+    );
+  }
+}

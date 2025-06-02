@@ -1,3 +1,4 @@
+// components/CartClientPage.tsx
 "use client";
 
 import { useSelector, useDispatch } from "react-redux";
@@ -20,7 +21,8 @@ export default function CartClientPage() {
     return total + priceValue * item.quantity;
   }, 0);
 
-  const handleRemove = (id: number, name: string) => {
+  // FIX: Change id parameter type to string | number
+  const handleRemove = (id: string | number, name: string) => {
     dispatch(removeFromCart(id));
     toast.custom(
       (t) => (
@@ -75,10 +77,6 @@ export default function CartClientPage() {
             Your cart is empty.
           </p>
         ) : (
-          // Responsive flex container:
-          // Mobile: column (default)
-          // Tablet md: row with stacked widths
-          // Large lg: row with original widths
           <div className="flex flex-col md:flex-row gap-6">
             <div className="md:w-2/3 lg:w-2/3 bg-white p-4 sm:p-6 rounded-lg shadow-md space-y-6">
               {cartItems.map((item: CartItem) => {
@@ -94,7 +92,7 @@ export default function CartClientPage() {
                   >
                     <button
                       className="text-gray-400 hover:text-gray-600 text-xl font-bold self-start sm:self-auto"
-                      onClick={() => handleRemove(item.id, item.name)}
+                      onClick={() => handleRemove(item.id, item.name)} // This now correctly passes string | number
                       aria-label={`Remove ${item.name} from cart`}
                     >
                       &times;
@@ -131,7 +129,7 @@ export default function CartClientPage() {
                           className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-l"
                           onClick={() =>
                             dispatch(
-                              updateQuantity({ id: item.id, change: -1 })
+                              updateQuantity({ id: item.id, change: -1 }) // This is also now correct
                             )
                           }
                         >
@@ -142,8 +140,11 @@ export default function CartClientPage() {
                         </span>
                         <button
                           className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-r"
-                          onClick={() =>
-                            dispatch(updateQuantity({ id: item.id, change: 1 }))
+                          onClick={
+                            () =>
+                              dispatch(
+                                updateQuantity({ id: item.id, change: 1 })
+                              ) // This is also now correct
                           }
                         >
                           +
@@ -241,9 +242,8 @@ export default function CartClientPage() {
             <span className="font-semibold">
               Next Working Day delivery (Order before 10pm)
             </span>
-            . Next Day Delivery is not available outside of N Ireland.
+            . Next Day Delivery is not available outside of N Ireland.{" "}
             <span className="font-semibold">
-              {" "}
               Delivery is Monday to Friday, excluding public holidays.
             </span>
           </p>
