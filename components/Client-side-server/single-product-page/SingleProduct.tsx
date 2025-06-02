@@ -1,87 +1,99 @@
+// components/Client-side-server/single-product-page/SingleProduct.tsx
 "use client";
 
 import { useState } from "react";
-// Ensure you import from your unified types/product.ts file
-import { Product, Variant } from "@/types/Products";
+import { Product, Variant } from "@/types/Products"; // Ensure path is correct
 
 interface Props {
   product: Product;
 }
 
-export default function ProductDetailClient({ product }: Props) {
-  // Initialize selectedVariant state. It can be a Variant or the main Product.
-  // We prioritize a variant that's marked as 'is_selected', otherwise, default to the main product.
+export default function SingleProduct({ product }: Props) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | Product>(
-    product.variant_list?.find((v) => v.is_selected) || product
+    product.has_variant && product.variant_list?.length
+      ? product.variant_list.find((v) => v.is_selected) ||
+          product.variant_list[0]
+      : product
   );
 
-  // Determine the image to display based on the selected variant or the main product.
-  // Provide a fallback to an empty string to ensure the src attribute is always a string.
   const productImage =
-    (selectedVariant as Variant).images?.[0] || // Try selected variant's first image
-    product.images?.[0] || // Fallback to product's first image
-    ""; // Fallback to an empty string
+    (selectedVariant as Variant)?.images?.[0] || product.images?.[0] || "";
+
+  // Helper function to check if selectedVariant is actually a Variant type
+  const isSelectedVariant = (item: Product | Variant): item is Variant => {
+    // A Variant has 'specification' property, a Product generally doesn't directly
+    return (item as Variant).specification !== undefined;
+  };
 
   return (
     <div className="max-w-7xl mx-auto h-screen px-4 pt-22 py-4 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden">
       {/* Left: Image & Thumbnails */}
       <div className="space-y-4 flex flex-col items-center overflow-y-auto max-h-full">
-        {/* Only render the main image if a valid URL is available */}
         {productImage && (
           <img
             src={`https://nxadmin.consociate.co.in${productImage}`}
-            alt={product.name}
+            alt={product.name} // FIX 1: Always use product.name for the main title's alt text
             className="w-full max-h-[60vh] object-contain rounded-xl border shadow"
           />
         )}
 
-        {/* Only render variant thumbnails if variant_list exists and has items */}
-        {product.variant_list && product.variant_list.length > 0 && (
-          <div className="flex gap-3 justify-center overflow-x-auto">
-            {product.variant_list.map((variant) => (
-              <img
-                key={variant.id} // Use variant.id as the key
-                src={`https://nxadmin.consociate.co.in${
-                  variant.images?.[0] || "" // Safely access image and provide fallback
-                }`}
-                alt={variant.specification?.colour || "Variant Image"} // Safely access specification and provide fallback
-                className={`w-16 h-16 rounded border object-cover cursor-pointer ${
-                  selectedVariant.id === variant.id
-                    ? "ring-2 ring-blue-500"
-                    : ""
-                }`}
-                onClick={() => setSelectedVariant(variant)} // Update selected variant on click
-              />
-            ))}
-          </div>
-        )}
+        {product.has_variant &&
+          product.variant_list &&
+          product.variant_list.length > 0 && (
+            <div className="flex gap-3 justify-center overflow-x-auto">
+              {product.variant_list.map((variant) => (
+                <img
+                  key={variant.id}
+                  src={`https://nxadmin.consociate.co.in${
+                    variant.images?.[0] || ""
+                  }`}
+                  alt={variant.specification?.colour || "Variant Image"}
+                  className={`w-16 h-16 rounded border object-cover cursor-pointer ${
+                    selectedVariant.id === variant.id
+                      ? "ring-2 ring-blue-500"
+                      : ""
+                  }`}
+                  onClick={() => setSelectedVariant(variant)}
+                />
+              ))}
+            </div>
+          )}
       </div>
 
       {/* Right: Product Info */}
       <div className="overflow-y-auto max-h-full pr-2 space-y-3 text-sm">
-        <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>{" "}
+        {/* FIX 1: Use product.name */}
+        {/* FIX 2: Use type narrowing for 'specification' */}
+        {isSelectedVariant(selectedVariant) &&
+          selectedVariant.specification?.colour && (
+            <p className="text-gray-600">
+              Color: {selectedVariant.specification.colour}
+            </p>
+          )}
         {product.category_name && (
           <p className="text-gray-600">Category: {product.category_name}</p>
         )}
-
         <div className="text-lg font-semibold text-green-600">
-          {/* Display selling price of the selected variant */}₹
-          {selectedVariant.selling_price}
-          {/* Display base price if it exists and is different from selling price */}
-          {(selectedVariant as Product).base_price &&
-            (selectedVariant as Product).base_price !==
-              selectedVariant.selling_price && (
+          ₹{selectedVariant.selling_price}
+          {/* FIX 3: Corrected base price display logic */}
+          {/* Show base price if the selected item is the main product and it has a different base price */}
+          {selectedVariant.id === product.id &&
+            product.base_price &&
+            product.base_price !== product.selling_price && (
               <span className="line-through ml-2 text-gray-400 text-xs">
-                ₹{(selectedVariant as Product).base_price}
+                ₹{product.base_price}
               </span>
             )}
         </div>
-
-        {product.description && (
-          <p className="text-gray-700 text-xs">{product.description}</p>
+        {/* Use selected variant's description if it's a variant, otherwise product's description */}
+        {selectedVariant.description && (
+          <p
+            className="text-gray-700 text-xs"
+            dangerouslySetInnerHTML={{ __html: selectedVariant.description }}
+          ></p>
         )}
-
-        {/* Specifications */}
+        {/* Specifications - Use product.product_details for general product specs */}
         <div>
           <h3 className="font-semibold mb-1">Specifications:</h3>
           <ul className="list-disc pl-5 space-y-0.5 text-gray-700 text-xs">
@@ -101,38 +113,42 @@ export default function ProductDetailClient({ product }: Props) {
                   `(${product.product_details.stackable_pieces_number} pcs)`}
               </li>
             )}
-            {product.dimensions && (
+            {selectedVariant.dimensions && (
               <li>
-                Dimensions: {product.dimensions.length}L x{" "}
-                {product.dimensions.width}W x {product.dimensions.height}H
+                Dimensions: {selectedVariant.dimensions.length}L x{" "}
+                {selectedVariant.dimensions.width}W x{" "}
+                {selectedVariant.dimensions.height}H
               </li>
             )}
           </ul>
         </div>
-
         {/* Color Variants */}
-        {product.variant_list && product.variant_list.length > 0 && (
-          <div>
-            <h3 className="font-semibold mb-1">Available Colors:</h3>
-            <div className="flex gap-2">
-              {product.variant_list.map((variant) => (
-                <div
-                  key={variant.id}
-                  title={variant.specification?.colour || "Unknown Color"}
-                  className="w-7 h-7 rounded-full border cursor-pointer"
-                  style={{
-                    backgroundColor: variant.colour_code || "transparent",
-                  }} // Provide a default for background-color
-                  onClick={() => setSelectedVariant(variant)}
-                ></div>
-              ))}
+        {product.has_variant &&
+          product.variant_list &&
+          product.variant_list.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-1">Available Colors:</h3>
+              <div className="flex gap-2">
+                {product.variant_list.map((variant) => (
+                  <div
+                    key={variant.id}
+                    title={variant.specification?.colour || "Unknown Color"}
+                    className={`w-7 h-7 rounded-full border cursor-pointer ${
+                      selectedVariant.id === variant.id
+                        ? "ring-2 ring-blue-500"
+                        : ""
+                    }`}
+                    style={{
+                      backgroundColor: variant.colour_code || "transparent",
+                    }}
+                    onClick={() => setSelectedVariant(variant)}
+                  ></div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
+          )}
+        {/* Action Buttons (Quantity, Buy Now, Add to Cart) */}
         <div className="flex items-center gap-3 pt-2">
-          {/* Quantity Selector */}
           <div className="flex items-center border rounded-lg px-2 py-1 text-sm">
             <button className="px-2 text-lg font-bold text-gray-700 hover:text-red-600">
               −
@@ -142,7 +158,6 @@ export default function ProductDetailClient({ product }: Props) {
               +
             </button>
           </div>
-
           <button className="w-32 bg-lime-500 hover:bg-lime-600 text-white font-semibold py-2 rounded-lg shadow text-sm">
             Buy Now
           </button>
@@ -150,7 +165,6 @@ export default function ProductDetailClient({ product }: Props) {
             Add to Cart
           </button>
         </div>
-
         {/* Care, Warranty & Delivery Info */}
         <div className="pt-6 space-y-4 border-t mt-4">
           {product.care_instruction && (
