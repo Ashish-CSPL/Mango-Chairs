@@ -22,7 +22,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const dispatch = useDispatch();
 
-  const [email, setEmail] = useState("");
+  // UPDATED: State variable name changed from 'email' to 'username'
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +32,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
     setLoading(true);
     dispatch(setAuthLoading(true));
     try {
-      const response = await loginCustomer({ email, password });
+      // UPDATED: Passing 'username' instead of 'email' to loginCustomer
+      const response = await loginCustomer({ username, password });
       // Assuming your login API returns user data and a token
       dispatch(setAuthSuccess({ user: response.user, token: response.token }));
       toast.success("Login successful!");
@@ -52,18 +54,19 @@ const LoginForm: React.FC<LoginFormProps> = ({
       <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
+          {/* UPDATED: label htmlFor and input id to reflect 'username' */}
           <label
-            htmlFor="loginEmail"
+            htmlFor="loginUsername"
             className="block text-sm font-medium text-gray-700"
           >
-            Email
+            Email/Username
           </label>
           <input
-            type="email"
-            id="loginEmail"
+            type="text" // Can be 'text' now, as it's a username field, though email format is common.
+            id="loginUsername"
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username} // Bind to the 'username' state
+            onChange={(e) => setUsername(e.target.value)} // Update 'username' state
             required
             disabled={loading}
           />

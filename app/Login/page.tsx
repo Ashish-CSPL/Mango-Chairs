@@ -1,4 +1,3 @@
-// app/login/page.tsx
 "use client";
 
 import React, { useState, ChangeEvent } from "react";
@@ -11,54 +10,47 @@ import {
   loginCustomer,
 } from "@/app/API_Calls/auth";
 
+import { RegistrationData } from "@/types/Auth";
+
 const LoginPage: React.FC = () => {
   const router = useRouter();
-  const [isLoginView, setIsLoginView] = useState(true); // Toggles between Login and Register tabs
+  const [isLoginView, setIsLoginView] = useState(true);
 
   // --- Login Form State ---
-  const [loginEmail, setLoginEmail] = useState("");
+  // FIX: Renamed loginEmail to loginUsername
+  const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false); // Loading state for login button
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoginError(null); // Clear previous errors
-    setIsLoggingIn(true); // Show loading indicator
+    setLoginError(null);
+    setIsLoggingIn(true);
 
     try {
-      // Call the loginCustomer API function
+      // FIX: Changed 'email' to 'username' when calling loginCustomer
       const data = await loginCustomer({
-        email: loginEmail,
+        username: loginUsername, // Pass the state variable that holds the email as 'username'
         password: loginPassword,
       });
-      console.log("Login successful response data:", data); // Debugging log to see the exact response
+      console.log("Login successful response data:", data);
 
-      // --- Store User Data in localStorage ---
       if (data.token) {
-        localStorage.setItem("userToken", data.token); // Store the authentication token
-
-        // --- CORRECTED LINE BELOW ---
-        // Store the entire 'data' object as it contains user details directly (first_name, profile_picture, etc.)
+        localStorage.setItem("userToken", data.token);
         localStorage.setItem("userData", JSON.stringify(data));
-        // --- END CORRECTED LINE ---
-
-        alert("Login successful!"); // User feedback
-
-        // Redirect to homepage or dashboard after successful login
+        alert("Login successful!");
         router.push("/");
       } else {
-        // If login was successful but no token was received (unexpected)
         throw new Error("Login successful but no token received.");
       }
     } catch (error: any) {
       console.error("Login error:", error.message);
-      // Display specific error message from backend or a generic one
       setLoginError(
         error.message || "Login failed. Please check your credentials."
       );
     } finally {
-      setIsLoggingIn(false); // Hide loading indicator
+      setIsLoggingIn(false);
     }
   };
 
@@ -66,15 +58,15 @@ const LoginPage: React.FC = () => {
   const [registrationStage, setRegistrationStage] = useState<
     "emailVerification" | "otpVerification" | "registrationForm"
   >("emailVerification");
-  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerEmail, setRegisterEmail] = useState(""); // This is fine for the registration flow's email field
   const [otp, setOtp] = useState("");
 
   // States for all registration form fields
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [countryCode, setCountryCode] = useState("+91"); // Default country code
-  const [profilePicture, setProfilePicture] = useState<File | null>(null); // For file input
+  const [countryCode, setCountryCode] = useState("+91");
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [address, setAddress] = useState("");
   const [locality, setLocality] = useState("");
   const [city, setCity] = useState("");
@@ -84,7 +76,7 @@ const LoginPage: React.FC = () => {
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [registerError, setRegisterError] = useState<string | null>(null); // Error for registration
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
@@ -97,7 +89,7 @@ const LoginPage: React.FC = () => {
       const data = await sendOtpForVerification(registerEmail);
       console.log("OTP sent successfully:", data);
       alert("OTP sent to your email!");
-      setRegistrationStage("otpVerification"); // Move to OTP verification stage
+      setRegistrationStage("otpVerification");
     } catch (error: any) {
       console.error("Error sending OTP:", error.message);
       setRegisterError(
@@ -116,7 +108,7 @@ const LoginPage: React.FC = () => {
       const data = await verifyOtp(registerEmail, otp);
       console.log("OTP verified successfully:", data);
       alert("Email verified successfully!");
-      setRegistrationStage("registrationForm"); // Move to full registration form stage
+      setRegistrationStage("registrationForm");
     } catch (error: any) {
       console.error("Error verifying OTP:", error.message);
       setRegisterError(
@@ -129,7 +121,7 @@ const LoginPage: React.FC = () => {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setProfilePicture(e.target.files[0]); // Set the selected file
+      setProfilePicture(e.target.files[0]);
     } else {
       setProfilePicture(null);
     }
@@ -137,24 +129,23 @@ const LoginPage: React.FC = () => {
 
   const handleRegistrationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setRegisterError(null); // Clear previous errors
+    setRegisterError(null);
 
     if (registerPassword !== confirmPassword) {
       setRegisterError("Password and Confirm Password do not match.");
-      return; // Stop if passwords don't match
+      return;
     }
 
-    setIsRegistering(true); // Show loading indicator for registration
+    setIsRegistering(true);
     try {
-      // Prepare the registration data object
-      const registrationData = {
-        email: registerEmail,
+      const registrationData: RegistrationData = {
+        email: registerEmail, // Keep as 'email' for registration if your backend API expects it for registration
         otp: otp,
         first_name: firstName,
         last_name: lastName,
         phone_number: phoneNumber,
         country_code_for_phone_number: countryCode,
-        profile_picture: profilePicture || undefined, // Pass the File object or undefined if not selected
+        profile_picture: profilePicture || undefined,
         address: address,
         locality: locality,
         city: city,
@@ -164,17 +155,15 @@ const LoginPage: React.FC = () => {
         password: registerPassword,
         confirm_password: confirmPassword,
       };
-      // Call the registerCustomer API function
       const data = await registerCustomer(registrationData);
       console.log("Registration successful:", data);
       alert("Registration successful! You can now log in.");
 
-      // After successful registration:
-      setIsLoginView(true); // Switch to login view
-      setLoginEmail(registerEmail); // Pre-fill email for easy login
-      setRegistrationStage("emailVerification"); // Reset registration flow for next time
+      setIsLoginView(true);
+      // FIX: Pre-fill loginUsername with the registered email
+      setLoginUsername(registerEmail);
+      setRegistrationStage("emailVerification");
 
-      // Optionally clear all registration form fields
       setFirstName("");
       setLastName("");
       setPhoneNumber("");
@@ -196,7 +185,7 @@ const LoginPage: React.FC = () => {
         error.message || "Registration failed. Please try again."
       );
     } finally {
-      setIsRegistering(false); // Hide loading indicator
+      setIsRegistering(false);
     }
   };
 
@@ -207,7 +196,6 @@ const LoginPage: React.FC = () => {
           {isLoginView ? "Welcome Back!" : "Join Us!"}
         </h1>
 
-        {/* Toggle buttons for Login/Register tab */}
         <div className="flex justify-center mb-6 border-b border-gray-200">
           <button
             onClick={() => setIsLoginView(true)}
@@ -222,8 +210,8 @@ const LoginPage: React.FC = () => {
           <button
             onClick={() => {
               setIsLoginView(false);
-              setRegistrationStage("emailVerification"); // Reset registration stage when switching to Register
-              setRegisterError(null); // Clear any previous errors
+              setRegistrationStage("emailVerification");
+              setRegisterError(null);
             }}
             className={`py-3 px-6 text-lg font-semibold transition-colors duration-200 ${
               !isLoginView
@@ -235,7 +223,6 @@ const LoginPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Conditional rendering of Login vs. Register form */}
         {isLoginView ? (
           // Login Form
           <form onSubmit={handleLoginSubmit} className="space-y-6">
@@ -244,18 +231,19 @@ const LoginPage: React.FC = () => {
             </h2>
             {loginError && <p className="text-red-500 text-sm">{loginError}</p>}
             <div>
+              {/* FIX: htmlFor and id for login email input */}
               <label
-                htmlFor="login-email"
+                htmlFor="login-username" // Changed from login-email
                 className="block text-sm font-medium text-gray-700"
               >
-                Email
+                Email/Username
               </label>
               <input
-                type="email"
-                id="login-email"
-                name="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
+                type="text" // Can be type="text" now as it's 'username'
+                id="login-username" // Changed from login-email
+                name="username" // Changed name to 'username'
+                value={loginUsername} // Bind to loginUsername state
+                onChange={(e) => setLoginUsername(e.target.value)} // Update loginUsername state
                 required
                 className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-base text-black"
                 placeholder="you@example.com"
@@ -294,7 +282,7 @@ const LoginPage: React.FC = () => {
             </button>
           </form>
         ) : (
-          // Registration Flow (multi-stage)
+          // Registration Flow (multi-stage) - No changes here, assuming registration still uses 'email' field
           <div className="space-y-6">
             <h2 className="text-xl font-semibold mb-4 text-gray-800">
               Create Account
@@ -355,7 +343,7 @@ const LoginPage: React.FC = () => {
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
                     required
-                    maxLength={6} // Assuming 6-digit OTP
+                    maxLength={6}
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-base text-black"
                     placeholder="******"
                   />
@@ -615,7 +603,7 @@ const LoginPage: React.FC = () => {
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     required
-                    minLength={8} // Example: minimum password length
+                    minLength={8}
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-base text-black"
                     placeholder="Minimum 8 characters"
                   />
@@ -662,7 +650,6 @@ const LoginPage: React.FC = () => {
           </div>
         )}
 
-        {/* Link to switch between Login/Register if not already in that view */}
         <p className="mt-8 text-center text-gray-600">
           {isLoginView ? (
             <>
@@ -670,7 +657,7 @@ const LoginPage: React.FC = () => {
               <button
                 onClick={() => {
                   setIsLoginView(false);
-                  setRegistrationStage("emailVerification"); // Reset stage when switching to Register
+                  setRegistrationStage("emailVerification");
                   setRegisterError(null);
                 }}
                 className="text-blue-500 hover:underline font-medium"

@@ -2,6 +2,11 @@
 
 // Existing Product interface (assuming this is correct based on your API response)
 export interface Product {
+  delivery_or_installation_tips: any;
+  warranty: string | TrustedHTML;
+  care_instruction: any;
+  dimensions: any;
+  product_details: any;
   id: number;
   slug: string;
   variant_id: number;
