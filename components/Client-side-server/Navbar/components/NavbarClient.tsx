@@ -13,12 +13,12 @@ import {
   LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-// REMOVED: import { NEXT_PUBLIC_API_BASE_URL } from "@/api/fetchdata"; // THIS LINE IS INCORRECT AND REMOVED
 
 // --- REDUX IMPORTS ---
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux"; // Import useDispatch
 import { RootState } from "@/app/Redux/Store/store"; // Adjust path if necessary
 import { CartItem } from "@/app/Redux/Store/cartSlice"; // Import CartItem for stronger typing
+import { logout, setAuthSuccess } from "@/app/Redux/Slices/authSlice"; // Import logout and setAuthSuccess actions
 
 interface NavItem {
   pk: number;
@@ -37,17 +37,16 @@ interface NavbarClientProps {
   categories: Category[];
 }
 
-// Define a type for the stored user data structure
+// Define a type for the user data structure within Redux
 interface UserData {
-  first_name?: string; // Made optional as it might be missing or null
+  first_name?: string;
   last_name?: string;
-  profile_picture?: string; // URL string for the profile picture (could be relative or absolute)
-  email: string; // Including email just in case needed for display or debugging
+  profile_picture?: string;
+  email?: string; // Made optional as it might not always be directly available or needed for display
   // Add other fields you might store, e.g., id, phone_number
 }
 
-// --- REDUX SELECTOR FUNCTION ---
-// This function takes the RootState and calculates the total quantity of items in the cart
+// --- REDUX SELECTOR FUNCTION (for cart count, remains same) ---
 const selectCartCount = (state: RootState): number => {
   return state.cart.cartItems.reduce(
     (total: number, item: CartItem) => total + item.quantity,
@@ -60,38 +59,46 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   categories = [],
 }) => {
   const router = useRouter();
+  const dispatch = useDispatch();
 
-  // --- Authentication State Management ---
-  const [userToken, setUserToken] = useState<string | null>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
+  // --- Authentication State Management via Redux useSelector ---
+  // This is the primary source of truth for user authentication status
+  const { user, token, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth
+  );
 
-  // Effect to load user data from localStorage on component mount
+  // Effect to rehydrate Redux state from localStorage on initial component mount.
+  // This is crucial for maintaining login status across page refreshes.
   useEffect(() => {
-    // Ensure this runs only in the browser environment
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("userToken");
+    // Only run this rehydration logic if we are not already authenticated in Redux
+    // and if we are in a browser environment.
+    if (typeof window !== "undefined" && !isAuthenticated) {
+      const storedToken = localStorage.getItem("userToken");
       const storedUserData = localStorage.getItem("userData");
-      if (token && storedUserData) {
-        setUserToken(token);
+
+      if (storedToken && storedUserData) {
         try {
-          // Attempt to parse the stored user data JSON
-          const parsedUserData = JSON.parse(storedUserData);
-          setUserData(parsedUserData);
+          const parsedUserData: UserData = JSON.parse(storedUserData);
+          // Dispatch setAuthSuccess to populate Redux store with rehydrated data
+          dispatch(
+            setAuthSuccess({ user: parsedUserData, token: storedToken })
+          );
           console.log(
-            "Navbar: Loaded userData from localStorage:",
+            "Navbar: Rehydrated user data from localStorage into Redux:",
             parsedUserData
-          ); // Debugging log
+          );
         } catch (e) {
-          console.error("Failed to parse user data from localStorage", e);
-          // If parsing fails, clear invalid data to prevent persistent errors
+          console.error(
+            "Navbar: Failed to parse user data from localStorage",
+            e
+          );
+          // Clear invalid data to prevent persistent errors
           localStorage.removeItem("userToken");
           localStorage.removeItem("userData");
-          setUserToken(null);
-          setUserData(null);
         }
       }
     }
-  }, []); // Empty dependency array means this effect runs once after the initial render
+  }, [isAuthenticated, dispatch]); // Depend on isAuthenticated and dispatch
 
   // Handles user logout
   const handleLogout = () => {
@@ -99,15 +106,12 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
       localStorage.removeItem("userToken"); // Remove token from storage
       localStorage.removeItem("userData"); // Remove user data from storage
     }
-    setUserToken(null); // Clear token state
-    setUserData(null); // Clear user data state
-    router.push("/login"); // Redirect to the login page
+    dispatch(logout()); // Dispatch the logout action to clear Redux state
+    router.push("/login"); // Redirect to the login page (client-side navigation)
   };
 
   // --- REDUX CART STATE INTEGRATION ---
-  // Use useSelector to get the actual cart count from the Redux store
   const cartCount = useSelector(selectCartCount);
-  // Use useSelector to get the actual cart items array from the Redux store
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
 
   // --- Existing Navbar States & Handlers ---
@@ -118,7 +122,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   const [showMiniCart, setShowMiniCart] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Effect to handle scroll-based styling
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 0);
@@ -127,16 +130,14 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Closes mobile menu and dropdowns
   const handleCloseMenu = () => {
     setIsMobileMenuOpen(false);
     setShowMobileDropdown(false);
   };
 
-  // Determine icon and text color based on scroll state and login status
-  // This logic ensures icons are visible against varying background colors
+  // Determine icon and text color based on scroll state and Redux isAuthenticated status
   const iconColor =
-    !isScrolled && !isMobileMenuOpen && !userToken ? "white" : "black";
+    !isScrolled && !isMobileMenuOpen && !isAuthenticated ? "white" : "black";
   const dynamicTextColor =
     isScrolled || isMobileMenuOpen ? "text-black" : "text-white";
 
@@ -150,7 +151,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
           : `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api/v1", "")}${
               cat.image
             }`;
-        // Corrected: Use process.env.NEXT_PUBLIC_API_BASE_URL directly here
         return (
           <Link
             key={cat.id}
@@ -205,7 +205,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 </div>
                 <p className="text-sm font-semibold">
                   ₹{(item.price * item.quantity).toFixed(2)}{" "}
-                  {/* Ensure price is formatted */}
                 </p>
               </li>
             )
@@ -227,21 +226,13 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   // Helper function to get the full profile image URL
   const getProfileImageUrl = (path?: string) => {
     if (!path) {
-      console.log("Navbar: No profile picture path provided."); // Debugging log
       return "/images/default-profile.png"; // Fallback if no path is provided
     }
 
-    // If the path is already an absolute URL, use it directly
     if (path.startsWith("http://") || path.startsWith("https://")) {
-      console.log("Navbar: Absolute profile image URL:", path); // Debugging log
-      return path;
+      return path; // If the path is already an absolute URL, use it directly
     }
 
-    // Construct the full URL for relative paths:
-    // Remove '/api/v1' from the base URL to get the domain root, then append the path.
-    // Example: https://nxadmin.consociate.co.in/api/v1 becomes https://nxadmin.consociate.co.in
-    // Then append /media/profiles/image.jpg
-    // Corrected: Use process.env.NEXT_PUBLIC_API_BASE_URL directly here
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
     if (!baseUrl) {
@@ -251,11 +242,12 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
       return "/images/default-profile.png"; // Fallback if URL is missing
     }
 
+    // Construct the full URL for relative paths:
+    // Remove '/api/v1' from the base URL to get the domain root, then append the path.
     const baseUrlParts = baseUrl.split("/api/v1");
     const imageUrl = `${baseUrlParts[0]}${
       path.startsWith("/") ? path : `/${path}`
     }`; // Ensure leading slash for path
-    console.log("Navbar: Constructed relative profile image URL:", imageUrl); // Debugging log
     return imageUrl;
   };
 
@@ -369,13 +361,13 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               </div>
 
               {/* Conditional User Display (Logged In vs. Logged Out) */}
-              {userToken && userData ? (
-                // If user is logged in
+              {isAuthenticated && user ? (
+                // If user is logged in (using Redux state directly)
                 <div className="relative flex items-center gap-2 group">
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white cursor-pointer">
                     <Image
-                      src={getProfileImageUrl(userData.profile_picture)}
-                      alt={userData.first_name || "User"}
+                      src={getProfileImageUrl(user.profile_picture)} // Use user from Redux state
+                      alt={user.first_name || "User"} // Use user from Redux state
                       fill
                       className="object-cover"
                       unoptimized // Use unoptimized for external images to avoid Next.js Image component optimization issues
@@ -383,8 +375,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   </div>
                   {/* DISPLAY USER NAME HERE */}
                   <span className={`text-sm font-semibold ${dynamicTextColor}`}>
-                    Hi, {userData.first_name || "User"}{" "}
-                    {/* Fallback to 'User' if first_name is missing */}
+                    Hi, {user.first_name || "User"}{" "}
                   </span>
                   {/* Logout Button */}
                   <button
@@ -396,7 +387,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   </button>
                 </div>
               ) : (
-                // If user is not logged in
+                // If user is not logged in (Redux isAuthenticated is false)
                 <div className="relative cursor-pointer">
                   <Link href="/login" className="flex items-center gap-1">
                     <CircleUserRound
@@ -421,7 +412,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               >
                 <Link href="/cart">
                   <ShoppingBag size={24} color={iconColor} />
-                  {/* Now cartCount is correctly typed as number */}
                   {cartCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {cartCount}
@@ -447,12 +437,12 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               </div>
 
               {/* Conditional User Display for Mobile/Tablet */}
-              {userToken && userData ? (
+              {isAuthenticated && user ? (
                 <div className="relative flex items-center gap-2 group text-black">
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-black cursor-pointer">
                     <Image
-                      src={getProfileImageUrl(userData.profile_picture)}
-                      alt={userData.first_name || "User"}
+                      src={getProfileImageUrl(user.profile_picture)}
+                      alt={user.first_name || "User"}
                       fill
                       className="object-cover"
                       unoptimized
@@ -460,8 +450,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   </div>
                   {/* DISPLAY USER NAME HERE */}
                   <span className={`text-sm font-semibold`}>
-                    Hi, {userData.first_name || "User"}{" "}
-                    {/* Fallback to 'User' */}
+                    Hi, {user.first_name || "User"}{" "}
                   </span>
                   <button
                     onClick={handleLogout}
@@ -574,7 +563,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                             "/api/v1",
                             ""
                           )}${cat.image}`;
-                      // Corrected: Use process.env.NEXT_PUBLIC_API_BASE_URL directly here
                       return (
                         <Link
                           key={cat.id}
@@ -624,12 +612,12 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               />
             </div>
             {/* Conditional User Display for Mobile Menu */}
-            {userToken && userData ? (
+            {isAuthenticated && user ? (
               <div className="relative flex items-center gap-2 group text-black">
                 <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-black cursor-pointer">
                   <Image
-                    src={getProfileImageUrl(userData.profile_picture)}
-                    alt={userData.first_name || "User"}
+                    src={getProfileImageUrl(user.profile_picture)}
+                    alt={user.first_name || "User"}
                     fill
                     className="object-cover"
                     unoptimized
@@ -637,7 +625,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 </div>
                 {/* DISPLAY USER NAME HERE */}
                 <span className={`text-sm font-semibold`}>
-                  Hi, {userData.first_name || "User"} {/* Fallback to 'User' */}
+                  Hi, {user.first_name || "User"}
                 </span>
                 <button
                   onClick={() => {

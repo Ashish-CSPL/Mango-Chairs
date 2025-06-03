@@ -18,7 +18,7 @@ export async function sendOtpForVerification(email: string): Promise<OtpResponse
   try {
     // Assuming your OTP API still expects 'email'
     const response = await fetchData<OtpResponse>(
-      "customer/send-otp/",
+      "user/verify-email/customer/send-otp/",
       "POST",
       {
         body: { email: email },
@@ -35,7 +35,7 @@ export async function verifyOtp(email: string, otp: string): Promise<OtpResponse
   try {
     // Assuming your OTP verification API still expects 'email' and 'otp'
     const response = await fetchData<OtpResponse>(
-      "customer/verify-otp/",
+      "/user/verify-email/verify-otp/",
       "POST",
       {
         body: { email: email, otp: otp },
@@ -76,7 +76,7 @@ export async function registerCustomer(registrationData: RegistrationData): Prom
 
     // fetchData will now correctly handle FormData (no manual Content-Type or JSON.stringify)
     const response = await fetchData<RegisterApiResponse>(
-      "user/customer/register/",
+      "user/customer-registration/",
       "POST",
       {
         body: bodyToSend,

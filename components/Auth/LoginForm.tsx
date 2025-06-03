@@ -22,7 +22,6 @@ const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const dispatch = useDispatch();
 
-  // UPDATED: State variable name changed from 'email' to 'username'
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,17 +31,38 @@ const LoginForm: React.FC<LoginFormProps> = ({
     setLoading(true);
     dispatch(setAuthLoading(true));
     try {
-      // UPDATED: Passing 'username' instead of 'email' to loginCustomer
+      // Assuming loginCustomer returns { user: userData, token: string }
       const response = await loginCustomer({ username, password });
-      // Assuming your login API returns user data and a token
-      dispatch(setAuthSuccess({ user: response.user, token: response.token }));
+
+      // Ensure the response contains user and token as expected
+      if (!response || !response.user || !response.token) {
+        throw new Error(
+          "Login API did not return expected user data or token."
+        );
+      }
+
+      const { user, token } = response;
+
+      // 1. Dispatch success action to update Redux state immediately
+      dispatch(setAuthSuccess({ user, token }));
+
+      // 2. Persist user data and token to localStorage for re-hydration on refresh
+      if (typeof window !== "undefined") {
+        localStorage.setItem("userToken", token);
+        localStorage.setItem("userData", JSON.stringify(user));
+        console.log("LoginForm: User data and token saved to localStorage.");
+      }
+
       toast.success("Login successful!");
-      onSuccess(); // Close modal or redirect
+      onSuccess(); // Execute callback (e.g., close modal, redirect client-side)
     } catch (error: any) {
-      toast.error(
-        error.message || "Login failed. Please check your credentials."
-      );
-      dispatch(setAuthError(error.message || "Login failed."));
+      const errorMessage =
+        error.response?.data?.message || // Axios error response
+        error.message ||
+        "Login failed. Please check your credentials.";
+      toast.error(errorMessage);
+      dispatch(setAuthError(errorMessage));
+      console.error("LoginForm Error:", error);
     } finally {
       setLoading(false);
       dispatch(setAuthLoading(false));
@@ -54,7 +74,6 @@ const LoginForm: React.FC<LoginFormProps> = ({
       <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          {/* UPDATED: label htmlFor and input id to reflect 'username' */}
           <label
             htmlFor="loginUsername"
             className="block text-sm font-medium text-gray-700"
@@ -62,11 +81,11 @@ const LoginForm: React.FC<LoginFormProps> = ({
             Email/Username
           </label>
           <input
-            type="text" // Can be 'text' now, as it's a username field, though email format is common.
+            type="text"
             id="loginUsername"
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-            value={username} // Bind to the 'username' state
-            onChange={(e) => setUsername(e.target.value)} // Update 'username' state
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             required
             disabled={loading}
           />
