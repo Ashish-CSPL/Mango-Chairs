@@ -1,100 +1,86 @@
-// app/Redux/Slices/addressSlice.ts (UPDATED)
+// app/Redux/Slices/addressSlice.ts
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-// Define the structure of a Customer Address as received from the backend
-// Ensure these types match your backend's API response structure exactly.
-// UPDATED FIELD NAMES: address, locality, is_selected, and added type, created_by, updated_by
+// Define the CustomerAddress interface with all required fields as strict strings
 export interface CustomerAddress {
-  id: number;
-  customer: number; // Foreign key to customer/user
-  type: string; // Added from your JSON
-  full_name?: string; // Made optional if not always present in GET response, but it is in POST
-  phone_number?: string; // Made optional if not always present in GET response
-  address: string; // Changed from address_line1
-  locality?: string; // Changed from address_line2, made optional as it can be null
-  city: string;
-  state: string;
-  zipcode: string;
-  country: string;
-  is_selected: boolean; // Changed from is_default
-  created_by?: string; // Added from your JSON, made optional
-  created_at: string; // ISO 8601 string date
-  updated_by?: string; // Added from your JSON, made optional
-  updated_at: string; // ISO 8601 string date
+  id: number; // Assuming an ID for existing addresses
+  customer: number; // Customer ID associated with this address
+  full_name: string; // Changed to strict string
+  phone_number: string; // Changed to strict string
+  address_line1: string; // Changed to strict string
+  address_line2: string; // Changed to strict string
+  city: string; // Changed to strict string
+  state: string; // Changed to strict string
+  postal_code: string; // Changed to strict string
+  country: string; // Changed to strict string
+  is_default_shipping: boolean; // Assuming these flags exist
+  is_default_billing: boolean; // Assuming these flags exist
 }
 
-// Define the shape of the address-related state
+// Define the state structure for the address slice
 interface AddressState {
   addresses: CustomerAddress[];
-  selectedBillingAddress: CustomerAddress | null;
-  selectedShippingAddress: CustomerAddress | null;
   loading: boolean;
   error: string | null;
+  selectedBillingAddress: CustomerAddress | null;
+  selectedShippingAddress: CustomerAddress | null;
 }
 
 // Initial state for the address slice
 const initialState: AddressState = {
-  addresses: [],
-  selectedBillingAddress: null,
-  selectedShippingAddress: null,
+  addresses: [], // Ensure this is initialized as an empty array
   loading: false,
   error: null,
+  selectedBillingAddress: null,
+  selectedShippingAddress: null,
 };
 
-// Create the address slice
 const addressSlice = createSlice({
   name: "address",
   initialState,
   reducers: {
+    // Action to set loading state
     setAddressLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
-      state.error = null;
     },
+    // Action to set fetched addresses
     setAddresses: (state, action: PayloadAction<CustomerAddress[]>) => {
       state.addresses = action.payload;
-      state.loading = false;
-      state.error = null;
+      state.error = null; // Clear any previous errors on successful fetch
     },
+    // Action to set an error message
     setAddressError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
-      state.loading = false;
+      state.loading = false; // Stop loading on error
     },
+    // Action to set the selected billing address
     setSelectedBillingAddress: (state, action: PayloadAction<CustomerAddress | null>) => {
       state.selectedBillingAddress = action.payload;
     },
+    // Action to set the selected shipping address
     setSelectedShippingAddress: (state, action: PayloadAction<CustomerAddress | null>) => {
       state.selectedShippingAddress = action.payload;
     },
+    // Action to add a new address (optimistic update or after successful API call)
     addAddress: (state, action: PayloadAction<CustomerAddress>) => {
-      // If the new address is marked as selected, ensure previous selected are unset
-      if (action.payload.is_selected) { // Changed from is_default
-        state.addresses = state.addresses.map(addr =>
-          addr.is_selected ? { ...addr, is_selected: false } : addr // Changed from is_default
-        );
-      }
       state.addresses.push(action.payload);
     },
+    // Action to update an existing address
     updateAddress: (state, action: PayloadAction<CustomerAddress>) => {
-      const index = state.addresses.findIndex(addr => addr.id === action.payload.id);
+      const index = state.addresses.findIndex(
+        (address) => address.id === action.payload.id
+      );
       if (index !== -1) {
-        // If the updated address is set as selected, unset previous selected
-        if (action.payload.is_selected) { // Changed from is_default
-          state.addresses = state.addresses.map(addr =>
-            addr.is_selected ? { ...addr, is_selected: false } : addr // Changed from is_default
-          );
-        }
         state.addresses[index] = action.payload;
       }
-      if (state.selectedBillingAddress?.id === action.payload.id) {
-        state.selectedBillingAddress = action.payload;
-      }
-      if (state.selectedShippingAddress?.id === action.payload.id) {
-        state.selectedShippingAddress = action.payload;
-      }
     },
-    deleteAddress: (state, action: PayloadAction<number>) => {
-      state.addresses = state.addresses.filter(addr => addr.id !== action.payload);
+    // Action to remove an address
+    removeAddress: (state, action: PayloadAction<number>) => {
+      state.addresses = state.addresses.filter(
+        (address) => address.id !== action.payload
+      );
+      // If the removed address was selected, clear the selection
       if (state.selectedBillingAddress?.id === action.payload) {
         state.selectedBillingAddress = null;
       }
@@ -113,7 +99,7 @@ export const {
   setSelectedShippingAddress,
   addAddress,
   updateAddress,
-  deleteAddress,
+  removeAddress,
 } = addressSlice.actions;
 
 export default addressSlice.reducer;

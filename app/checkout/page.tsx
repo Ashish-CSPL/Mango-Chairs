@@ -1,3 +1,4 @@
+// checkout/page.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -11,24 +12,23 @@ import {
   setAddressError,
   setSelectedBillingAddress,
   setSelectedShippingAddress,
+  CustomerAddress, // Ensure CustomerAddress is imported here for typing useState
 } from "@/app/Redux/Slices/addressSlice";
-import AddressList from "@/components/checkout/AddressList";
-import AddressForm from "@/components/checkout/AddressForm";
+import AddressList from "@/components/checkout/AddressList"; // <--- CRITICAL: ENSURE THIS PATH IS CORRECT FOR THE COMPONENT
+import AddressForm from "@/components/checkout/AddressForm"; // Assuming AddressForm is correctly imported
 import GuestLoginPrompt from "@/components/checkout/GuestLoginPrompt";
 import Modal from "@/components/ui/Modal";
 import Image from "next/image";
-import { removeFromCart, updateQuantity } from "@/app/Redux/Store/cartSlice"; // Import cart actions
-import toast, { Toaster } from "react-hot-toast"; // Import toast for notifications
+import { removeFromCart, updateQuantity } from "@/app/Redux/Store/cartSlice";
+import toast, { Toaster } from "react-hot-toast";
 
 const CheckoutPage: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
   const router = useRouter();
 
-  // Destructure authentication and user data from Redux state
   const { isAuthenticated, token, user } = useSelector(
     (state: RootState) => state.auth
   );
-  // Destructure address-related state from Redux
   const {
     addresses,
     loading: addressesLoading,
@@ -37,19 +37,15 @@ const CheckoutPage: React.FC = () => {
     selectedShippingAddress,
   } = useSelector((state: RootState) => state.address);
 
-  // Get cart items from Redux state
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
 
-  // State for coupon code input
   const [couponCode, setCouponCode] = useState("");
 
-  // Calculate total amount from cart items
   const totalAmount = cartItems.reduce((total: number, item: any) => {
     const priceValue = typeof item.price === "number" ? item.price : 0;
     return total + priceValue * item.quantity;
   }, 0);
 
-  // Handlers for cart item quantity and removal (similar to CartClientPage)
   const handleRemove = (id: string | number, name: string) => {
     dispatch(removeFromCart(id));
     toast.custom(
@@ -93,28 +89,24 @@ const CheckoutPage: React.FC = () => {
     dispatch(updateQuantity({ id, change }));
   };
 
-  // State for controlling address form visibility and data for editing
+  // Corrected type for addressToEdit to CustomerAddress | null
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [addressToEdit, setAddressToEdit] = useState<any | null>(null); // Use 'any' or your CustomerAddress type
+  const [addressToEdit, setAddressToEdit] = useState<CustomerAddress | null>(
+    null
+  );
 
-  // Centralized function to fetch addresses, memoized with useCallback for stability
   const fetchAddresses = useCallback(async () => {
-    const customerId = user?.id; // Get customerId from the user object
+    const customerId = user?.id;
 
-    // Proceed with fetching only if authenticated, token is present, and customerId is a valid number
     if (isAuthenticated && token && typeof customerId === "number") {
-      dispatch(setAddressLoading(true)); // Set loading state to true
+      dispatch(setAddressLoading(true));
       try {
-        // Call the API to get customer addresses
         const fetchedAddresses = await getCustomerAddresses(customerId, token);
         console.log("DEBUG: Fetched Addresses API Response:", fetchedAddresses);
 
-        // Dispatch the fetched addresses to the Redux store
-        // The getCustomerAddresses function is designed to always return an array.
         if (Array.isArray(fetchedAddresses)) {
           dispatch(setAddresses(fetchedAddresses));
         } else {
-          // This block should ideally not be reached if getCustomerAddresses is robust
           console.error(
             "fetchAddresses received non-array result from getCustomerAddresses:",
             fetchedAddresses
@@ -122,23 +114,20 @@ const CheckoutPage: React.FC = () => {
           dispatch(
             setAddressError("Received unexpected data format for addresses.")
           );
-          dispatch(setAddresses([])); // Ensure state is an empty array even on error
+          dispatch(setAddresses([]));
         }
       } catch (err: any) {
-        // Handle API errors during address fetching
         dispatch(setAddressError(err.message || "Failed to fetch addresses."));
         console.error("Error fetching addresses in checkout:", err);
-        dispatch(setAddresses([])); // Clear addresses on error
+        dispatch(setAddresses([]));
       } finally {
-        dispatch(setAddressLoading(false)); // Always set loading to false after fetch attempt
+        dispatch(setAddressLoading(false));
       }
     } else if (!isAuthenticated) {
-      // If not authenticated, clear addresses and set loading to false
       console.log("User not authenticated, not fetching addresses.");
       dispatch(setAddresses([]));
       dispatch(setAddressLoading(false));
     } else if (user && typeof customerId !== "number") {
-      // If authenticated but customerId is missing or invalid, handle gracefully
       console.warn(
         "Authenticated user found, but customer ID is missing or invalid. Cannot fetch addresses."
       );
@@ -150,67 +139,56 @@ const CheckoutPage: React.FC = () => {
       dispatch(setAddresses([]));
       dispatch(setAddressLoading(false));
     } else {
-      // Fallback for cases where authentication state is still resolving or not yet present
       dispatch(setAddressLoading(false));
     }
-  }, [isAuthenticated, token, user?.id, dispatch]); // Dependencies for useCallback: re-create if these change
+  }, [isAuthenticated, token, user?.id, dispatch]);
 
-  // Effect hook to trigger fetchAddresses when dependencies change (initial load, login/logout)
   useEffect(() => {
     fetchAddresses();
-  }, [fetchAddresses]); // Dependency on the memoized fetchAddresses function
+  }, [fetchAddresses]);
 
-  // Handlers for selecting billing and shipping addresses
-  const handleSelectBilling = (address: any) => {
+  const handleSelectBilling = (address: CustomerAddress) => {
     dispatch(setSelectedBillingAddress(address));
   };
 
-  const handleSelectShipping = (address: any) => {
+  const handleSelectShipping = (address: CustomerAddress) => {
     dispatch(setSelectedShippingAddress(address));
   };
 
-  // Handler for editing an existing address
-  const handleEditAddress = (address: any) => {
-    setAddressToEdit(address); // Set the address to pre-fill the form
-    setShowAddressForm(true); // Show the address form modal
+  const handleEditAddress = (address: CustomerAddress) => {
+    setAddressToEdit(address);
+    setShowAddressForm(true);
   };
 
-  // Handler for adding a new address
   const handleAddNewAddress = () => {
-    setAddressToEdit(null); // Clear addressToEdit to ensure a new address form
-    setShowAddressForm(true); // Show the address form modal
+    setAddressToEdit(null);
+    setShowAddressForm(true);
   };
 
-  // Callback from AddressForm when an address is saved/updated
   const handleAddressFormSave = () => {
-    setShowAddressForm(false); // Close the address form modal
-    setAddressToEdit(null); // Clear the address being edited
-    // Re-fetch all addresses to ensure the list is up-to-date with backend changes
+    setShowAddressForm(false);
+    setAddressToEdit(null);
     fetchAddresses();
   };
 
-  // Callback from AddressForm when the form is cancelled
   const handleAddressFormCancel = () => {
-    setShowAddressForm(false); // Close the address form modal
-    setAddressToEdit(null); // Clear the address being edited
+    setShowAddressForm(false);
+    setAddressToEdit(null);
   };
 
-  // Determine if the component has the necessary data to render the AddressForm
   const customerId = user?.id;
   const isReadyForForm =
     isAuthenticated && token && typeof customerId === "number";
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Toaster position="top-center" /> {/* Add Toaster here */}
+      <Toaster position="top-center" />
       <h1 className="text-3xl font-bold mb-8 text-gray-900">Checkout</h1>
       <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-2/3 space-y-6">
           {!isAuthenticated ? (
-            // Display guest login prompt if not authenticated
             <GuestLoginPrompt />
           ) : (
-            // Main checkout content for authenticated users
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">
                 Delivery & Billing Details
@@ -227,9 +205,8 @@ const CheckoutPage: React.FC = () => {
               )}
 
               {!addressesLoading && !addressError && (
-                // Render AddressList if not loading and no error
                 <AddressList
-                  addresses={Array.isArray(addresses) ? addresses : []} // Ensure addresses is an array
+                  addresses={Array.isArray(addresses) ? addresses : []}
                   selectedBillingAddress={selectedBillingAddress}
                   selectedShippingAddress={selectedShippingAddress}
                   onSelectBilling={handleSelectBilling}
@@ -239,24 +216,21 @@ const CheckoutPage: React.FC = () => {
                 />
               )}
 
-              {/* Render Modal and AddressForm only if authentication and customer ID are ready */}
               {isReadyForForm ? (
                 <Modal
                   isOpen={showAddressForm}
                   onClose={handleAddressFormCancel}
                 >
-                  {/* This is the AddressForm component */}
                   <AddressForm
-                    addressToEdit={addressToEdit}
-                    customerId={customerId} // Correctly passing customerId
-                    token={token} // Correctly passing token
+                    addressToEdit={addressToEdit} // This prop now strictly typed as CustomerAddress | null
+                    customerId={customerId}
+                    token={token}
                     onSave={handleAddressFormSave}
                     onCancel={handleAddressFormCancel}
                   />
                 </Modal>
               ) : (
-                // Display an error or loading message if form opens but data is not ready
-                showAddressForm && ( // Only show this modal if the form was attempted to be opened
+                showAddressForm && (
                   <Modal
                     isOpen={showAddressForm}
                     onClose={handleAddressFormCancel}
@@ -271,7 +245,6 @@ const CheckoutPage: React.FC = () => {
               )}
             </div>
           )}
-          {/* Payment Method Section (Hardcoded as per image) */}
           <div className="bg-orange-600 text-white p-4 rounded-t-lg font-semibold text-lg">
             Payment Method
           </div>
@@ -291,9 +264,7 @@ const CheckoutPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Section: Your Cart, Apply Coupon, Order Summary */}
         <div className="md:w-1/3 space-y-6">
-          {/* Your Cart Section */}
           <div className="bg-orange-600 text-white p-4 rounded-t-lg font-semibold text-lg">
             Your Cart
           </div>
@@ -374,14 +345,13 @@ const CheckoutPage: React.FC = () => {
               </div>
             )}
             <button
-              onClick={() => router.push("/shop")} // Example: Go back to shopping
+              onClick={() => router.push("/shop")}
               className="mt-6 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition duration-200"
             >
               Go Back To Shopping
             </button>
           </div>
 
-          {/* Apply Coupon Section */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-4 text-gray-800">
               Apply Coupon
@@ -403,7 +373,6 @@ const CheckoutPage: React.FC = () => {
             </a>
           </div>
 
-          {/* Order Summary Section */}
           <div className="bg-orange-600 text-white p-4 rounded-t-lg font-semibold text-lg">
             Order Summary
           </div>
@@ -418,7 +387,7 @@ const CheckoutPage: React.FC = () => {
             </div>
             <button
               className="mt-6 w-full bg-orange-600 hover:bg-orange-700 text-white text-lg font-semibold py-3 rounded-lg transition duration-200"
-              onClick={() => console.log("Place Order clicked")} // Placeholder for actual order placement logic
+              onClick={() => console.log("Place Order clicked")}
             >
               Place Order
             </button>
