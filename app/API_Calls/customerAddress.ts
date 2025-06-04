@@ -1,4 +1,4 @@
-// app/API_Calls/customerAddress.ts (UPDATED)
+// app/API_Calls/customerAddress.ts (Your provided version)
 
 import fetchData from "@/api/fetchdata";
 import { CustomerAddress } from "@/app/Redux/Slices/addressSlice"; // This will also be updated below

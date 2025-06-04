@@ -149,12 +149,15 @@ const AddressList: React.FC<AddressListProps> = ({
 
               <div>
                 <p className="font-semibold text-lg">{address.full_name}</p>
-                <p className="text-gray-700">{address.address_line1}</p>
-                {address.address_line2 && (
-                  <p className="text-gray-700">{address.address_line2}</p>
+                {/* Corrected address field names based on CustomerAddress interface */}
+                <p className="text-gray-700">{address.address}</p>{" "}
+                {/* Changed from address_line1 */}
+                {address.locality && ( // Changed from address_line2
+                  <p className="text-gray-700">{address.locality}</p>
                 )}
                 <p className="text-gray-700">
-                  {address.city}, {address.state} {address.postal_code}
+                  {address.city}, {address.state} {address.zipcode}{" "}
+                  {/* Changed from postal_code */}
                 </p>
                 <p className="text-gray-700">{address.country}</p>
                 <p className="text-gray-700">Phone: {address.phone_number}</p>

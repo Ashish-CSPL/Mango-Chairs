@@ -15,12 +15,13 @@ import {
   CustomerAddress, // Ensure CustomerAddress is imported here for typing useState
 } from "@/app/Redux/Slices/addressSlice";
 import AddressList from "@/components/checkout/AddressList"; // <--- CRITICAL: ENSURE THIS PATH IS CORRECT FOR THE COMPONENT
-import AddressForm from "@/components/checkout/AddressForm"; // Assuming AddressForm is correctly imported
+
 import GuestLoginPrompt from "@/components/checkout/GuestLoginPrompt";
 import Modal from "@/components/ui/Modal";
 import Image from "next/image";
 import { removeFromCart, updateQuantity } from "@/app/Redux/Store/cartSlice";
 import toast, { Toaster } from "react-hot-toast";
+import AddressForm from "@/components/checkout/AddressForm";
 
 const CheckoutPage: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -168,7 +169,7 @@ const CheckoutPage: React.FC = () => {
   const handleAddressFormSave = () => {
     setShowAddressForm(false);
     setAddressToEdit(null);
-    fetchAddresses();
+    fetchAddresses(); // Re-fetch all addresses to ensure the list is up-to-date
   };
 
   const handleAddressFormCancel = () => {
@@ -222,7 +223,7 @@ const CheckoutPage: React.FC = () => {
                   onClose={handleAddressFormCancel}
                 >
                   <AddressForm
-                    addressToEdit={addressToEdit} // This prop now strictly typed as CustomerAddress | null
+                    addressToEdit={addressToEdit}
                     customerId={customerId}
                     token={token}
                     onSave={handleAddressFormSave}

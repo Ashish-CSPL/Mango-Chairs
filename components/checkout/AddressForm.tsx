@@ -1,47 +1,46 @@
-// components/checkout/AddressForm.tsx (UPDATED)
+// components/checkout/AddressForm.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { CustomerAddress } from "@/app/Redux/Slices/addressSlice"; // Import CustomerAddress type
 import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/app/Redux/Store/store";
-import {
-  AddressPayload, // This type will now have 'address', 'locality', 'is_selected'
-  createCustomerAddress,
-  updateCustomerAddress,
-} from "@/app/API_Calls/customerAddress";
 import {
   addAddress,
   updateAddress,
   setAddressLoading,
   setAddressError,
 } from "@/app/Redux/Slices/addressSlice";
+import {
+  createCustomerAddress,
+  updateCustomerAddress,
+  AddressPayload, // Import AddressPayload from your API file
+} from "@/app/API_Calls/customerAddress";
 import toast from "react-hot-toast";
 
-// Interface extending AddressPayload to include an optional 'id' for editing
-interface FormAddress extends AddressPayload {
-  id?: number;
+// Define the interface for the form data, now aligned with CustomerAddress and AddressPayload
+interface FormData {
+  id?: number; // Optional for new addresses
+  customer: number;
+  full_name: string;
+  phone_number: string;
+  address: string; // Changed from address_line1
+  locality: string; // Changed from address_line2
+  city: string;
+  state: string;
+  zipcode: string; // Changed from postal_code
+  country: string;
+  is_default_shipping: boolean;
+  is_default_billing: boolean;
 }
 
+// Define the props for the AddressForm component
 interface AddressFormProps {
-  addressToEdit: FormAddress | null;
-  customerId: number;
-  token: string;
-  onSave: () => void;
-  onCancel: () => void;
+  addressToEdit: CustomerAddress | null; // The address object to pre-fill for editing
+  customerId: number; // The ID of the current customer
+  token: string; // The authentication token
+  onSave: () => void; // Callback after successful save/update
+  onCancel: () => void; // Callback to close the form without saving
 }
-
-// Initial state for the form fields (empty for new address)
-const initialFormData: FormAddress = {
-  full_name: "",
-  phone_number: "",
-  address: "", // Changed from address_line1
-  locality: "", // Changed from address_line2
-  city: "",
-  state: "",
-  zipcode: "",
-  country: "",
-  is_selected: false, // Changed from is_default
-};
 
 const AddressForm: React.FC<AddressFormProps> = ({
   addressToEdit,
@@ -50,115 +49,125 @@ const AddressForm: React.FC<AddressFormProps> = ({
   onSave,
   onCancel,
 }) => {
-  const dispatch: AppDispatch = useDispatch();
-  const [formData, setFormData] = useState<FormAddress>(initialFormData);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const dispatch = useDispatch();
 
-  // Effect to populate form data when `addressToEdit` prop changes
+  // Initialize form state from addressToEdit or with default empty values
+  const [formData, setFormData] = useState<FormData>({
+    id: addressToEdit?.id || undefined,
+    customer: customerId, // Customer ID is crucial for API calls
+    full_name: addressToEdit?.full_name || "",
+    phone_number: addressToEdit?.phone_number || "",
+    address: addressToEdit?.address || "", // Changed from address_line1
+    locality: addressToEdit?.locality || "", // Changed from address_line2
+    city: addressToEdit?.city || "",
+    state: addressToEdit?.state || "",
+    zipcode: addressToEdit?.zipcode || "", // Changed from postal_code
+    country: addressToEdit?.country || "",
+    is_default_shipping: addressToEdit?.is_default_shipping || false,
+    is_default_billing: addressToEdit?.is_default_billing || false,
+  });
+
+  // Effect to update form data if addressToEdit changes (e.g., when editing a different address)
   useEffect(() => {
-    if (addressToEdit) {
-      setFormData({
-        id: addressToEdit.id,
-        full_name: addressToEdit.full_name || "", // Ensure string
-        phone_number: addressToEdit.phone_number || "", // Ensure string
-        address: addressToEdit.address, // Changed from address_line1
-        locality: addressToEdit.locality || "", // Changed from address_line2
-        city: addressToEdit.city,
-        state: addressToEdit.state,
-        zipcode: addressToEdit.zipcode,
-        country: addressToEdit.country,
-        is_selected: addressToEdit.is_selected || false, // Changed from is_default
-      });
-    } else {
-      setFormData(initialFormData);
-    }
-  }, [addressToEdit]);
+    setFormData({
+      id: addressToEdit?.id || undefined,
+      customer: customerId,
+      full_name: addressToEdit?.full_name || "",
+      phone_number: addressToEdit?.phone_number || "",
+      address: addressToEdit?.address || "",
+      locality: addressToEdit?.locality || "",
+      city: addressToEdit?.city || "",
+      state: addressToEdit?.state || "",
+      zipcode: addressToEdit?.zipcode || "",
+      country: addressToEdit?.country || "",
+      is_default_shipping: addressToEdit?.is_default_shipping || false,
+      is_default_billing: addressToEdit?.is_default_billing || false,
+    });
+  }, [addressToEdit, customerId]);
 
-  // Handler for input changes
+  // Handle input changes
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
     const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+    const checked = (e.target as HTMLInputElement).checked; // For checkboxes
+
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
-  // Handler for form submission (Create or Update)
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || typeof customerId !== "number") {
-      toast.error("Authentication or Customer ID missing. Please log in.");
+
+    if (!token) {
+      toast.error("Authentication token is missing. Please log in.");
       return;
     }
 
-    setIsSubmitting(true);
-    dispatch(setAddressLoading(true));
-
+    dispatch(setAddressLoading(true)); // Set loading state
     try {
-      let responseAddress;
+      let responseAddress: CustomerAddress;
+      // Prepare the payload for the backend API, casting to AddressPayload
       const payload: AddressPayload = {
         full_name: formData.full_name,
         phone_number: formData.phone_number,
-        address: formData.address, // Changed from address_line1
-        locality: formData.locality, // Changed from address_line2
+        address: formData.address,
+        locality: formData.locality,
         city: formData.city,
         state: formData.state,
         zipcode: formData.zipcode,
         country: formData.country,
-        is_selected: formData.is_selected, // Changed from is_default
+        is_selected:
+          formData.is_default_shipping || formData.is_default_billing, // Assuming is_selected combines both defaults
       };
 
-      if (addressToEdit && formData.id) {
+      if (formData.id) {
+        // Update existing address
         responseAddress = await updateCustomerAddress(
           formData.id,
-          payload,
-          customerId,
+          payload, // Use the prepared payload
+          customerId, // Pass customerId
           token
         );
-        dispatch(updateAddress(responseAddress));
+        dispatch(updateAddress(responseAddress)); // Update Redux store
         toast.success("Address updated successfully!");
       } else {
+        // Create new address
         responseAddress = await createCustomerAddress(
-          payload,
-          customerId,
+          payload, // Use the prepared payload
+          customerId, // Pass customerId
           token
         );
-        dispatch(addAddress(responseAddress));
-        toast.success("Address created successfully!");
+        dispatch(addAddress(responseAddress)); // Add to Redux store
+        toast.success("Address added successfully!");
       }
-      onSave();
+      onSave(); // Call the onSave callback to close modal and refresh list
     } catch (error: any) {
-      const errorMessage = error.message || "Failed to save address.";
-      toast.error(errorMessage);
-      dispatch(setAddressError(errorMessage));
       console.error("Error saving address:", error);
+      dispatch(setAddressError(error.message || "Failed to save address."));
+      toast.error(error.message || "Failed to save address.");
     } finally {
-      setIsSubmitting(false);
-      dispatch(setAddressLoading(false));
+      dispatch(setAddressLoading(false)); // Clear loading state
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="p-6 bg-white rounded-lg shadow-md max-w-md mx-auto"
-    >
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+    <div className="p-6 bg-white rounded-lg shadow-xl max-w-lg mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900">
         {addressToEdit ? "Edit Address" : "Add New Address"}
       </h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="mb-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
           <label
             htmlFor="full_name"
-            className="block text-gray-700 text-sm font-bold mb-2"
+            className="block text-sm font-medium text-gray-700"
           >
-            Full Name:
+            Full Name
           </label>
           <input
             type="text"
@@ -167,16 +176,15 @@ const AddressForm: React.FC<AddressFormProps> = ({
             value={formData.full_name}
             onChange={handleChange}
             required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           />
         </div>
-
-        <div className="mb-4">
+        <div>
           <label
             htmlFor="phone_number"
-            className="block text-gray-700 text-sm font-bold mb-2"
+            className="block text-sm font-medium text-gray-700"
           >
-            Phone Number:
+            Phone Number
           </label>
           <input
             type="text"
@@ -185,158 +193,169 @@ const AddressForm: React.FC<AddressFormProps> = ({
             value={formData.phone_number}
             onChange={handleChange}
             required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           />
         </div>
-      </div>
-
-      <div className="mb-4">
-        <label
-          htmlFor="address"
-          className="block text-gray-700 text-sm font-bold mb-2"
-        >
-          Address Line 1: (Street, House No.)
-        </label>
-        <input
-          type="text"
-          id="address" // Changed from address_line1
-          name="address" // Changed from address_line1
-          value={formData.address} // Changed from address_line1
-          onChange={handleChange}
-          required
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-        />
-      </div>
-
-      <div className="mb-4">
-        <label
-          htmlFor="locality"
-          className="block text-gray-700 text-sm font-bold mb-2"
-        >
-          Address Line 2: (Locality, Apt/Suite, Optional)
-        </label>
-        <input
-          type="text"
-          id="locality" // Changed from address_line2
-          name="locality" // Changed from address_line2
-          value={formData.locality} // Changed from address_line2
-          onChange={handleChange}
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="mb-4">
+        <div>
           <label
-            htmlFor="city"
-            className="block text-gray-700 text-sm font-bold mb-2"
+            htmlFor="address"
+            className="block text-sm font-medium text-gray-700"
           >
-            City:
+            Address Line 1
           </label>
           <input
             type="text"
-            id="city"
-            name="city"
-            value={formData.city}
+            id="address"
+            name="address"
+            value={formData.address}
             onChange={handleChange}
             required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           />
         </div>
-
-        <div className="mb-4">
+        <div>
           <label
-            htmlFor="state"
-            className="block text-gray-700 text-sm font-bold mb-2"
+            htmlFor="locality"
+            className="block text-sm font-medium text-gray-700"
           >
-            State:
+            Address Line 2 (Optional)
           </label>
           <input
             type="text"
-            id="state"
-            name="state"
-            value={formData.state}
+            id="locality"
+            name="locality"
+            value={formData.locality}
             onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           />
         </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="city"
+              className="block text-sm font-medium text-gray-700"
+            >
+              City
+            </label>
+            <input
+              type="text"
+              id="city"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="state"
+              className="block text-sm font-medium text-gray-700"
+            >
+              State
+            </label>
+            <input
+              type="text"
+              id="state"
+              name="state"
+              value={formData.state}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="zipcode"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Postal Code
+            </label>
+            <input
+              type="text"
+              id="zipcode"
+              name="zipcode"
+              value={formData.zipcode}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="country"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Country
+            </label>
+            <input
+              type="text"
+              id="country"
+              name="country"
+              value={formData.country}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
+        </div>
 
-        <div className="mb-4">
-          <label
-            htmlFor="zipcode"
-            className="block text-gray-700 text-sm font-bold mb-2"
-          >
-            Zip Code:
-          </label>
+        {/* Conditional rendering for "Set as default shipping address" */}
+        {!addressToEdit && ( // Only show if adding a NEW address
+          <div className="flex items-center">
+            <input
+              id="is_default_shipping"
+              name="is_default_shipping"
+              type="checkbox"
+              checked={formData.is_default_shipping}
+              onChange={handleChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label
+              htmlFor="is_default_shipping"
+              className="ml-2 block text-sm text-gray-900"
+            >
+              Set as default shipping address
+            </label>
+          </div>
+        )}
+
+        <div className="flex items-center">
           <input
-            type="text"
-            id="zipcode"
-            name="zipcode"
-            value={formData.zipcode}
+            id="is_default_billing"
+            name="is_default_billing"
+            type="checkbox"
+            checked={formData.is_default_billing}
             onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
+          <label
+            htmlFor="is_default_billing"
+            className="ml-2 block text-sm text-gray-900"
+          >
+            Set as default billing address
+          </label>
         </div>
-      </div>
 
-      <div className="mb-4">
-        <label
-          htmlFor="country"
-          className="block text-gray-700 text-sm font-bold mb-2"
-        >
-          Country:
-        </label>
-        <input
-          type="text"
-          id="country"
-          name="country"
-          value={formData.country}
-          onChange={handleChange}
-          required
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-        />
-      </div>
-
-      <div className="mb-6 flex items-center">
-        <input
-          type="checkbox"
-          id="is_selected" // Changed from is_default
-          name="is_selected" // Changed from is_default
-          checked={formData.is_selected} // Changed from is_default
-          onChange={handleChange}
-          className="mr-2 leading-tight"
-        />
-        <label htmlFor="is_selected" className="text-sm text-gray-700">
-          {" "}
-          {/* Changed from is_default */}
-          Set as Default/Selected Address
-        </label>
-      </div>
-
-      <div className="flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={isSubmitting}
-          className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-200"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition-colors duration-200"
-        >
-          {isSubmitting
-            ? "Saving..."
-            : addressToEdit
-            ? "Update Address"
-            : "Add Address"}
-        </button>
-      </div>
-    </form>
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            {addressToEdit ? "Save Changes" : "Add Address"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 

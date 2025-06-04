@@ -1,19 +1,20 @@
 // app/Redux/Slices/addressSlice.ts
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+// No need to import ReactNode here, as it's not used for data types
 
-// Define the CustomerAddress interface with all required fields as strict strings
+// Define the CustomerAddress interface, with all fields correctly typed as string
 export interface CustomerAddress {
   id: number; // Assuming an ID for existing addresses
   customer: number; // Customer ID associated with this address
-  full_name: string; // Changed to strict string
-  phone_number: string; // Changed to strict string
-  address_line1: string; // Changed to strict string
-  address_line2: string; // Changed to strict string
-  city: string; // Changed to strict string
-  state: string; // Changed to strict string
-  postal_code: string; // Changed to strict string
-  country: string; // Changed to strict string
+  full_name: string;
+  phone_number: string;
+  address: string; // Correctly typed as string (replaces address_line1)
+  locality: string; // Correctly typed as string (replaces address_line2)
+  city: string;
+  state: string;
+  zipcode: string; // Correctly typed as string (replaces postal_code)
+  country: string;
   is_default_shipping: boolean; // Assuming these flags exist
   is_default_billing: boolean; // Assuming these flags exist
 }
