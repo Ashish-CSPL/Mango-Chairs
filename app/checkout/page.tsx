@@ -1,4 +1,3 @@
-// app/checkout/page.tsx
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -17,6 +16,7 @@ import AddressList from "@/components/checkout/AddressList";
 import AddressForm from "@/components/checkout/AddressForm";
 import GuestLoginPrompt from "@/components/checkout/GuestLoginPrompt";
 import Modal from "@/components/ui/Modal";
+import Image from "next/image"; // Import Image component
 
 const CheckoutPage: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -34,6 +34,15 @@ const CheckoutPage: React.FC = () => {
     selectedBillingAddress,
     selectedShippingAddress,
   } = useSelector((state: RootState) => state.address);
+
+  // Get cart items from Redux state
+  const cartItems = useSelector((state: RootState) => state.cart.cartItems);
+
+  // Calculate total amount from cart items
+  const totalAmount = cartItems.reduce((total: number, item: any) => {
+    const priceValue = typeof item.price === "number" ? item.price : 0;
+    return total + priceValue * item.quantity;
+  }, 0);
 
   // State for controlling address form visibility and data for editing
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -204,7 +213,44 @@ const CheckoutPage: React.FC = () => {
             <h2 className="text-2xl font-semibold mb-4 text-gray-800">
               Order Summary
             </h2>
-            <p>Order details will go here.</p>
+            {cartItems.length === 0 ? (
+              <p className="text-gray-600">Your cart is empty.</p>
+            ) : (
+              <div className="space-y-4">
+                {cartItems.map((item: any) => (
+                  <div key={item.id} className="flex items-center gap-4">
+                    <Image
+                      src={item.image}
+                      alt={item.name}
+                      width={80}
+                      height={80}
+                      className="object-cover rounded-md border border-gray-200"
+                    />
+                    <div className="flex-grow">
+                      <p className="font-medium text-gray-800">{item.name}</p>
+                      <p className="text-sm text-gray-600">
+                        Qty: {item.quantity}
+                      </p>
+                    </div>
+                    <span className="font-semibold text-gray-800">
+                      £{(item.price * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                  <span className="text-lg font-semibold text-gray-800">
+                    Total:
+                  </span>
+                  <span className="text-lg font-bold text-gray-900">
+                    £{totalAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+            {/* You can add a "Proceed to Payment" button here and handle the logic for it */}
+            <button className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+              Proceed to Payment
+            </button>
           </div>
         </div>
       )}
