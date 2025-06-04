@@ -1,7 +1,7 @@
 // components/checkout/AddressList.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"; // Removed ReactNode as it's not used in this file
 import { CustomerAddress } from "@/app/Redux/Slices/addressSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/app/Redux/Store/store";
@@ -10,19 +10,19 @@ import {
   removeAddress as deleteAddressAction,
   setAddressError,
   setSelectedBillingAddress,
-  setSelectedShippingAddress, // Ensure this is imported for direct dispatch
+  setSelectedShippingAddress,
 } from "@/app/Redux/Slices/addressSlice";
 import toast from "react-hot-toast";
-import { FaTrash } from "react-icons/fa"; // Import the trash icon
-import { FaEdit } from "react-icons/fa"; // Import the edit icon
+import { FaTrash } from "react-icons/fa";
+import { FaEdit } from "react-icons/fa";
 
 // Define the props interface for AddressList component
 interface AddressListProps {
   addresses: CustomerAddress[];
   selectedBillingAddress: CustomerAddress | null;
   selectedShippingAddress: CustomerAddress | null;
-  onSelectBilling: (address: CustomerAddress) => void; // Still needed for separate billing selection
-  onSelectShipping: (address: CustomerAddress) => void; // Will be used by the new checkbox logic
+  onSelectBilling: (address: CustomerAddress) => void;
+  onSelectShipping: (address: CustomerAddress) => void;
   onEditAddress: (address: CustomerAddress) => void;
   onAddNewAddress: () => void;
 }
@@ -32,8 +32,8 @@ const AddressList: React.FC<AddressListProps> = ({
   addresses,
   selectedBillingAddress,
   selectedShippingAddress,
-  onSelectBilling, // This prop is no longer directly used in JSX for a button, but kept in props
-  onSelectShipping, // This prop will now be used by the new checkbox logic
+  onSelectBilling,
+  onSelectShipping,
   onEditAddress,
   onAddNewAddress,
 }) => {
@@ -41,11 +41,10 @@ const AddressList: React.FC<AddressListProps> = ({
   const token = useSelector((state: RootState) => state.auth.token);
   const customerId = useSelector((state: RootState) => state.auth.user?.id);
 
-  // This state now primarily reflects if the currently selected shipping and billing are the same address.
+  // This state is for internal logic, not for default status
   const [isBillingSameAsShipping, setIsBillingSameAsShipping] = useState(false);
 
   useEffect(() => {
-    // Update local state based on Redux selected addresses
     if (
       selectedBillingAddress &&
       selectedShippingAddress &&
@@ -67,24 +66,79 @@ const AddressList: React.FC<AddressListProps> = ({
       return;
     }
 
-    if (!confirm("Are you sure you want to delete this address?")) {
-      return;
-    }
-    try {
-      // Optimistically remove from Redux store first for faster UI feedback
-      dispatch(deleteAddressAction(id));
-      // Then call the API to delete from the backend
-      await deleteCustomerAddress(id, customerId, token);
-      toast.success("Address deleted successfully!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete address.");
-      dispatch(setAddressError(error.message || "Failed to delete address."));
-      console.error("Error deleting address:", error);
-      // In a real app, you might want to revert the optimistic update here if the API call fails
-    }
+    toast.custom(
+      (t) => (
+        <div
+          className={`${t.visible ? "animate-enter" : "animate-leave"}
+        max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+        >
+          <div className="flex-1 w-0 p-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 pt-0.5">
+                <svg
+                  className="h-6 w-6 text-red-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
+                  Delete Address
+                </p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Are you sure you want to delete this address? This action
+                  cannot be undone.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex border-l border-gray-200">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                (async () => {
+                  try {
+                    dispatch(deleteAddressAction(id));
+                    await deleteCustomerAddress(id, customerId, token);
+                    toast.success("Address deleted successfully!");
+                  } catch (error: any) {
+                    toast.error(error.message || "Failed to delete address.");
+                    dispatch(
+                      setAddressError(
+                        error.message || "Failed to delete address."
+                      )
+                    );
+                    console.error("Error deleting address:", error);
+                  }
+                })();
+              }}
+              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-red-600 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: Infinity, position: "top-center" }
+    );
   };
 
-  // Handler for the new "Use this address for Delivery & Billing" checkbox
   const handleDeliveryAndBillingChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     address: CustomerAddress
@@ -92,20 +146,15 @@ const AddressList: React.FC<AddressListProps> = ({
     const isChecked = e.target.checked;
 
     if (isChecked) {
-      // When checked, this address becomes both shipping and billing
       dispatch(setSelectedShippingAddress(address));
       dispatch(setSelectedBillingAddress(address));
-      // No need to set isBillingSameAsShipping here, useEffect will handle it
     } else {
-      // When unchecked, clear both shipping and billing if this was the selected one.
-      // This allows the user to then pick a separate billing address.
       if (selectedShippingAddress?.id === address.id) {
         dispatch(setSelectedShippingAddress(null));
       }
       if (selectedBillingAddress?.id === address.id) {
         dispatch(setSelectedBillingAddress(null));
       }
-      // No need to set isBillingSameAsShipping here, useEffect will handle it
     }
   };
 
@@ -121,10 +170,9 @@ const AddressList: React.FC<AddressListProps> = ({
               className={`border p-4 rounded-lg relative flex flex-col justify-between
                 ${
                   selectedShippingAddress?.id === address.id
-                    ? "border-green-500 ring-2 ring-green-200" // Highlight if it's the selected shipping
-                    : selectedBillingAddress?.id === address.id &&
-                      !isBillingSameAsShipping
-                    ? "border-blue-500 ring-2 ring-blue-200" // Highlight if it's a separate billing
+                    ? "border-green-500 ring-2 ring-green-200"
+                    : selectedBillingAddress?.id === address.id
+                    ? "border-blue-500 ring-2 ring-blue-200"
                     : "border-gray-200"
                 }
               bg-white shadow-sm`}
@@ -138,6 +186,13 @@ const AddressList: React.FC<AddressListProps> = ({
                 <FaTrash size={18} />
               </button>
 
+              {/* "Default" text under trash icon - now only checks is_default_billing */}
+              {address.is_default_billing && (
+                <span className="absolute top-10 right-2 text-xs font-semibold text-indigo-700 bg-indigo-50 px-1 py-0.5 rounded">
+                  Default
+                </span>
+              )}
+
               {/* Edit Icon at bottom right */}
               <button
                 onClick={() => onEditAddress(address)}
@@ -149,24 +204,15 @@ const AddressList: React.FC<AddressListProps> = ({
 
               <div>
                 <p className="font-semibold text-lg">{address.full_name}</p>
-                {/* Corrected address field names based on CustomerAddress interface */}
-                <p className="text-gray-700">{address.address}</p>{" "}
-                {/* Changed from address_line1 */}
-                {address.locality && ( // Changed from address_line2
+                <p className="text-gray-700">{address.address}</p>
+                {address.locality && (
                   <p className="text-gray-700">{address.locality}</p>
                 )}
                 <p className="text-gray-700">
-                  {address.city}, {address.state} {address.zipcode}{" "}
-                  {/* Changed from postal_code */}
+                  {address.city}, {address.state} {address.zipcode}
                 </p>
                 <p className="text-gray-700">{address.country}</p>
                 <p className="text-gray-700">Phone: {address.phone_number}</p>
-                {(address.is_default_shipping ||
-                  address.is_default_billing) && (
-                  <span className="mt-2 inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
-                    Default Address
-                  </span>
-                )}
               </div>
               <div className="mt-4 flex flex-wrap gap-2 items-center">
                 {/* New: Combined "Use this address for Delivery & Billing" checkbox */}
@@ -174,7 +220,6 @@ const AddressList: React.FC<AddressListProps> = ({
                   <input
                     type="checkbox"
                     id={`delivery-billing-${address.id}`}
-                    // This checkbox is checked if this address is currently both selected shipping AND selected billing
                     checked={
                       selectedShippingAddress?.id === address.id &&
                       selectedBillingAddress?.id === address.id
@@ -189,10 +234,6 @@ const AddressList: React.FC<AddressListProps> = ({
                     Use this address for Delivery & Billing
                   </label>
                 </div>
-
-                {/* The "Set as Billing" button is now completely removed */}
-
-                {/* Removed the edit button from here */}
               </div>
             </div>
           ))

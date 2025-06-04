@@ -1,22 +1,21 @@
 // app/Redux/Slices/addressSlice.ts
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-// No need to import ReactNode here, as it's not used for data types
 
-// Define the CustomerAddress interface, with all fields correctly typed as string
+// Define the CustomerAddress interface, with all fields correctly typed
 export interface CustomerAddress {
-  id: number; // Assuming an ID for existing addresses
-  customer: number; // Customer ID associated with this address
+  id: number;
+  customer: number;
   full_name: string;
   phone_number: string;
-  address: string; // Correctly typed as string (replaces address_line1)
-  locality: string; // Correctly typed as string (replaces address_line2)
+  address: string; // Changed from address_line1
+  locality: string; // Changed from address_line2
   city: string;
   state: string;
-  zipcode: string; // Correctly typed as string (replaces postal_code)
+  zipcode: string; // Changed from postal_code
   country: string;
-  is_default_shipping: boolean; // Assuming these flags exist
-  is_default_billing: boolean; // Assuming these flags exist
+  is_default_shipping: boolean; // Keep this in the type, even if not directly set by form
+  is_default_billing: boolean; // This is the key field for default billing
 }
 
 // Define the state structure for the address slice
@@ -30,7 +29,7 @@ interface AddressState {
 
 // Initial state for the address slice
 const initialState: AddressState = {
-  addresses: [], // Ensure this is initialized as an empty array
+  addresses: [],
   loading: false,
   error: null,
   selectedBillingAddress: null,
@@ -41,33 +40,26 @@ const addressSlice = createSlice({
   name: "address",
   initialState,
   reducers: {
-    // Action to set loading state
     setAddressLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
     },
-    // Action to set fetched addresses
     setAddresses: (state, action: PayloadAction<CustomerAddress[]>) => {
       state.addresses = action.payload;
-      state.error = null; // Clear any previous errors on successful fetch
+      state.error = null;
     },
-    // Action to set an error message
     setAddressError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
-      state.loading = false; // Stop loading on error
+      state.loading = false;
     },
-    // Action to set the selected billing address
     setSelectedBillingAddress: (state, action: PayloadAction<CustomerAddress | null>) => {
       state.selectedBillingAddress = action.payload;
     },
-    // Action to set the selected shipping address
     setSelectedShippingAddress: (state, action: PayloadAction<CustomerAddress | null>) => {
       state.selectedShippingAddress = action.payload;
     },
-    // Action to add a new address (optimistic update or after successful API call)
     addAddress: (state, action: PayloadAction<CustomerAddress>) => {
       state.addresses.push(action.payload);
     },
-    // Action to update an existing address
     updateAddress: (state, action: PayloadAction<CustomerAddress>) => {
       const index = state.addresses.findIndex(
         (address) => address.id === action.payload.id
@@ -76,12 +68,10 @@ const addressSlice = createSlice({
         state.addresses[index] = action.payload;
       }
     },
-    // Action to remove an address
     removeAddress: (state, action: PayloadAction<number>) => {
       state.addresses = state.addresses.filter(
         (address) => address.id !== action.payload
       );
-      // If the removed address was selected, clear the selection
       if (state.selectedBillingAddress?.id === action.payload) {
         state.selectedBillingAddress = null;
       }

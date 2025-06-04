@@ -2,11 +2,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CustomerAddress } from "@/app/Redux/Slices/addressSlice"; // Import CustomerAddress type
-import { useDispatch } from "react-redux";
+import { CustomerAddress } from "@/app/Redux/Slices/addressSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/app/Redux/Store/store";
 import {
   addAddress,
-  updateAddress,
+  updateAddress, // Ensure updateAddress action is imported
   setAddressLoading,
   setAddressError,
 } from "@/app/Redux/Slices/addressSlice";
@@ -17,29 +18,28 @@ import {
 } from "@/app/API_Calls/customerAddress";
 import toast from "react-hot-toast";
 
-// Define the interface for the form data, now aligned with CustomerAddress and AddressPayload
+// Define the interface for the form data, aligned with CustomerAddress and AddressPayload
 interface FormData {
   id?: number; // Optional for new addresses
   customer: number;
   full_name: string;
   phone_number: string;
-  address: string; // Changed from address_line1
-  locality: string; // Changed from address_line2
+  address: string;
+  locality: string;
   city: string;
   state: string;
-  zipcode: string; // Changed from postal_code
+  zipcode: string;
   country: string;
-  is_default_shipping: boolean;
-  is_default_billing: boolean;
+  is_default_billing: boolean; // Only billing default remains
 }
 
 // Define the props for the AddressForm component
 interface AddressFormProps {
-  addressToEdit: CustomerAddress | null; // The address object to pre-fill for editing
-  customerId: number; // The ID of the current customer
-  token: string; // The authentication token
-  onSave: () => void; // Callback after successful save/update
-  onCancel: () => void; // Callback to close the form without saving
+  addressToEdit: CustomerAddress | null;
+  customerId: number;
+  token: string;
+  onSave: () => void;
+  onCancel: () => void;
 }
 
 const AddressForm: React.FC<AddressFormProps> = ({
@@ -50,24 +50,24 @@ const AddressForm: React.FC<AddressFormProps> = ({
   onCancel,
 }) => {
   const dispatch = useDispatch();
+  const allAddresses = useSelector(
+    (state: RootState) => state.address.addresses
+  );
 
-  // Initialize form state from addressToEdit or with default empty values
   const [formData, setFormData] = useState<FormData>({
     id: addressToEdit?.id || undefined,
-    customer: customerId, // Customer ID is crucial for API calls
+    customer: customerId,
     full_name: addressToEdit?.full_name || "",
     phone_number: addressToEdit?.phone_number || "",
-    address: addressToEdit?.address || "", // Changed from address_line1
-    locality: addressToEdit?.locality || "", // Changed from address_line2
+    address: addressToEdit?.address || "",
+    locality: addressToEdit?.locality || "",
     city: addressToEdit?.city || "",
     state: addressToEdit?.state || "",
-    zipcode: addressToEdit?.zipcode || "", // Changed from postal_code
+    zipcode: addressToEdit?.zipcode || "",
     country: addressToEdit?.country || "",
-    is_default_shipping: addressToEdit?.is_default_shipping || false,
     is_default_billing: addressToEdit?.is_default_billing || false,
   });
 
-  // Effect to update form data if addressToEdit changes (e.g., when editing a different address)
   useEffect(() => {
     setFormData({
       id: addressToEdit?.id || undefined,
@@ -80,19 +80,17 @@ const AddressForm: React.FC<AddressFormProps> = ({
       state: addressToEdit?.state || "",
       zipcode: addressToEdit?.zipcode || "",
       country: addressToEdit?.country || "",
-      is_default_shipping: addressToEdit?.is_default_shipping || false,
       is_default_billing: addressToEdit?.is_default_billing || false,
     });
   }, [addressToEdit, customerId]);
 
-  // Handle input changes
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
     const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked; // For checkboxes
+    const checked = (e.target as HTMLInputElement).checked;
 
     setFormData((prevData) => ({
       ...prevData,
@@ -100,7 +98,6 @@ const AddressForm: React.FC<AddressFormProps> = ({
     }));
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -109,10 +106,22 @@ const AddressForm: React.FC<AddressFormProps> = ({
       return;
     }
 
-    dispatch(setAddressLoading(true)); // Set loading state
+    dispatch(setAddressLoading(true));
     try {
+      // --- Logic to unset other default billing addresses in Redux before API call ---
+      if (formData.is_default_billing) {
+        allAddresses.forEach((a) => {
+          if (a.id !== formData.id && a.is_default_billing) {
+            dispatch(updateAddress({ ...a, is_default_billing: false }));
+            // IMPORTANT: In a real application, you would also send an API call
+            // to update this other address on the backend to unset its default flag.
+            // Example: await updateCustomerAddress(a.id, { ...a, is_default_billing: false }, customerId, token);
+          }
+        });
+      }
+      // --- End of default unsetting logic ---
+
       let responseAddress: CustomerAddress;
-      // Prepare the payload for the backend API, casting to AddressPayload
       const payload: AddressPayload = {
         full_name: formData.full_name,
         phone_number: formData.phone_number,
@@ -122,37 +131,34 @@ const AddressForm: React.FC<AddressFormProps> = ({
         state: formData.state,
         zipcode: formData.zipcode,
         country: formData.country,
-        is_selected:
-          formData.is_default_shipping || formData.is_default_billing, // Assuming is_selected combines both defaults
+        is_selected: formData.is_default_billing, // is_selected in payload now only reflects is_default_billing
       };
 
       if (formData.id) {
-        // Update existing address
         responseAddress = await updateCustomerAddress(
           formData.id,
-          payload, // Use the prepared payload
-          customerId, // Pass customerId
+          payload,
+          customerId,
           token
         );
-        dispatch(updateAddress(responseAddress)); // Update Redux store
+        dispatch(updateAddress(responseAddress)); // Update Redux store with the response
         toast.success("Address updated successfully!");
       } else {
-        // Create new address
         responseAddress = await createCustomerAddress(
-          payload, // Use the prepared payload
-          customerId, // Pass customerId
+          payload,
+          customerId,
           token
         );
-        dispatch(addAddress(responseAddress)); // Add to Redux store
+        dispatch(addAddress(responseAddress)); // Add to Redux store with the response
         toast.success("Address added successfully!");
       }
-      onSave(); // Call the onSave callback to close modal and refresh list
+      onSave();
     } catch (error: any) {
       console.error("Error saving address:", error);
       dispatch(setAddressError(error.message || "Failed to save address."));
       toast.error(error.message || "Failed to save address.");
     } finally {
-      dispatch(setAddressLoading(false)); // Clear loading state
+      dispatch(setAddressLoading(false));
     }
   };
 
@@ -301,26 +307,6 @@ const AddressForm: React.FC<AddressFormProps> = ({
             />
           </div>
         </div>
-
-        {/* Conditional rendering for "Set as default shipping address" */}
-        {!addressToEdit && ( // Only show if adding a NEW address
-          <div className="flex items-center">
-            <input
-              id="is_default_shipping"
-              name="is_default_shipping"
-              type="checkbox"
-              checked={formData.is_default_shipping}
-              onChange={handleChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label
-              htmlFor="is_default_shipping"
-              className="ml-2 block text-sm text-gray-900"
-            >
-              Set as default shipping address
-            </label>
-          </div>
-        )}
 
         <div className="flex items-center">
           <input
