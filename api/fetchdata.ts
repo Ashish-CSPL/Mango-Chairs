@@ -5,7 +5,7 @@ const BASE_URL = "https://nxadmin.consociate.co.in/";
 type CustomRequestBody = Record<string, any> | FormData;
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD"; // <-- Added "HEAD" here
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD";
   body?: CustomRequestBody;
   headers?: Record<string, string>;
   token?: string;
@@ -48,11 +48,12 @@ async function fetchData<T>(
     ...(options?.headers || {}),
   };
   if (options?.token) {
-    headers["Authorization"] = `Bearer ${options.token}`;
+    // --- THIS IS THE ONLY LINE THAT NEEDS TO BE CHANGED ---
+    // Change 'Bearer' to 'Token' to match Django Rest Framework's default TokenAuthentication
+    headers["Authorization"] = `Token ${options.token}`; 
   }
 
   let requestBody: BodyInit | undefined;
-  // This condition is now valid because 'method' can explicitly be "HEAD"
   if (method !== "GET" && method !== "HEAD") { 
     if (options?.body instanceof FormData) {
       requestBody = options.body;

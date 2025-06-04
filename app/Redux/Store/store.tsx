@@ -1,6 +1,4 @@
 // app/Redux/Store/store.ts
-// (Assuming this file exists and sets up your Redux store with persist)
-// This is just a placeholder.
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import {
   persistStore,
@@ -16,17 +14,19 @@ import storage from "redux-persist/lib/storage"; // defaults to localStorage for
 
 import authReducer from "../Slices/authSlice";
 import cartReducer from "@/app/Redux/Store/cartSlice"; // Make sure cartSlice is correctly imported
+import addressReducer from "../Slices/addressSlice"; // <-- NEW: Import address slice
 
 const rootReducer = combineReducers({
   auth: authReducer,
   cart: cartReducer,
+  address: addressReducer, // <-- NEW: Add addressReducer
 });
 
 const persistConfig = {
   key: "root",
   version: 1,
   storage,
-  whitelist: ["cart", "auth"], // Specify which reducers to persist
+  whitelist: ["cart", "auth", "address"], // <-- UPDATED: Persist address slice
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

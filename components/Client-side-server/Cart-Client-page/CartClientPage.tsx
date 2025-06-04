@@ -2,8 +2,8 @@
 "use client";
 
 import { useSelector, useDispatch } from "react-redux";
-
 import Image from "next/image";
+import { useRouter } from "next/navigation"; // <-- NEW: Import useRouter
 import {
   CartItem,
   removeFromCart,
@@ -15,13 +15,13 @@ import { RootState } from "@/app/Redux/Store/store";
 export default function CartClientPage() {
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
   const dispatch = useDispatch();
+  const router = useRouter(); // <-- NEW: Initialize useRouter
 
   const totalAmount = cartItems.reduce((total: number, item: CartItem) => {
     const priceValue = typeof item.price === "number" ? item.price : 0;
     return total + priceValue * item.quantity;
   }, 0);
 
-  // FIX: Change id parameter type to string | number
   const handleRemove = (id: string | number, name: string) => {
     dispatch(removeFromCart(id));
     toast.custom(
@@ -61,6 +61,11 @@ export default function CartClientPage() {
     );
   };
 
+  // <-- NEW: handleCheckout function
+  const handleCheckout = () => {
+    router.push("/checkout");
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen py-8">
       <Toaster position="top-center" />
@@ -92,7 +97,7 @@ export default function CartClientPage() {
                   >
                     <button
                       className="text-gray-400 hover:text-gray-600 text-xl font-bold self-start sm:self-auto"
-                      onClick={() => handleRemove(item.id, item.name)} // This now correctly passes string | number
+                      onClick={() => handleRemove(item.id, item.name)}
                       aria-label={`Remove ${item.name} from cart`}
                     >
                       &times;
@@ -129,7 +134,7 @@ export default function CartClientPage() {
                           className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-l"
                           onClick={() =>
                             dispatch(
-                              updateQuantity({ id: item.id, change: -1 }) // This is also now correct
+                              updateQuantity({ id: item.id, change: -1 })
                             )
                           }
                         >
@@ -140,11 +145,8 @@ export default function CartClientPage() {
                         </span>
                         <button
                           className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded-r"
-                          onClick={
-                            () =>
-                              dispatch(
-                                updateQuantity({ id: item.id, change: 1 })
-                              ) // This is also now correct
+                          onClick={() =>
+                            dispatch(updateQuantity({ id: item.id, change: 1 }))
                           }
                         >
                           +
@@ -207,7 +209,10 @@ export default function CartClientPage() {
                 </div>
               </div>
 
-              <button className="w-full bg-green-500 hover:bg-green-600 text-white text-lg font-semibold py-3 rounded-lg transition duration-200">
+              <button
+                onClick={handleCheckout} // <-- UPDATED: Add onClick handler
+                className="w-full bg-green-500 hover:bg-green-600 text-white text-lg font-semibold py-3 rounded-lg transition duration-200"
+              >
                 Checkout
               </button>
 
