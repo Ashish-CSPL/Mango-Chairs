@@ -1,13 +1,14 @@
 // types/Products.ts
 
 // Define the structure of a product variant's specifications
-interface Specification {
+export interface Specification { // <--- Added 'export' for clarity if needed elsewhere
   colour?: string;
-  // Add any other specific variant attributes here (e.g., size, material if they vary by variant)
+  size?: string; // <--- ADDED THIS LINE
+  // Add any other specific variant attributes here (e.g., material if they vary by variant)
 }
 
 // Define the structure for product dimensions
-interface Dimensions {
+export interface Dimensions { // <--- Added 'export'
   height: number | null;
   weight: number | null;
   length: number | null;
@@ -15,7 +16,7 @@ interface Dimensions {
 }
 
 // Define the structure for product details
-interface ProductDetails {
+export interface ProductDetails { // <--- Added 'export'
   material?: string;
   weight_bearing_number?: number;
   is_stackable?: boolean;
@@ -46,7 +47,7 @@ export interface Variant {
 
 // Define the structure for the main product
 export interface Product {
-  id: number;
+  id: string;
   slug: string;
   variant_id: number;
   sequence_number: number;
@@ -72,4 +73,5 @@ export interface Product {
   care_instruction?: string | null;
   warranty?: string | null;
   delivery_or_installation_tips?: string | null;
+  
 }

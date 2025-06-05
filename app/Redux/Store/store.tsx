@@ -10,27 +10,30 @@ import {
   PURGE,
   REGISTER,
 } from "redux-persist";
-import storage from "redux-persist/lib/storage"; // defaults to localStorage for web
+import storage from "redux-persist/lib/storage";
 
-import authReducer from "../Slices/authSlice";
-import cartReducer from "@/app/Redux/Store/cartSlice";
-import addressReducer from "../Slices/addressSlice";
-import orderReducer from "../Slices/orderSlice";
-import forgotPasswordReducer from "../Slices/forgotPasswordSlice"; // <-- NEW: Import forgot password slice
+// Import your reducers
+import authReducer from "../Slices/authSlice"; // Assuming you have an authSlice
+import cartReducer from "../Store/cartSlice"; // Assuming this is correct path for cartSlice
+import wishlistReducer from "../Slices/wishlistSlice"; // <--- IMPORT WISHLIST REDUCER
 
+// Combine your reducers
 const rootReducer = combineReducers({
   auth: authReducer,
   cart: cartReducer,
-  address: addressReducer,
-  order: orderReducer,
-  forgotPassword: forgotPasswordReducer, // <-- NEW: Add forgotPasswordReducer
+  wishlist: wishlistReducer, // <--- ADD WISHLIST REDUCER HERE
+  // Add other reducers if you have them, e.g.:
+  // address: addressReducer,
+  // order: orderReducer,
+  // forgotPassword: forgotPasswordReducer,
 });
 
+// Redux Persist configuration
 const persistConfig = {
   key: "root",
   version: 1,
   storage,
-  whitelist: ["cart", "auth", "address", "order", "forgotPassword"], // <-- UPDATED: Persist forgotPassword slice
+  whitelist: ["auth", "cart", "wishlist"], // <--- IMPORTANT: Whitelist 'wishlist' to persist its state
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -47,5 +50,6 @@ export const store = configureStore({
 
 export const persistor = persistStore(store);
 
+// Define RootState and AppDispatch types
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppDispatch = typeof store.dispatch;
