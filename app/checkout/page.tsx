@@ -12,16 +12,31 @@ import {
   setAddressError,
   setSelectedBillingAddress,
   setSelectedShippingAddress,
-  CustomerAddress, // Ensure CustomerAddress is imported here for typing useState
+  CustomerAddress,
 } from "@/app/Redux/Slices/addressSlice";
-import AddressList from "@/components/checkout/AddressList"; // <--- CRITICAL: ENSURE THIS PATH IS CORRECT FOR THE COMPONENT
-
+import {
+  setOrderLoading,
+  setOrderSuccess,
+  setOrderError,
+  clearOrderState,
+  OrderDetails, // Ensure OrderDetails is imported from orderSlice
+} from "@/app/Redux/Slices/orderSlice";
+import {
+  placeOrder,
+  PlaceOrderPayload,
+  PlaceOrderSuccessResponse,
+} from "@/app/API_Calls/order";
+import AddressList from "@/components/checkout/AddressList";
+import AddressForm from "@/components/checkout/AddressForm";
 import GuestLoginPrompt from "@/components/checkout/GuestLoginPrompt";
 import Modal from "@/components/ui/Modal";
 import Image from "next/image";
-import { removeFromCart, updateQuantity } from "@/app/Redux/Store/cartSlice";
+import {
+  removeFromCart,
+  updateQuantity,
+  clearCart,
+} from "@/app/Redux/Store/cartSlice";
 import toast, { Toaster } from "react-hot-toast";
-import AddressForm from "@/components/checkout/AddressForm";
 
 const CheckoutPage: React.FC = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -37,10 +52,16 @@ const CheckoutPage: React.FC = () => {
     selectedBillingAddress,
     selectedShippingAddress,
   } = useSelector((state: RootState) => state.address);
+  const { loading: orderLoading, error: orderError } = useSelector(
+    (state: RootState) => state.order
+  );
 
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
 
   const [couponCode, setCouponCode] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    "razorpay" | "cod"
+  >("razorpay");
 
   const totalAmount = cartItems.reduce((total: number, item: any) => {
     const priceValue = typeof item.price === "number" ? item.price : 0;
@@ -90,7 +111,6 @@ const CheckoutPage: React.FC = () => {
     dispatch(updateQuantity({ id, change }));
   };
 
-  // Corrected type for addressToEdit to CustomerAddress | null
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressToEdit, setAddressToEdit] = useState<CustomerAddress | null>(
     null
@@ -181,6 +201,144 @@ const CheckoutPage: React.FC = () => {
   const isReadyForForm =
     isAuthenticated && token && typeof customerId === "number";
 
+  // Helper function to format address into a string
+  const formatAddressToString = (address: CustomerAddress): string => {
+    if (!address) return "";
+    // Note: Assuming address.address, address.locality, etc. are available on CustomerAddress
+    // Reconstruct the address string as your backend expects
+    let addressString = address.full_name;
+    addressString += `, ${address.address}`;
+    if (address.locality) addressString += `, ${address.locality}`;
+    addressString += `, ${address.city}, ${address.state} - ${address.zipcode}, ${address.country}`;
+    return addressString;
+  };
+
+  // Handle Place Order
+  const handlePlaceOrder = async () => {
+    if (!isAuthenticated || !token || typeof user?.id !== "number") {
+      toast.error("Please log in to place an order.");
+      return;
+    }
+    if (!selectedShippingAddress) {
+      toast.error("Please select a shipping address.");
+      return;
+    }
+    if (!selectedBillingAddress) {
+      toast.error("Please select a billing address.");
+      return;
+    }
+    if (cartItems.length === 0) {
+      toast.error(
+        "Your cart is empty. Please add items before placing an order."
+      );
+      return;
+    }
+
+    dispatch(setOrderLoading(true));
+    dispatch(clearOrderState()); // Clear previous order state
+    try {
+      const orderItems = cartItems.map((item) => ({
+        product_id: Number(item.id),
+        quantity: item.quantity,
+        unit_price: item.price,
+      }));
+
+      const subTotal = totalAmount;
+      const tax = 0;
+      const discount = 0;
+      const deliveryCharge = 0;
+      const finalTotal = subTotal + tax + deliveryCharge - discount;
+
+      const payload: PlaceOrderPayload = {
+        sub_total: subTotal,
+        tax: tax,
+        discount: discount,
+        delivery_charge: deliveryCharge,
+        final_total: finalTotal,
+        is_payment_done: selectedPaymentMethod === "cod",
+        payment_transaction_id:
+          selectedPaymentMethod === "cod" ? `COD-${Date.now()}` : "",
+        payment_type:
+          selectedPaymentMethod === "cod" ? "Cash on Delivery" : "Razorpay",
+        payment_datetime: new Date().toISOString(),
+        billing_address: formatAddressToString(selectedBillingAddress),
+        delivery_address: formatAddressToString(selectedShippingAddress),
+        products: orderItems,
+        ...(couponCode && { discount_coupon_id: Number(couponCode) }),
+      };
+
+      console.log(
+        "DEBUG: Place Order Payload (Final):",
+        JSON.stringify(payload, null, 2)
+      );
+
+      // Call placeOrder which now returns PlaceOrderSuccessResponse
+      const orderResponse: PlaceOrderSuccessResponse = await placeOrder(
+        payload,
+        token
+      );
+      console.log(
+        "DEBUG: Order Response after successful placeOrder API call:",
+        orderResponse
+      );
+
+      // Check if order_id is a string and exists
+      if (orderResponse && typeof orderResponse.order_id === "string") {
+        // Construct the full OrderDetails object for Redux state
+        // IMPORTANT: REMOVE 'id: undefined' as it does not exist in your OrderDetails type
+        const fullOrderDetails: OrderDetails = {
+          order_id: orderResponse.order_id,
+          external_order_id: orderResponse.external_order_id || null, // Ensure it's null if not present, matching interface
+          message: orderResponse.message || "Order placed successfully", // Default message if not present
+          customer: user.id,
+          sub_total: subTotal,
+          tax: tax,
+          discount: discount,
+          delivery_charge: deliveryCharge,
+          final_total: finalTotal,
+          is_payment_done: payload.is_payment_done,
+          payment_transaction_id: payload.payment_transaction_id,
+          payment_type: payload.payment_type,
+          payment_datetime: payload.payment_datetime,
+          billing_address: payload.billing_address,
+          delivery_address: payload.delivery_address,
+          products: payload.products, // Products from the payload
+          status: "Pending", // Set initial status or derive from response if available
+          discount_coupon_id: payload.discount_coupon_id || null, // Match interface nullable type
+          // REMOVED: id: undefined, // THIS LINE IS GONE!
+        };
+
+        dispatch(setOrderSuccess(fullOrderDetails)); // Dispatch the constructed full OrderDetails
+        dispatch(clearCart());
+        toast.success("Order placed successfully!");
+        router.push(`/order-confirmation/${orderResponse.order_id}`); // Use order_id for redirection
+      } else {
+        const errorMessage =
+          "Order placed, but no valid order ID (string) received for redirection.";
+        console.error("DEBUG: " + errorMessage, orderResponse);
+        dispatch(setOrderError(errorMessage));
+        toast.error(errorMessage);
+      }
+    } catch (err: any) {
+      console.error("DEBUG: Error placing order (full error object):", err);
+      let errorMessage = "Failed to place order.";
+      if (
+        err.responseBody &&
+        err.responseBody.message &&
+        err.responseBody.message.error &&
+        err.responseBody.message.error.description
+      ) {
+        errorMessage = err.responseBody.message.error.description;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      dispatch(setOrderError(errorMessage));
+      toast.error(errorMessage);
+    } finally {
+      dispatch(setOrderLoading(false));
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <Toaster position="top-center" />
@@ -250,18 +408,34 @@ const CheckoutPage: React.FC = () => {
             Payment Method
           </div>
           <div className="bg-white p-6 rounded-b-lg shadow-md">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="razorpay"
-                defaultChecked
-                className="form-radio text-blue-600 h-4 w-4"
-              />
-              <span className="ml-2 text-gray-800">
-                Razorpay Secure (UPI, Cards, Wallets, NetBanking)
-              </span>
-            </label>
+            <div className="space-y-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="razorpay"
+                  checked={selectedPaymentMethod === "razorpay"}
+                  onChange={() => setSelectedPaymentMethod("razorpay")}
+                  className="form-radio text-blue-600 h-4 w-4"
+                />
+                <span className="ml-2 text-gray-800">
+                  Razorpay Secure (UPI, Cards, Wallets, NetBanking)
+                </span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="cod"
+                  checked={selectedPaymentMethod === "cod"}
+                  onChange={() => setSelectedPaymentMethod("cod")}
+                  className="form-radio text-blue-600 h-4 w-4"
+                />
+                <span className="ml-2 text-gray-800">
+                  Cash on Delivery (COD)
+                </span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -382,16 +556,34 @@ const CheckoutPage: React.FC = () => {
               <span>Subtotal:</span>
               <span>₹{totalAmount.toFixed(2)}</span>
             </div>
+            {/* Displaying coupon discount if applicable */}
+            {/*
+            {couponCode && (
+              <div className="flex justify-between mb-2 text-green-700">
+                <span>Coupon Discount:</span>
+                <span>- ₹XX.XX</span> // Replace XX.XX with actual calculated discount
+              </div>
+            )}
+            */}
             <div className="flex justify-between items-center text-xl font-bold text-gray-900 border-t pt-4 mt-4">
               <span>Total:</span>
               <span>₹{totalAmount.toFixed(2)}</span>
             </div>
             <button
-              className="mt-6 w-full bg-orange-600 hover:bg-orange-700 text-white text-lg font-semibold py-3 rounded-lg transition duration-200"
-              onClick={() => console.log("Place Order clicked")}
+              className="mt-6 w-full bg-orange-600 hover:bg-orange-700 text-white text-lg font-semibold py-3 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handlePlaceOrder}
+              disabled={
+                orderLoading ||
+                !selectedShippingAddress ||
+                !selectedBillingAddress ||
+                cartItems.length === 0
+              }
             >
-              Place Order
+              {orderLoading ? "Placing Order..." : "Place Order"}
             </button>
+            {orderError && (
+              <p className="text-red-500 text-center mt-2">{orderError}</p>
+            )}
           </div>
         </div>
       </div>

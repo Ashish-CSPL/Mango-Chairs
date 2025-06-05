@@ -1,79 +1,64 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-// Removed `ReactNode` import as it's not used in this file for `CartItem`
-// import { ReactNode } from "react";
+// app/Redux/Store/cartSlice.ts
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-// Ensure this CartItem interface matches what you dispatch from ProductCard.tsx
-export interface CartItem {
-  title: any;
-  isRare: any;
-  regularPrice: any;
-  isOnSale: boolean;
-  id: string | number; // This needs to be string | number to match your product/variant IDs
+// Define the type for a single cart item
+interface CartItem {
+  id: string | number; // Product ID can be string or number
   name: string;
   image: string;
-  price: number; // Keep price as number for calculations
+  price: number;
   quantity: number;
-  slug?: string; // Optional: for linking back to product page
-  selectedVariantId?: string | number; // Optional: to track which variant was added
-  color?: string; // Optional: variant specific detail
-  size?: string; // Optional: variant specific detail
-  stock?: number; // Optional: stock of the item at the time of adding
-  // If you need these, ensure they are passed from ProductCard and are part of the API Product/Variant types
-  // isRare?: boolean;
-  // title?: string; // If 'title' is distinct from 'name'
+  title?: string; // Optional field for product title
 }
 
+// Define the shape of the cart state
 interface CartState {
   cartItems: CartItem[];
 }
 
+// Initial state for the cart
 const initialState: CartState = {
   cartItems: [],
 };
 
 const cartSlice = createSlice({
-  name: "cart",
+  name: 'cart',
   initialState,
   reducers: {
+    // Action to add an item to the cart or update its quantity
     addToCart: (state, action: PayloadAction<CartItem>) => {
       const newItem = action.payload;
-      // Find an existing item that matches by ID AND (if applicable) selected variant ID
-      const existingItem = state.cartItems.find(
-        (item) =>
-          item.id === newItem.id &&
-          item.selectedVariantId === newItem.selectedVariantId
-      );
+      const existingItem = state.cartItems.find(item => item.id === newItem.id);
 
       if (existingItem) {
-        // If it exists, increment quantity (default to 1 if newItem.quantity is not provided)
-        existingItem.quantity += newItem.quantity || 1;
+        existingItem.quantity += newItem.quantity;
       } else {
-        // If it's a new item, add it with the specified quantity or default to 1
-        state.cartItems.push({ ...newItem, quantity: newItem.quantity || 1 });
+        state.cartItems.push(newItem);
       }
     },
+    // Action to remove an item from the cart
     removeFromCart: (state, action: PayloadAction<string | number>) => {
-      state.cartItems = state.cartItems.filter(
-        (item) => item.id !== action.payload
-      );
+      state.cartItems = state.cartItems.filter(item => item.id !== action.payload);
     },
-    updateQuantity: (
-      state,
-      action: PayloadAction<{ id: string | number; change: number }>
-    ) => {
+    // Action to update the quantity of an item
+    updateQuantity: (state, action: PayloadAction<{ id: string | number; change: number }>) => {
       const { id, change } = action.payload;
-      const itemToUpdate = state.cartItems.find((item) => item.id === id);
+      const itemToUpdate = state.cartItems.find(item => item.id === id);
 
       if (itemToUpdate) {
         itemToUpdate.quantity += change;
         if (itemToUpdate.quantity <= 0) {
-          state.cartItems = state.cartItems.filter((item) => item.id !== id);
+          state.cartItems = state.cartItems.filter(item => item.id !== id);
         }
       }
+    },
+    // NEW: Action to clear all items from the cart
+    clearCart: (state) => {
+      state.cartItems = [];
     },
   },
 });
 
-export const { addToCart, removeFromCart, updateQuantity } = cartSlice.actions;
-
+// Export actions and reducer
+export const { addToCart, removeFromCart, updateQuantity, clearCart } = cartSlice.actions; // Export clearCart
 export default cartSlice.reducer;

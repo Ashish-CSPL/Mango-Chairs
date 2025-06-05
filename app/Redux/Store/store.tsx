@@ -13,20 +13,22 @@ import {
 import storage from "redux-persist/lib/storage"; // defaults to localStorage for web
 
 import authReducer from "../Slices/authSlice";
-import cartReducer from "@/app/Redux/Store/cartSlice"; // Make sure cartSlice is correctly imported
-import addressReducer from "../Slices/addressSlice"; // <-- NEW: Import address slice
+import cartReducer from "@/app/Redux/Store/cartSlice";
+import addressReducer from "../Slices/addressSlice";
+import orderReducer from "../Slices/orderSlice"; // <-- NEW: Import order slice
 
 const rootReducer = combineReducers({
   auth: authReducer,
   cart: cartReducer,
-  address: addressReducer, // <-- NEW: Add addressReducer
+  address: addressReducer,
+  order: orderReducer, // <-- NEW: Add orderReducer
 });
 
 const persistConfig = {
   key: "root",
   version: 1,
   storage,
-  whitelist: ["cart", "auth", "address"], // <-- UPDATED: Persist address slice
+  whitelist: ["cart", "auth", "address", "order"], // <-- UPDATED: Persist order slice
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
