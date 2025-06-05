@@ -16,7 +16,7 @@ export interface CartItem {
   stock: number; // Added previously
   isRare?: boolean; // Added previously
   regularPrice?: number; // Added previously
-  isOnSale?: boolean; // <--- ADD THIS LINE
+  isOnSale?: boolean; // <--- ADDED THIS LINE
 }
 
 // Define the shape of the cart state
@@ -36,8 +36,6 @@ const cartSlice = createSlice({
     // Action to add an item to the cart or update its quantity
     addToCart: (state, action: PayloadAction<CartItem>) => {
       const newItem = action.payload;
-      // 'isOnSale' is a characteristic of the product/price, not typically used for identifying a unique cart item instance.
-      // So, the 'find' logic usually doesn't need to include 'isOnSale'.
       const existingItem = state.cartItems.find(item =>
         item.id === newItem.id &&
         item.selectedVariantId === newItem.selectedVariantId &&
@@ -53,7 +51,6 @@ const cartSlice = createSlice({
     },
     // Action to remove an item from the cart
     removeFromCart: (state, action: PayloadAction<{ id: string | number; selectedVariantId?: number; color?: string; size?: string | number | (string | number)[]; }>) => {
-      // 'isOnSale' is generally not used for removal logic.
       const { id, selectedVariantId, color, size } = action.payload;
       state.cartItems = state.cartItems.filter(item =>
         item.id !== id ||
@@ -64,7 +61,6 @@ const cartSlice = createSlice({
     },
     // Action to update the quantity of an item
     updateQuantity: (state, action: PayloadAction<{ id: string | number; change: number; selectedVariantId?: number; color?: string; size?: string | number | (string | number)[]; }>) => {
-      // 'isOnSale' is generally not used for update logic.
       const { id, change, selectedVariantId, color, size } = action.payload;
       const itemToUpdate = state.cartItems.find(item =>
         item.id === id &&

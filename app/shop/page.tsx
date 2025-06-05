@@ -5,6 +5,7 @@ import fetchData from "@/api/fetchdata";
 import Link from "next/link";
 import { Product, ProductsApiResponse } from "@/types/Products";
 import ProductCard from "@/components/Common-Components/ProductCard";
+
 export const metadata = {
   title: "Our Shop - NextGen Store",
   description:
@@ -35,7 +36,8 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
       "frontend/products/",
       "GET",
       {
-        params: {
+        // FIX IS HERE: Changed 'params' to 'queryParams'
+        queryParams: {
           page: currentPage,
           page_size: pageSize,
         },

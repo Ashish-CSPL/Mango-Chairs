@@ -11,15 +11,16 @@ import {
   X,
   Search,
   LogOut,
-  Heart, // <--- IMPORT HEART ICON HERE
+  Heart,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // --- REDUX IMPORTS ---
-import { useSelector, useDispatch } from "react-redux"; // Import useDispatch
-import { RootState } from "@/app/Redux/Store/store"; // Adjust path if necessary
-import { CartItem } from "@/app/Redux/Store/cartSlice"; // Import CartItem for stronger typing
-import { logout, setAuthSuccess } from "@/app/Redux/Slices/authSlice"; // Import logout and setAuthSuccess actions
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "@/app/Redux/Store/store";
+import { CartItem } from "@/app/Redux/Store/cartSlice"; // Assuming CartItem is defined here
+import { logout, setAuthSuccess } from "@/app/Redux/Slices/authSlice";
+import { fetchWishlistItems } from "@/app/Redux/Slices/wishlistSlice"; // Import fetchWishlistItems
 
 interface NavItem {
   pk: number;
@@ -38,16 +39,14 @@ interface NavbarClientProps {
   categories: Category[];
 }
 
-// Define a type for the user data structure within Redux
 interface UserData {
   first_name?: string;
   last_name?: string;
   profile_picture?: string;
-  email?: string; // Made optional as it might not always be directly available or needed for display
-  // Add other fields you might store, e.g., id, phone_number
+  email?: string;
+  id?: string;
 }
 
-// --- REDUX SELECTOR FUNCTION (for cart count, remains same) ---
 const selectCartCount = (state: RootState): number => {
   return state.cart.cartItems.reduce(
     (total: number, item: CartItem) => total + item.quantity,
@@ -55,24 +54,33 @@ const selectCartCount = (state: RootState): number => {
   );
 };
 
+// Selector for wishlist count
+const selectWishlistCount = (state: RootState): number => {
+  return state.wishlist.wishlistItems.length;
+};
+
 const NavbarClient: React.FC<NavbarClientProps> = ({
   navData = [],
   categories = [],
 }) => {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch: AppDispatch = useDispatch();
 
-  // --- Authentication State Management via Redux useSelector ---
-  // This is the primary source of truth for user authentication status
   const { user, token, isAuthenticated } = useSelector(
     (state: RootState) => state.auth
   );
 
-  // Effect to rehydrate Redux state from localStorage on initial component mount.
-  // This is crucial for maintaining login status across page refreshes.
+  const cartCount = useSelector(selectCartCount);
+  const { cartItems } = useSelector((state: RootState) => state.cart);
+
+  // --- WISHLIST: Select wishlist items and count ---
+  const wishlistCount = useSelector(selectWishlistCount);
+  const wishlistStatus = useSelector(
+    (state: RootState) => state.wishlist.status
+  );
+
   useEffect(() => {
-    // Only run this rehydration logic if we are not already authenticated in Redux
-    // and if we are in a browser environment.
+    // Rehydrate user from localStorage
     if (typeof window !== "undefined" && !isAuthenticated) {
       const storedToken = localStorage.getItem("userToken");
       const storedUserData = localStorage.getItem("userData");
@@ -80,48 +88,43 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
       if (storedToken && storedUserData) {
         try {
           const parsedUserData: UserData = JSON.parse(storedUserData);
-          // Dispatch setAuthSuccess to populate Redux store with rehydrated data
           dispatch(
             setAuthSuccess({ user: parsedUserData, token: storedToken })
-          );
-          console.log(
-            "Navbar: Rehydrated user data from localStorage into Redux:",
-            parsedUserData
           );
         } catch (e) {
           console.error(
             "Navbar: Failed to parse user data from localStorage",
             e
           );
-          // Clear invalid data to prevent persistent errors
           localStorage.removeItem("userToken");
           localStorage.removeItem("userData");
         }
       }
     }
-  }, [isAuthenticated, dispatch]); // Depend on isAuthenticated and dispatch
+  }, [isAuthenticated, dispatch]);
 
-  // Handles user logout
+  // --- WISHLIST: Fetch wishlist items when authenticated ---
+  useEffect(() => {
+    if (isAuthenticated && user?.id && wishlistStatus === "idle") {
+      // Only fetch if authenticated and wishlist hasn't been fetched yet
+      dispatch(fetchWishlistItems(user.id.toString()));
+    }
+  }, [isAuthenticated, user?.id, wishlistStatus, dispatch]);
+
   const handleLogout = () => {
     if (typeof window !== "undefined") {
-      localStorage.removeItem("userToken"); // Remove token from storage
-      localStorage.removeItem("userData"); // Remove user data from storage
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("userData");
     }
-    dispatch(logout()); // Dispatch the logout action to clear Redux state
-    router.push("/login"); // Redirect to the login page (client-side navigation)
+    dispatch(logout());
+    router.push("/login");
   };
 
-  // Handles navigation to the wishlist page
   const handleWishlistClick = () => {
-    router.push("/wishlist");
-    handleCloseMenu(); // Close mobile menu if open
+    router.push("/wishlist"); // Navigate to the wishlist page
+    handleCloseMenu();
   };
 
-  // --- REDUX CART STATE INTEGRATION ---
-  const cartCount = useSelector(selectCartCount);
-  const cartItems = useSelector((state: RootState) => state.cart.cartItems);
-
-  // --- Existing Navbar States & Handlers ---
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showMobileDropdown, setShowMobileDropdown] = useState(false);
@@ -142,17 +145,14 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     setShowMobileDropdown(false);
   };
 
-  // Determine icon and text color based on scroll state and Redux isAuthenticated status
   const iconColor =
     !isScrolled && !isMobileMenuOpen && !isAuthenticated ? "white" : "black";
   const dynamicTextColor =
     isScrolled || isMobileMenuOpen ? "text-black" : "text-white";
 
-  // Renders the desktop category dropdown
   const renderCategoryDropdown = () => (
     <div className="absolute left-1/2 top-full transform -translate-x-1/2 mt-2 z-50 w-[50vw] max-w-2xl bg-white/30 backdrop-blur-lg shadow-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl">
       {categories?.map((cat) => {
-        // Construct correct image URL: if relative, append to base domain
         const imageSrc = cat.image.startsWith("http")
           ? cat.image
           : `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api/v1", "")}${
@@ -179,7 +179,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     </div>
   );
 
-  // Renders the mini cart dropdown
   const renderMiniCart = () => (
     <div
       onMouseLeave={() => setShowMiniCart(false)}
@@ -189,33 +188,28 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
       <h3 className="font-semibold text-lg mb-3 border-b pb-2">Cart Items</h3>
       {cartItems && cartItems.length > 0 ? (
         <ul className="max-h-64 overflow-y-auto">
-          {cartItems.map(
-            (
-              item: CartItem,
-              index: number // Use CartItem type here
-            ) => (
-              <li
-                key={index}
-                className="flex items-center gap-3 mb-3 border-b pb-2 last:border-none"
-              >
-                <div className="w-12 h-12 relative flex-shrink-0">
-                  <Image
-                    src={item.image || "/placeholder.png"}
-                    alt={item.name || "Product"}
-                    fill
-                    className="object-cover rounded"
-                  />
-                </div>
-                <div className="flex-grow">
-                  <p className="text-sm font-medium">{item.name}</p>
-                  <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
-                </div>
-                <p className="text-sm font-semibold">
-                  ₹{(item.price * item.quantity).toFixed(2)}{" "}
-                </p>
-              </li>
-            )
-          )}
+          {cartItems.map((item: CartItem, index: number) => (
+            <li
+              key={index}
+              className="flex items-center gap-3 mb-3 border-b pb-2 last:border-none"
+            >
+              <div className="w-12 h-12 relative flex-shrink-0">
+                <Image
+                  src={item.image || "/placeholder.png"}
+                  alt={item.name || "Product"}
+                  fill
+                  className="object-cover rounded"
+                />
+              </div>
+              <div className="flex-grow">
+                <p className="text-sm font-medium">{item.name}</p>
+                <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
+              </div>
+              <p className="text-sm font-semibold">
+                ₹{(item.price * item.quantity).toFixed(2)}{" "}
+              </p>
+            </li>
+          ))}
         </ul>
       ) : (
         <p className="text-sm text-gray-500">Your cart is empty.</p>
@@ -230,14 +224,13 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     </div>
   );
 
-  // Helper function to get the full profile image URL
   const getProfileImageUrl = (path?: string) => {
     if (!path) {
-      return "/images/default-profile.png"; // Fallback if no path is provided
+      return "/images/default-profile.png";
     }
 
     if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path; // If the path is already an absolute URL, use it directly
+      return path;
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -246,15 +239,15 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
       console.error(
         "Navbar Error: NEXT_PUBLIC_API_BASE_URL is not defined for image URL construction."
       );
-      return "/images/default-profile.png"; // Fallback if URL is missing
+      return "/images/default-profile.png";
     }
 
-    // Construct the full URL for relative paths:
-    // Remove '/api/v1' from the base URL to get the domain root, then append the path.
-    const baseUrlParts = baseUrl.split("/api/v1");
+    // This assumes your backend serves media from the root if the path doesn't start with /media/
+    // Adjust this logic if your media URLs are different.
+    const baseUrlParts = baseUrl.split("/api"); // Split at /api to get the domain part
     const imageUrl = `${baseUrlParts[0]}${
       path.startsWith("/") ? path : `/${path}`
-    }`; // Ensure leading slash for path
+    }`;
     return imageUrl;
   };
 
@@ -282,7 +275,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
           transition: max-height 0.3s ease, opacity 0.3s ease;
         }
         .mobile-category-dropdown.open {
-          max-height: 1000px; /* big enough to show all */
+          max-height: 1000px;
           opacity: 1;
         }
 
@@ -302,7 +295,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
         lg:top-[30px] lg:mt-[0px]
         `}
         style={{
-          // Adjust top/marginTop for a sticky effect without initial offset
           top: isScrolled || isMobileMenuOpen ? 0 : undefined,
           marginTop: isScrolled || isMobileMenuOpen ? 0 : undefined,
         }}
@@ -316,7 +308,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   alt="Mango Logo"
                   fill
                   className="object-contain"
-                  priority // Prioritize loading for LCP
+                  priority
                   style={{ objectFit: "contain" }}
                 />
               </div>
@@ -325,7 +317,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
             {/* Desktop Navigation Links */}
             <ul className="hidden lg:flex items-center space-x-8 group relative">
               {navData?.map((navItem, index) =>
-                index === 1 ? ( // Assuming second item is 'Shop By Category'
+                index === 1 ? (
                   <li
                     key={navItem.pk}
                     className="relative group"
@@ -369,22 +361,19 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
               {/* Conditional User Display (Logged In vs. Logged Out) */}
               {isAuthenticated && user ? (
-                // If user is logged in (using Redux state directly)
                 <div className="relative flex items-center gap-2 group">
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white cursor-pointer">
                     <Image
-                      src={getProfileImageUrl(user.profile_picture)} // Use user from Redux state
-                      alt={user.first_name || "User"} // Use user from Redux state
+                      src={getProfileImageUrl(user.profile_picture)}
+                      alt={user.first_name || "User"}
                       fill
                       className="object-cover"
-                      unoptimized // Use unoptimized for external images to avoid Next.js Image component optimization issues
+                      unoptimized
                     />
                   </div>
-                  {/* DISPLAY USER NAME HERE */}
                   <span className={`text-sm font-semibold ${dynamicTextColor}`}>
                     Hi, {user.first_name || "User"}{" "}
                   </span>
-                  {/* Logout Button */}
                   <button
                     onClick={handleLogout}
                     className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500 ${dynamicTextColor}`}
@@ -394,7 +383,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   </button>
                 </div>
               ) : (
-                // If user is not logged in (Redux isAuthenticated is false)
                 <div className="relative cursor-pointer">
                   <Link href="/login" className="flex items-center gap-1">
                     <CircleUserRound
@@ -418,6 +406,11 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   color={iconColor}
                   onClick={handleWishlistClick}
                 />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
               </div>
 
               {/* Shopping Cart Icon (Desktop) */}
@@ -464,7 +457,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                       unoptimized
                     />
                   </div>
-                  {/* DISPLAY USER NAME HERE */}
                   <span className={`text-sm font-semibold`}>
                     Hi, {user.first_name || "User"}{" "}
                   </span>
@@ -489,6 +481,11 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               {/* Wishlist Icon (Tablet) */}
               <div className="relative cursor-pointer">
                 <Heart size={24} color="black" onClick={handleWishlistClick} />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
               </div>
 
               <div
@@ -518,7 +515,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
             {/* Mobile-only menu toggle (small screens) */}
             <button
-              className="md:hidden text-white" // Default color for mobile button when not scrolled
+              className="md:hidden text-white"
               aria-label="Toggle menu"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
@@ -534,14 +531,14 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               ? "opacity-100 pointer-events-auto"
               : "opacity-0 pointer-events-none"
           }`}
-          onClick={handleCloseMenu} // Close menu when clicking outside
+          onClick={handleCloseMenu}
         />
 
         {/* Mobile Menu Content */}
         <div
           className={`mobile-menu fixed top-0 left-0 right-0 bg-white shadow-lg z-50 p-6 flex flex-col space-y-6
           ${isMobileMenuOpen ? "open" : ""}`}
-          style={{ top: 64 }} // Position below the main nav bar
+          style={{ top: 64 }}
         >
           <ul className="flex flex-col space-y-6">
             {navData?.map((navItem, index) =>
@@ -589,7 +586,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                           key={cat.id}
                           href={`/category/${cat.id}`}
                           className="flex items-center gap-3 py-2 text-black hover:text-orange-500"
-                          onClick={handleCloseMenu} // Close menu when category is clicked
+                          onClick={handleCloseMenu}
                         >
                           <div className="w-20 h-20 relative flex-shrink-0">
                             <Image
@@ -611,7 +608,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   <Link
                     href={navItem.link}
                     className="font-semibold text-black hover:text-orange-500"
-                    onClick={handleCloseMenu} // Close menu when link is clicked
+                    onClick={handleCloseMenu}
                   >
                     {navItem.name}
                   </Link>
@@ -644,7 +641,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                     unoptimized
                   />
                 </div>
-                {/* DISPLAY USER NAME HERE */}
                 <span className={`text-sm font-semibold`}>
                   Hi, {user.first_name || "User"}
                 </span>
@@ -652,7 +648,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   onClick={() => {
                     handleLogout();
                     handleCloseMenu();
-                  }} // Also close mobile menu on logout
+                  }}
                   className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500`}
                 >
                   <LogOut size={20} />
@@ -672,6 +668,11 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
             {/* Wishlist Icon (Mobile Menu) */}
             <div className="relative cursor-pointer">
               <Heart size={24} color="black" onClick={handleWishlistClick} />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {wishlistCount}
+                </span>
+              )}
             </div>
 
             <Link href="/cart" className="relative">
