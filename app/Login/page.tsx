@@ -1,5 +1,6 @@
-"use client";
+// app/login/page.tsx (No changes to this file based on your request)
 
+"use client";
 import React, { useState, ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -264,7 +265,7 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => setLoginPassword(e.target.value)}
                 required
                 className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-base text-black"
-                placeholder="********"
+                placeholder=""
               />
             </div>
             <Link
@@ -345,7 +346,7 @@ const LoginPage: React.FC = () => {
                     required
                     maxLength={6}
                     className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-base text-black"
-                    placeholder="******"
+                    placeholder=""
                   />
                 </div>
                 <button

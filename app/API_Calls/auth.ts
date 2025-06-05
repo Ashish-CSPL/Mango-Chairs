@@ -1,11 +1,12 @@
-// app/API_Calls/auth.ts
-
 import fetchData from "@/api/fetchdata";
 import {
   LoginApiResponse,
   RegisterApiResponse,
   OtpResponse,
   RegistrationData,
+  ForgotPasswordSendOtpPayload,
+  ForgotPasswordVerifyOtpPayload,
+  ForgotPasswordResetPayload, // Ensure this type is correctly defined below
 } from "@/types/Auth";
 
 // UPDATED: Changed 'email' to 'username' to match backend API structure for login
@@ -14,7 +15,9 @@ interface LoginCredentials {
   password: string;
 }
 
-export async function sendOtpForVerification(email: string): Promise<OtpResponse> {
+export async function sendOtpForVerification(
+  email: string
+): Promise<OtpResponse> {
   try {
     // Assuming your OTP API still expects 'email'
     const response = await fetchData<OtpResponse>(
@@ -48,7 +51,9 @@ export async function verifyOtp(email: string, otp: string): Promise<OtpResponse
   }
 }
 
-export async function registerCustomer(registrationData: RegistrationData): Promise<RegisterApiResponse> {
+export async function registerCustomer(
+  registrationData: RegistrationData
+): Promise<RegisterApiResponse> {
   try {
     let bodyToSend: Record<string, any> | FormData;
 
@@ -56,13 +61,16 @@ export async function registerCustomer(registrationData: RegistrationData): Prom
     if (registrationData.profile_picture) {
       const formData = new FormData();
       for (const key in registrationData) {
-        if (key !== "profile_picture" && Object.prototype.hasOwnProperty.call(registrationData, key)) {
+        if (
+          key !== "profile_picture" &&
+          Object.prototype.hasOwnProperty.call(registrationData, key)
+        ) {
           const value = (registrationData as any)[key];
           if (value !== undefined) {
-              // Note: If your backend register API expects 'username' instead of 'email' for registration,
-              // you might need to adjust 'email' to 'username' here too.
-              // For now, assuming registrationData.email is correct for registration API.
-              formData.append(key, String(value));
+            // Note: If your backend register API expects 'username' instead of 'email' for registration,
+            // you might need to adjust 'email' to 'username' here too.
+            // For now, assuming registrationData.email is correct for registration API.
+            formData.append(key, String(value));
           }
         }
       }
@@ -89,14 +97,16 @@ export async function registerCustomer(registrationData: RegistrationData): Prom
   }
 }
 
-export async function loginCustomer(credentials: LoginCredentials): Promise<LoginApiResponse> {
+export async function loginCustomer(
+  credentials: LoginCredentials
+): Promise<LoginApiResponse> {
   try {
     // UPDATED: credentials now correctly contains 'username' and 'password'
     const response = await fetchData<LoginApiResponse>(
       "user/customer-login/", // Ensure this endpoint is correct
       "POST",
       {
-        body: credentials, // `credentials` is a plain object, so fetchData will JSON.stringify it and set Content-Type correctly
+        body: credentials, // credentials is a plain object, so fetchData will JSON.stringify it and set Content-Type correctly
       }
     );
     return response;
@@ -106,3 +116,60 @@ export async function loginCustomer(credentials: LoginCredentials): Promise<Logi
   }
 }
 
+// NEW: Forgot Password API Calls
+export async function sendOtpForResetPassword(
+  email: string
+): Promise<OtpResponse> {
+  try {
+    const response = await fetchData<OtpResponse>(
+      "/user/reset-password/customer/send-otp/",
+      "POST",
+      {
+        body: { email: email },
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error sending OTP for password reset:", error);
+    throw error;
+  }
+}
+
+export async function verifyOtpForResetPassword(
+  email: string,
+  otp: string
+): Promise<OtpResponse> {
+  try {
+    const response = await fetchData<OtpResponse>(
+      "/user/reset-password/verify-otp/",
+      "POST",
+      {
+        body: { email: email, otp: otp },
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error verifying OTP for password reset:", error);
+    throw error;
+  }
+}
+
+export async function resetCustomerPassword(
+  resetData: ForgotPasswordResetPayload
+): Promise<RegisterApiResponse> {
+  // Using RegisterApiResponse as a placeholder for a generic success response,
+  // you might want to create a specific type for reset password success if the API returns different data.
+  try {
+    const response = await fetchData<RegisterApiResponse>(
+      "/user/reset-password/",
+      "POST",
+      {
+        body: resetData,
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error resetting customer password:", error);
+    throw error;
+  }
+}

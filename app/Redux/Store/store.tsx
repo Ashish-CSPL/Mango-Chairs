@@ -15,20 +15,22 @@ import storage from "redux-persist/lib/storage"; // defaults to localStorage for
 import authReducer from "../Slices/authSlice";
 import cartReducer from "@/app/Redux/Store/cartSlice";
 import addressReducer from "../Slices/addressSlice";
-import orderReducer from "../Slices/orderSlice"; // <-- NEW: Import order slice
+import orderReducer from "../Slices/orderSlice";
+import forgotPasswordReducer from "../Slices/forgotPasswordSlice"; // <-- NEW: Import forgot password slice
 
 const rootReducer = combineReducers({
   auth: authReducer,
   cart: cartReducer,
   address: addressReducer,
-  order: orderReducer, // <-- NEW: Add orderReducer
+  order: orderReducer,
+  forgotPassword: forgotPasswordReducer, // <-- NEW: Add forgotPasswordReducer
 });
 
 const persistConfig = {
   key: "root",
   version: 1,
   storage,
-  whitelist: ["cart", "auth", "address", "order"], // <-- UPDATED: Persist order slice
+  whitelist: ["cart", "auth", "address", "order", "forgotPassword"], // <-- UPDATED: Persist forgotPassword slice
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

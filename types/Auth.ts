@@ -40,3 +40,21 @@ export interface RegistrationData {
   password: string;
   confirm_password: string;
 }
+
+// NEW: Interfaces for Forgot Password API calls
+export interface ForgotPasswordSendOtpPayload {
+  email: string;
+}
+
+export interface ForgotPasswordVerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+// types/Auth.ts (Recommended Update)
+export interface ForgotPasswordResetPayload {
+  email: string;
+  otp: number; // or string, depending on your backend
+  password: string; // Changed from new_password to password
+  confirm_password: string;
+}
