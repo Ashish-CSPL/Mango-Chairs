@@ -11,6 +11,7 @@ import {
   X,
   Search,
   LogOut,
+  Heart, // <--- IMPORT HEART ICON HERE
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -108,6 +109,12 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     }
     dispatch(logout()); // Dispatch the logout action to clear Redux state
     router.push("/login"); // Redirect to the login page (client-side navigation)
+  };
+
+  // Handles navigation to the wishlist page
+  const handleWishlistClick = () => {
+    router.push("/wishlist");
+    handleCloseMenu(); // Close mobile menu if open
   };
 
   // --- REDUX CART STATE INTEGRATION ---
@@ -346,7 +353,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               )}
             </ul>
 
-            {/* Desktop Right Section: Search, User, Cart */}
+            {/* Desktop Right Section: Search, User, Wishlist, Cart */}
             <div className="hidden lg:flex items-center space-x-6">
               <div className="flex items-center border border-transparent bg-white px-2 py-1 max-w-[280px] flex-shrink-0">
                 <Search color="black" size={18} />
@@ -404,7 +411,16 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 </div>
               )}
 
-              {/* Shopping Cart Icon */}
+              {/* Wishlist Icon (Desktop) */}
+              <div className="relative cursor-pointer">
+                <Heart
+                  size={24}
+                  color={iconColor}
+                  onClick={handleWishlistClick}
+                />
+              </div>
+
+              {/* Shopping Cart Icon (Desktop) */}
               <div
                 onMouseEnter={() => setShowMiniCart(true)}
                 onMouseLeave={() => setShowMiniCart(false)}
@@ -422,7 +438,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               </div>
             </div>
 
-            {/* Mobile/Tablet Icons (Search, User, Cart, Menu Toggle) */}
+            {/* Mobile/Tablet Icons (Search, User, Wishlist, Cart, Menu Toggle) */}
             <div className="hidden md:flex lg:hidden items-center space-x-4 flex-1 justify-end">
               <div className="flex items-center border border-transparent bg-white px-2 py-1 max-w-[180px] flex-shrink-0">
                 <Search color="black" size={18} />
@@ -469,6 +485,11 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   </Link>
                 </div>
               )}
+
+              {/* Wishlist Icon (Tablet) */}
+              <div className="relative cursor-pointer">
+                <Heart size={24} color="black" onClick={handleWishlistClick} />
+              </div>
 
               <div
                 onMouseEnter={() => setShowMiniCart(true)}
@@ -647,6 +668,12 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 </Link>
               </div>
             )}
+
+            {/* Wishlist Icon (Mobile Menu) */}
+            <div className="relative cursor-pointer">
+              <Heart size={24} color="black" onClick={handleWishlistClick} />
+            </div>
+
             <Link href="/cart" className="relative">
               <ShoppingBag size={24} color="black" />
               {cartCount > 0 && (
