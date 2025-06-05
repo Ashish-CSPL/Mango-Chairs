@@ -1,40 +1,39 @@
 // app/Redux/Slices/addressSlice.ts
+
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-// Define the CustomerAddress interface based on your usage in checkout/page.tsx
-// It uses 'address', 'locality', 'zipcode' which are slightly different from a generic 'Address'
-// Adjust these if your backend returns 'address_line1', 'address_line2', 'zip_code' instead.
+// Define the CustomerAddress interface, with all fields correctly typed
 export interface CustomerAddress {
-  is_default_billing: boolean;
-  id: string | number; // Assuming ID can be string or number from backend
-  customer_id?: string | number; // Optional, if linked to user
+  id: number;
+  customer: number;
   full_name: string;
   phone_number: string;
-  address: string; // Used for the primary address line (e.g., house number, street)
-  locality?: string; // Optional: Used for area, landmark etc.
+  address: string; // Changed from address_line1
+  locality: string; // Changed from address_line2
   city: string;
   state: string;
-  zipcode: string; // Note: 'zipcode' is used in your page.tsx, not 'zip_code'
+  zipcode: string; // Changed from postal_code
   country: string;
-  is_default?: boolean;
-  address_type?: 'Home' | 'Work' | 'Other'; // Example: if you categorize addresses
-  // Add other fields from your backend address model if any
+  is_default_shipping: boolean; // Keep this in the type, even if not directly set by form
+  is_default_billing: boolean; // This is the key field for default billing
 }
 
+// Define the state structure for the address slice
 interface AddressState {
   addresses: CustomerAddress[];
-  selectedShippingAddress: CustomerAddress | null;
-  selectedBillingAddress: CustomerAddress | null;
   loading: boolean;
   error: string | null;
+  selectedBillingAddress: CustomerAddress | null;
+  selectedShippingAddress: CustomerAddress | null;
 }
 
+// Initial state for the address slice
 const initialState: AddressState = {
   addresses: [],
-  selectedShippingAddress: null,
-  selectedBillingAddress: null,
   loading: false,
   error: null,
+  selectedBillingAddress: null,
+  selectedShippingAddress: null,
 };
 
 const addressSlice = createSlice({
@@ -43,51 +42,42 @@ const addressSlice = createSlice({
   reducers: {
     setAddressLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
-      state.error = null; // Clear error on loading
     },
     setAddresses: (state, action: PayloadAction<CustomerAddress[]>) => {
       state.addresses = action.payload;
-      state.loading = false;
+      state.error = null;
     },
     setAddressError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
       state.loading = false;
     },
-    setSelectedShippingAddress: (
-      state,
-      action: PayloadAction<CustomerAddress | null>
-    ) => {
-      state.selectedShippingAddress = action.payload;
-    },
-    setSelectedBillingAddress: (
-      state,
-      action: PayloadAction<CustomerAddress | null>
-    ) => {
+    setSelectedBillingAddress: (state, action: PayloadAction<CustomerAddress | null>) => {
       state.selectedBillingAddress = action.payload;
     },
-    addCustomerAddress: (state, action: PayloadAction<CustomerAddress>) => {
+    setSelectedShippingAddress: (state, action: PayloadAction<CustomerAddress | null>) => {
+      state.selectedShippingAddress = action.payload;
+    },
+    addAddress: (state, action: PayloadAction<CustomerAddress>) => {
       state.addresses.push(action.payload);
     },
-    updateCustomerAddress: (state, action: PayloadAction<CustomerAddress>) => {
+    updateAddress: (state, action: PayloadAction<CustomerAddress>) => {
       const index = state.addresses.findIndex(
-        (addr) => addr.id === action.payload.id
+        (address) => address.id === action.payload.id
       );
       if (index !== -1) {
         state.addresses[index] = action.payload;
       }
     },
-    removeCustomerAddress: (state, action: PayloadAction<string | number>) => {
+    removeAddress: (state, action: PayloadAction<number>) => {
       state.addresses = state.addresses.filter(
-        (addr) => addr.id !== action.payload
+        (address) => address.id !== action.payload
       );
-    },
-    clearAddressState: (state) => {
-      // Useful for logout or when addresses are no longer needed
-      state.addresses = [];
-      state.selectedShippingAddress = null;
-      state.selectedBillingAddress = null;
-      state.loading = false;
-      state.error = null;
+      if (state.selectedBillingAddress?.id === action.payload) {
+        state.selectedBillingAddress = null;
+      }
+      if (state.selectedShippingAddress?.id === action.payload) {
+        state.selectedShippingAddress = null;
+      }
     },
   },
 });
@@ -96,12 +86,11 @@ export const {
   setAddressLoading,
   setAddresses,
   setAddressError,
-  setSelectedShippingAddress,
   setSelectedBillingAddress,
-  addCustomerAddress,
-  updateCustomerAddress,
-  removeCustomerAddress,
-  clearAddressState,
+  setSelectedShippingAddress,
+  addAddress,
+  updateAddress,
+  removeAddress,
 } = addressSlice.actions;
 
 export default addressSlice.reducer;
