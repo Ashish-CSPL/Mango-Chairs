@@ -13,19 +13,21 @@ import {
 import storage from "redux-persist/lib/storage";
 
 // Import your reducers
-import authReducer from "../Slices/authSlice"; // Assuming you have an authSlice
-import cartReducer from "../Store/cartSlice"; // Assuming this is correct path for cartSlice
-import wishlistReducer from "../Slices/wishlistSlice"; // <--- IMPORT WISHLIST REDUCER
+import authReducer from "../Slices/authSlice";
+import cartReducer from "../Store/cartSlice"; // <-- Assuming this path is correct
+import wishlistReducer from "../Slices/wishlistSlice";
+import forgotPasswordReducer from "../Slices/forgotPasswordSlice";
+import addressReducer from "../Slices/addressSlice"; // <--- ADD THIS IMPORT
+import orderReducer from "../Slices/orderSlice"; // <--- ADD THIS IMPORT
 
 // Combine your reducers
 const rootReducer = combineReducers({
   auth: authReducer,
   cart: cartReducer,
-  wishlist: wishlistReducer, // <--- ADD WISHLIST REDUCER HERE
-  // Add other reducers if you have them, e.g.:
-  // address: addressReducer,
-  // order: orderReducer,
-  // forgotPassword: forgotPasswordReducer,
+  wishlist: wishlistReducer,
+  forgotPassword: forgotPasswordReducer,
+  address: addressReducer, // <--- ADD THIS LINE
+  order: orderReducer, // <--- ADD THIS LINE
 });
 
 // Redux Persist configuration
@@ -33,7 +35,8 @@ const persistConfig = {
   key: "root",
   version: 1,
   storage,
-  whitelist: ["auth", "cart", "wishlist"], // <--- IMPORTANT: Whitelist 'wishlist' to persist its state
+  // IMPORTANT: Do NOT persist forgotPassword, address, or order slices as they should reset or be fetched dynamically
+  whitelist: ["auth", "cart", "wishlist"],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

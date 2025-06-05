@@ -19,9 +19,9 @@ import {
 import toast from "react-hot-toast";
 
 // Define the interface for the form data, aligned with CustomerAddress and AddressPayload
+// Inside components/checkout/AddressForm.tsx
 interface FormData {
-  id?: number; // Optional for new addresses
-  customer: number;
+  id?: string | number; // Change this from 'number' to 'string | number'
   full_name: string;
   phone_number: string;
   address: string;
@@ -30,7 +30,8 @@ interface FormData {
   state: string;
   zipcode: string;
   country: string;
-  is_default_billing: boolean; // Only billing default remains
+  address_type: "Home" | "Work" | "Other"; // Assuming you have this
+  // ... other fields
 }
 
 // Define the props for the AddressForm component

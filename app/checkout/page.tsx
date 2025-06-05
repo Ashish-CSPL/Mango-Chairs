@@ -12,14 +12,15 @@ import {
   setAddressError,
   setSelectedBillingAddress,
   setSelectedShippingAddress,
-  CustomerAddress,
+  CustomerAddress, // Ensure CustomerAddress is imported
+  clearAddressState, // Import clearAddressState
 } from "@/app/Redux/Slices/addressSlice";
 import {
   setOrderLoading,
   setOrderSuccess,
   setOrderError,
   clearOrderState,
-  OrderDetails, // Ensure OrderDetails is imported from orderSlice
+  OrderDetails,
 } from "@/app/Redux/Slices/orderSlice";
 import {
   placeOrder,
@@ -68,8 +69,20 @@ const CheckoutPage: React.FC = () => {
     return total + priceValue * item.quantity;
   }, 0);
 
+  // checkout/page.tsx
+
+  // ... (existing imports) ...
+
+  // Find this function:
   const handleRemove = (id: string | number, name: string) => {
-    dispatch(removeFromCart(id));
+    // CHANGE THIS LINE:
+    // FROM: dispatch(removeFromCart(id));
+    // TO:
+    dispatch(removeFromCart({ id: id })); // Pass an object with the id property
+    // If your cart items can have variants, and you want to remove a specific variant:
+    // dispatch(removeFromCart({ id: id, selectedVariantId: item.selectedVariantId }));
+    // (You'd need to ensure 'item.selectedVariantId' is available in your cart item structure)
+
     toast.custom(
       (t) => (
         <div
@@ -117,9 +130,10 @@ const CheckoutPage: React.FC = () => {
   );
 
   const fetchAddresses = useCallback(async () => {
-    const customerId = user?.id;
+    // Ensure customerId is a number; default to 0 or handle guest flow
+    const customerId = user?.id ? Number(user.id) : 0;
 
-    if (isAuthenticated && token && typeof customerId === "number") {
+    if (isAuthenticated && token && customerId !== 0) {
       dispatch(setAddressLoading(true));
       try {
         const fetchedAddresses = await getCustomerAddresses(customerId, token);
@@ -135,20 +149,21 @@ const CheckoutPage: React.FC = () => {
           dispatch(
             setAddressError("Received unexpected data format for addresses.")
           );
-          dispatch(setAddresses([]));
+          dispatch(setAddresses([])); // Ensure addresses is always an array
         }
       } catch (err: any) {
         dispatch(setAddressError(err.message || "Failed to fetch addresses."));
         console.error("Error fetching addresses in checkout:", err);
-        dispatch(setAddresses([]));
+        dispatch(setAddresses([])); // Ensure addresses is always an array on error
       } finally {
         dispatch(setAddressLoading(false));
       }
     } else if (!isAuthenticated) {
       console.log("User not authenticated, not fetching addresses.");
-      dispatch(setAddresses([]));
+      dispatch(setAddresses([])); // Clear addresses if not authenticated
       dispatch(setAddressLoading(false));
-    } else if (user && typeof customerId !== "number") {
+    } else if (customerId === 0) {
+      // This path is hit if user is authenticated but user.id is not valid/present
       console.warn(
         "Authenticated user found, but customer ID is missing or invalid. Cannot fetch addresses."
       );
@@ -159,14 +174,17 @@ const CheckoutPage: React.FC = () => {
       );
       dispatch(setAddresses([]));
       dispatch(setAddressLoading(false));
-    } else {
-      dispatch(setAddressLoading(false));
     }
+    // No else block needed as loading is false by default if not triggered
   }, [isAuthenticated, token, user?.id, dispatch]);
 
   useEffect(() => {
     fetchAddresses();
-  }, [fetchAddresses]);
+    // Cleanup function to clear addresses when component unmounts
+    return () => {
+      dispatch(clearAddressState());
+    };
+  }, [fetchAddresses, dispatch]); // Added dispatch to dependency array
 
   const handleSelectBilling = (address: CustomerAddress) => {
     dispatch(setSelectedBillingAddress(address));
@@ -197,9 +215,12 @@ const CheckoutPage: React.FC = () => {
     setAddressToEdit(null);
   };
 
-  const customerId = user?.id;
+  const customerId = user?.id ? Number(user.id) : null; // Keep as null if not valid for form
   const isReadyForForm =
-    isAuthenticated && token && typeof customerId === "number";
+    isAuthenticated &&
+    token &&
+    typeof customerId === "number" &&
+    customerId !== 0;
 
   // Helper function to format address into a string
   const formatAddressToString = (address: CustomerAddress): string => {
@@ -207,9 +228,9 @@ const CheckoutPage: React.FC = () => {
     // Note: Assuming address.address, address.locality, etc. are available on CustomerAddress
     // Reconstruct the address string as your backend expects
     let addressString = address.full_name;
-    addressString += `, ${address.address}`;
-    if (address.locality) addressString += `, ${address.locality}`;
-    addressString += `, ${address.city}, ${address.state} - ${address.zipcode}, ${address.country}`;
+    addressString += `, ${address.address}`; // Uses 'address' field
+    if (address.locality) addressString += `, ${address.locality}`; // Uses 'locality' field
+    addressString += `, ${address.city}, ${address.state} - ${address.zipcode}, ${address.country}`; // Uses 'zipcode' field
     return addressString;
   };
 
@@ -285,12 +306,11 @@ const CheckoutPage: React.FC = () => {
       // Check if order_id is a string and exists
       if (orderResponse && typeof orderResponse.order_id === "string") {
         // Construct the full OrderDetails object for Redux state
-        // IMPORTANT: REMOVE 'id: undefined' as it does not exist in your OrderDetails type
         const fullOrderDetails: OrderDetails = {
           order_id: orderResponse.order_id,
-          external_order_id: orderResponse.external_order_id || null, // Ensure it's null if not present, matching interface
-          message: orderResponse.message || "Order placed successfully", // Default message if not present
-          customer: user.id,
+          external_order_id: orderResponse.external_order_id || null,
+          message: orderResponse.message || "Order placed successfully",
+          customer: user.id, // Assuming user.id is correctly typed for OrderDetails
           sub_total: subTotal,
           tax: tax,
           discount: discount,
@@ -302,16 +322,15 @@ const CheckoutPage: React.FC = () => {
           payment_datetime: payload.payment_datetime,
           billing_address: payload.billing_address,
           delivery_address: payload.delivery_address,
-          products: payload.products, // Products from the payload
+          products: payload.products,
           status: "Pending", // Set initial status or derive from response if available
-          discount_coupon_id: payload.discount_coupon_id || null, // Match interface nullable type
-          // REMOVED: id: undefined, // THIS LINE IS GONE!
+          discount_coupon_id: payload.discount_coupon_id || null,
         };
 
-        dispatch(setOrderSuccess(fullOrderDetails)); // Dispatch the constructed full OrderDetails
+        dispatch(setOrderSuccess(fullOrderDetails));
         dispatch(clearCart());
         toast.success("Order placed successfully!");
-        router.push(`/order-confirmation/${orderResponse.order_id}`); // Use order_id for redirection
+        router.push(`/order-confirmation/${orderResponse.order_id}`);
       } else {
         const errorMessage =
           "Order placed, but no valid order ID (string) received for redirection.";
@@ -322,14 +341,21 @@ const CheckoutPage: React.FC = () => {
     } catch (err: any) {
       console.error("DEBUG: Error placing order (full error object):", err);
       let errorMessage = "Failed to place order.";
-      if (
+
+      // Improved error message extraction
+      if (err.response && err.response.data && err.response.data.message) {
+        // For errors from Axios or similar, if they return {data: { message: "..." }}
+        errorMessage = err.response.data.message;
+      } else if (
         err.responseBody &&
         err.responseBody.message &&
         err.responseBody.message.error &&
         err.responseBody.message.error.description
       ) {
+        // For specific payment gateway errors or complex backend errors
         errorMessage = err.responseBody.message.error.description;
       } else if (err.message) {
+        // Fallback to generic error message
         errorMessage = err.message;
       }
       dispatch(setOrderError(errorMessage));
@@ -382,8 +408,8 @@ const CheckoutPage: React.FC = () => {
                 >
                   <AddressForm
                     addressToEdit={addressToEdit}
-                    customerId={customerId}
-                    token={token}
+                    customerId={customerId!} // Asserting customerId is not null here
+                    token={token!} // Asserting token is not null here
                     onSave={handleAddressFormSave}
                     onCancel={handleAddressFormCancel}
                   />
