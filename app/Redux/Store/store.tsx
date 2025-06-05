@@ -1,4 +1,5 @@
 // app/Redux/Store/store.ts
+
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import {
   persistStore,
@@ -10,27 +11,34 @@ import {
   PURGE,
   REGISTER,
 } from "redux-persist";
-import storage from "redux-persist/lib/storage"; // defaults to localStorage for web
+import storage from "redux-persist/lib/storage";
 
+// --- Ensure these imports are present ---
 import authReducer from "../Slices/authSlice";
-import cartReducer from "@/app/Redux/Store/cartSlice";
+import cartReducer from "../Store/cartSlice";
+import wishlistReducer from "../Slices/wishlistSlice"; // <--- MAKE SURE THIS IS IMPORTED
+import forgotPasswordReducer from "../Slices/forgotPasswordSlice";
 import addressReducer from "../Slices/addressSlice";
 import orderReducer from "../Slices/orderSlice";
-import forgotPasswordReducer from "../Slices/forgotPasswordSlice"; // <-- NEW: Import forgot password slice
 
+// --- Ensure wishlist is included in combineReducers ---
 const rootReducer = combineReducers({
   auth: authReducer,
   cart: cartReducer,
+  wishlist: wishlistReducer, // <--- MAKE SURE THIS LINE IS PRESENT
+  forgotPassword: forgotPasswordReducer,
   address: addressReducer,
   order: orderReducer,
-  forgotPassword: forgotPasswordReducer, // <-- NEW: Add forgotPasswordReducer
 });
 
 const persistConfig = {
   key: "root",
   version: 1,
   storage,
-  whitelist: ["cart", "auth", "address", "order", "forgotPassword"], // <-- UPDATED: Persist forgotPassword slice
+  // IMPORTANT: Ensure 'wishlist' is in the whitelist if you want it to persist
+  // If you don't want it to persist, keep it out of the whitelist.
+  // Example: whitelist: ["auth", "cart", "wishlist"],
+  whitelist: ["auth", "cart", "wishlist"], // <--- ADD 'wishlist' HERE IF YOU WANT IT PERSISTED
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

@@ -3,6 +3,9 @@
 // Define the structure of a product variant's specifications
 interface Specification {
   colour?: string;
+   material: string;
+  weight: string;
+  size?: string | number | (string | number)[]; 
   // Add any other specific variant attributes here (e.g., size, material if they vary by variant)
 }
 
