@@ -1,14 +1,24 @@
-// app/Redux/Store/cartSlice.ts
+// src/app/Redux/Store/cartSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 // Define the type for a single cart item
-interface CartItem {
+export interface CartItem { // <--- Ensure this is exported as well
   id: string | number; // Product ID can be string or number
   name: string;
   image: string;
   price: number;
   quantity: number;
-  title?: string; // Optional field for product title
+  slug?: string; // Add this if you want to store it in the cart item
+  selectedVariantId?: string | number; // <--- CHANGE THIS LINE
+  color?: string; // Add this if you want to store it in the cart item
+  size?: string; // Add this if you want to store it in the cart item
+  stock?: number; // Add this if you want to store it in the cart item
+
+  // Add these optional properties from the original ProductCard
+  title?: string;
+  isRare?: boolean;
+  regularPrice?: number;
+  isOnSale?: boolean;
 }
 
 // Define the shape of the cart state
@@ -60,5 +70,5 @@ const cartSlice = createSlice({
 });
 
 // Export actions and reducer
-export const { addToCart, removeFromCart, updateQuantity, clearCart } = cartSlice.actions; // Export clearCart
+export const { addToCart, removeFromCart, updateQuantity, clearCart } = cartSlice.actions;
 export default cartSlice.reducer;
