@@ -10,7 +10,9 @@ import Link from "next/link";
 import { Product, Variant } from "@/types/Products";
 
 // --- REDUX IMPORTS ---
-import { useAppDispatch, useAppSelector } from "@/app/Redux/Hooks/hooks";
+// Import useDispatch and useSelector from react-redux
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/app/Redux/Store/store"; // Assuming your store setup
 import { addToCart, CartItem } from "@/app/Redux/Store/cartSlice";
 import { addOrUpdateWishlistItem } from "@/app/Redux/Slices/wishlistSlice";
 
@@ -18,9 +20,15 @@ interface ProductCardProps {
   product: Product;
 }
 
+// Create typed versions of useDispatch and useSelector
+// This is a common pattern in Redux Toolkit for better type inference
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
+export const useAppSelector = useSelector.withTypes<RootState>();
+
 export default function ProductCard({ product }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
 
+  // Now, use these typed hooks
   const dispatch = useAppDispatch();
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
 
@@ -68,7 +76,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
     const wishlistPayload = {
       customer: user.id.toString(),
-      product_id: product.id.toString(), // <--- THE FIX IS HERE: Convert product.id to string
+      product_id: product.id.toString(),
       quantity: 1,
       is_cart: false,
       product_name: product.name,
@@ -197,3 +205,13 @@ export default function ProductCard({ product }: ProductCardProps) {
     </div>
   );
 }
+
+// Remove the placeholder functions.
+// They are replaced by the typed hooks at the top.
+// function useAppSelector(arg0: (state: any) => any): { user: any; isAuthenticated: any; } {
+//   throw new Error("Function not implemented.");
+// }
+
+// function useAppDispatch() {
+//   throw new Error("Function not implemented.");
+// }
