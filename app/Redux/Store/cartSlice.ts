@@ -11,7 +11,7 @@ export interface CartItem { // <--- Ensure this is exported as well
   slug?: string; // Add this if you want to store it in the cart item
   selectedVariantId?: string | number; // <--- CHANGE THIS LINE
   color?: string; // Add this if you want to store it in the cart item
-  size?: string; // Add this if you want to store it in the cart item
+  size?: string | number | (string | number)[]; // Updated type for size
   stock?: number; // Add this if you want to store it in the cart item
 
   // Add these optional properties from the original ProductCard

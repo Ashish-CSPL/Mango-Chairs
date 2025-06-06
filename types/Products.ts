@@ -3,8 +3,10 @@
 // Define the structure of a product variant's specifications
 interface Specification {
   colour?: string;
-  size?: string; // <--- Add this line
-  // Add any other specific variant attributes here (e.g., material if they vary by variant)
+  material: string;
+  weight: string;
+  size?: string | number | (string | number)[];
+  // Add any other specific variant attributes here (e.g., size, material if they vary by variant)
 }
 
 // Define the structure for product dimensions
@@ -73,4 +75,14 @@ export interface Product {
   care_instruction?: string | null;
   warranty?: string | null;
   delivery_or_installation_tips?: string | null;
+}
+
+// --- NEW: Define and export ProductsApiResponse ---
+export interface ProductsApiResponse {
+  products: Product[];
+  total_pages: number;
+  current_page: number;
+  page_size: number;
+  total_products: number; // Added this line
+  // Add any other top-level properties expected from your API response
 }

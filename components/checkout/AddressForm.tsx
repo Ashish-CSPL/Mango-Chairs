@@ -110,7 +110,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
     try {
       // --- Logic to unset other default billing addresses in Redux before API call ---
       if (formData.is_default_billing) {
-        allAddresses.forEach((a) => {
+        allAddresses.forEach((a: CustomerAddress) => {
           if (a.id !== formData.id && a.is_default_billing) {
             dispatch(updateAddress({ ...a, is_default_billing: false }));
             // IMPORTANT: In a real application, you would also send an API call
