@@ -4,36 +4,96 @@
 
 import Image from "next/image";
 import { Heart } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { Product, Variant } from "@/types/Products";
+import { Product, Variant } from "@/types/Products"; // Ensure Product and Variant are imported
 
 // --- REDUX IMPORTS ---
-// Import useDispatch and useSelector from react-redux
 import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "@/app/Redux/Store/store"; // Assuming your store setup
+import type { AppDispatch, RootState } from "@/app/Redux/Store/store";
 import { addToCart, CartItem } from "@/app/Redux/Store/cartSlice";
-import { addOrUpdateWishlistItem } from "@/app/Redux/Slices/wishlistSlice";
+import {
+  toggleWishlistItem,
+  fetchWishlistItems,
+  WishlistItem as WishlistItemType,
+} from "@/app/Redux/Slices/wishlistSlice";
 
-interface ProductCardProps {
-  product: Product;
-}
-
-// Create typed versions of useDispatch and useSelector
-// This is a common pattern in Redux Toolkit for better type inference
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 export const useAppSelector = useSelector.withTypes<RootState>();
+
+// --- FIX: Define ProductCardProps interface ---
+interface ProductCardProps {
+  product: Product; // Assuming Product type is defined in "@/types/Products"
+}
+// --- END FIX ---
 
 export default function ProductCard({ product }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
 
-  // Now, use these typed hooks
   const dispatch = useAppDispatch();
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
 
-  const displayImage =
-    selectedVariant?.images?.[0] || product.images?.[0] || "/placeholder.png";
+  const { wishlistItems, productIdsInWishlist } = useAppSelector((state) => {
+    console.log(
+      "ProductCard Render: For Product ID:",
+      product.id.toString(),
+      "Current Redux productIdsInWishlist:",
+      state.wishlist.productIdsInWishlist
+    );
+    return state.wishlist;
+  });
+
+  const isInWishlist = productIdsInWishlist?.includes(product.id.toString());
+  console.log(
+    "ProductCard Render: isInWishlist calculated as:",
+    isInWishlist,
+    "for product:",
+    product.id.toString()
+  );
+
+  // Fetch wishlist on component mount if user is authenticated and wishlist is empty
+  useEffect(() => {
+    console.log(
+      "ProductCard useEffect: Re-evaluating. isAuthenticated:",
+      isAuthenticated,
+      "user.id:",
+      user?.id,
+      "wishlistItems.length:",
+      wishlistItems?.length
+    );
+    if (isAuthenticated && user?.id && wishlistItems?.length === 0) {
+      console.log(
+        "ProductCard useEffect: Dispatching fetchWishlistItems due to initial load/empty wishlist."
+      );
+      dispatch(fetchWishlistItems(user.id.toString()));
+    }
+  }, [isAuthenticated, user?.id, dispatch, wishlistItems?.length]);
+
+  // --- FIX: More robust image source handling ---
+  const getDisplayImageUrl = (
+    imagePath: string | undefined | null | string[]
+  ) => {
+    let finalPath = "";
+    if (Array.isArray(imagePath) && imagePath.length > 0) {
+      finalPath = imagePath[0];
+    } else if (typeof imagePath === "string") {
+      finalPath = imagePath;
+    }
+
+    if (finalPath && finalPath.startsWith("/")) {
+      return `https://nxadmin.consociate.co.in${finalPath}`;
+    }
+    // Fallback if no valid image path is found
+    // If '/placeholder.png' is a local image, it should not have the full domain.
+    // If it's a remote placeholder, use the full domain. Assuming remote for consistency.
+    return `https://nxadmin.consociate.co.in/media/placeholder.png`; // Added a default media path if your placeholder is in media folder
+  };
+
+  const displayImageUrl = getDisplayImageUrl(
+    selectedVariant?.images || product.images // Pass the array directly if possible
+  );
+  // --- END FIX ---
 
   const displayPrice =
     selectedVariant?.selling_price ?? product.selling_price ?? "0";
@@ -45,7 +105,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     const cartItem: CartItem = {
       id: itemToAdd.id,
       name: (itemToAdd as Product).name || product.name,
-      image: `https://nxadmin.consociate.co.in${displayImage}`,
+      image: getDisplayImageUrl(itemToAdd.images), // Use the robust function
       price: parseFloat(displayPrice.toString()),
       quantity: 1,
       slug: product.slug,
@@ -65,7 +125,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     toast.success("Product added successfully!");
   };
 
-  const handleAddToWishlist = () => {
+  const handleToggleWishlist = () => {
     if (!isAuthenticated || !user?.id) {
       toast.error("Please log in to add items to your wishlist.");
       return;
@@ -74,13 +134,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     const productPrice = parseFloat(product.selling_price.toString());
     const productBasePrice = parseFloat(product.base_price.toString());
 
-    const wishlistPayload = {
+    const wishlistPayload: WishlistItemType = {
+      id: product.id.toString(), // This 'id' is for the payload, might be product_id
       customer: user.id.toString(),
       product_id: product.id.toString(),
       quantity: 1,
       is_cart: false,
       product_name: product.name,
-      product_image: product.images?.[0] || "/placeholder.png",
+      product_image: product.images?.[0] || "/media/placeholder.png", // Ensure this fallback is also a valid path
       product_price: productPrice,
       base_price: productBasePrice,
       selling_price: productPrice,
@@ -88,13 +149,18 @@ export default function ProductCard({ product }: ProductCardProps) {
       stock: product.stock,
     };
 
-    dispatch(addOrUpdateWishlistItem(wishlistPayload))
+    dispatch(toggleWishlistItem(wishlistPayload))
       .unwrap()
       .then(() => {
-        // Success toast is handled by the wishlistSlice itself
+        console.log(
+          "ProductCard: toggleWishlistItem DISPATCHED AND SUCCEEDED (from .then() block)"
+        );
       })
       .catch((error: any) => {
-        console.error("Failed to add to wishlist:", error);
+        console.error(
+          "ProductCard: toggleWishlistItem DISPATCHED BUT FAILED (from .catch() block):",
+          error
+        );
       });
   };
 
@@ -108,20 +174,20 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.slug ? (
             <Link href={`/product/${product.slug}`}>
               <Image
-                src={`https://nxadmin.consociate.co.in${displayImage}`}
+                src={displayImageUrl} // Use the fully constructed URL
                 width={300}
                 height={300}
                 className="object-cover rounded mb-3"
                 alt={product.name}
                 onError={(e) => {
                   e.currentTarget.src =
-                    "https://placehold.co/300x300/cccccc/333333?text=No+Image";
+                    "https://placehold.co/300x300/cccccc/333333?text=No+Image"; // This is a client-side fallback for failed loads
                 }}
               />
             </Link>
           ) : (
             <Image
-              src={`https://nxadmin.consociate.co.in${displayImage}`}
+              src={displayImageUrl} // Use the fully constructed URL
               width={300}
               height={300}
               className="object-cover rounded mb-3"
@@ -134,8 +200,13 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
 
           <div className="absolute top-1 right-1 z-20 bg-white p-1 rounded-full shadow hover:text-red-500 h-8 w-8 flex items-center justify-center">
-            <button onClick={handleAddToWishlist} aria-label="Add to wishlist">
-              <Heart size={16} strokeWidth={1.5} />
+            <button onClick={handleToggleWishlist} aria-label="Add to wishlist">
+              <Heart
+                size={16}
+                strokeWidth={1.5}
+                fill={isInWishlist ? "red" : "none"}
+                color={isInWishlist ? "red" : "currentColor"}
+              />
             </button>
           </div>
         </div>
@@ -165,28 +236,34 @@ export default function ProductCard({ product }: ProductCardProps) {
             </p>
 
             <div className="flex gap-1 mt-1 flex-wrap">
-              {product.variant_list?.slice(0, 3).map((variant, index) => (
-                <div
-                  key={variant.id ?? `variant-${index}`}
-                  title={variant.specification?.colour}
-                  onClick={() => setSelectedVariant(variant)}
-                  className={`w-8 h-8 border-[1px] border-[#C5C5C5] cursor-pointer rounded-full overflow-hidden flex items-center justify-center hover:border-blue-400 ${
-                    selectedVariant?.id === variant.id
-                      ? "ring-2 ring-orange-400"
-                      : ""
-                  }`}
-                >
-                  {variant.images?.[0] && (
-                    <Image
-                      src={`https://nxadmin.consociate.co.in${variant.images[0]}`}
-                      alt={variant.specification?.colour || "Variant"}
-                      width={20}
-                      height={20}
-                      className="object-contain"
-                    />
-                  )}
-                </div>
-              ))}
+              {product.has_variant &&
+                product.variant_list?.slice(0, 3).map(
+                  (
+                    variant: Variant,
+                    index: number // --- FIX: Explicitly type variant and index ---
+                  ) => (
+                    <div
+                      key={variant.id ?? `variant-${index}`}
+                      title={variant.specification?.colour}
+                      onClick={() => setSelectedVariant(variant)}
+                      className={`w-8 h-8 border-[1px] border-[#C5C5C5] cursor-pointer rounded-full overflow-hidden flex items-center justify-center hover:border-blue-400 ${
+                        selectedVariant?.id === variant.id
+                          ? "ring-2 ring-orange-400"
+                          : ""
+                      }`}
+                    >
+                      {variant.images?.[0] && (
+                        <Image
+                          src={getDisplayImageUrl(variant.images)} // Use the robust function
+                          alt={variant.specification?.colour || "Variant"}
+                          width={20}
+                          height={20}
+                          className="object-contain"
+                        />
+                      )}
+                    </div>
+                  )
+                )}
             </div>
 
             <button
@@ -205,13 +282,3 @@ export default function ProductCard({ product }: ProductCardProps) {
     </div>
   );
 }
-
-// Remove the placeholder functions.
-// They are replaced by the typed hooks at the top.
-// function useAppSelector(arg0: (state: any) => any): { user: any; isAuthenticated: any; } {
-//   throw new Error("Function not implemented.");
-// }
-
-// function useAppDispatch() {
-//   throw new Error("Function not implemented.");
-// }

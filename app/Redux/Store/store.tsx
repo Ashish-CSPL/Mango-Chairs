@@ -13,20 +13,18 @@ import {
 } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 
-// --- Ensure these imports are present ---
 import authReducer from "../Slices/authSlice";
 import cartReducer from "../Store/cartSlice";
-import wishlistReducer from "../Slices/wishlistSlice"; // <--- ADD THIS IMPORT
+import wishlistReducer from "../Slices/wishlistSlice"; // Ensure this import is present
 
 import forgotPasswordReducer from "../Slices/forgotPasswordSlice";
 import addressReducer from "../Slices/addressSlice";
 import orderReducer from "../Slices/orderSlice";
 
-// --- Ensure wishlist is included in combineReducers ---
 const rootReducer = combineReducers({
   auth: authReducer,
   cart: cartReducer,
-  wishlist: wishlistReducer, // <--- ADD THIS LINE
+  wishlist: wishlistReducer, // Ensure 'wishlist' is included here
   forgotPassword: forgotPasswordReducer,
   address: addressReducer,
   order: orderReducer,
@@ -37,9 +35,7 @@ const persistConfig = {
   version: 1,
   storage,
   // IMPORTANT: Ensure 'wishlist' is in the whitelist if you want it to persist
-  // If you don't want it to persist, keep it out of the whitelist.
-  // Example: whitelist: ["auth", "cart", "wishlist"],
-  whitelist: ["auth", "cart", "wishlist"], // <--- ADD 'wishlist' HERE IF YOU WANT IT PERSISTED
+  whitelist: ["auth", "cart", "wishlist"],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

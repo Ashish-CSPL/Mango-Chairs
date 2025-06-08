@@ -1,212 +1,178 @@
 // app/wishlist/page.tsx
+
 "use client";
 
-import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/app/Redux/Store/store";
 import {
   fetchWishlistItems,
-  removeWishlistItem,
+  toggleWishlistItem,
   WishlistItem,
 } from "@/app/Redux/Slices/wishlistSlice";
 import { addToCart } from "@/app/Redux/Store/cartSlice";
 import Image from "next/image";
 import Link from "next/link";
-import { Trash2, ShoppingBag } from "lucide-react";
+import { useEffect } from "react";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
 
-const WishlistPage: React.FC = () => {
-  const dispatch: AppDispatch = useDispatch();
-  const router = useRouter();
-  const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
-  );
-  const { wishlistItems, status, error } = useSelector(
-    (state: RootState) => state.wishlist
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
+export const useAppSelector = useSelector.withTypes<RootState>();
+
+export default function WishlistPage() {
+  const dispatch = useAppDispatch();
+  const { user, isAuthenticated } = useAppSelector((state) => state.auth);
+  const { wishlistItems, status, error } = useAppSelector(
+    (state) => state.wishlist
   );
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      toast.error("Please log in to view your wishlist.");
-      router.push("/login"); // Redirect to login if not authenticated
-      return;
-    }
-    if (user?.id && status === "idle") {
+    console.log(
+      "WishlistPage useEffect: Checking for wishlist fetch. isAuthenticated:",
+      isAuthenticated,
+      "user.id:",
+      user?.id
+    );
+    if (isAuthenticated && user?.id) {
       dispatch(fetchWishlistItems(user.id.toString()));
     }
-  }, [isAuthenticated, user?.id, dispatch, status, router]);
+  }, [isAuthenticated, user?.id, dispatch]);
 
-  const handleRemoveFromWishlist = (product_id: string) => {
-    if (!user?.id) {
-      toast.error("User not identified for removal.");
+  const handleRemoveFromWishlist = (itemToRemove: WishlistItem) => {
+    if (!isAuthenticated || !user?.id) {
+      toast.error("Please log in to remove items from your wishlist.");
       return;
     }
-    dispatch(
-      removeWishlistItem({ customer_id: user.id.toString(), product_id })
-    )
+
+    const payloadForToggle = {
+      customer: user.id.toString(),
+      product_id: itemToRemove.product_id,
+      quantity: itemToRemove.quantity,
+      is_cart: false,
+      product_name: itemToRemove.product_name,
+      product_image: itemToRemove.product_image,
+      product_price: itemToRemove.product_price,
+      base_price: itemToRemove.base_price,
+      selling_price: itemToRemove.selling_price,
+      slug: itemToRemove.slug,
+      stock: itemToRemove.stock,
+    };
+
+    dispatch(toggleWishlistItem(payloadForToggle))
       .unwrap()
       .then(() => {
-        // Toast handled by slice
+        console.log(
+          "WishlistPage: Successfully dispatched toggleWishlistItem (remove)"
+        );
       })
-      .catch((err: any) => {
-        console.error("Failed to remove item from wishlist:", err);
+      .catch((err) => {
+        console.error("WishlistPage: Failed to remove from wishlist:", err);
       });
   };
 
   const handleAddToCartFromWishlist = (item: WishlistItem) => {
-    if (!user?.id) {
-      toast.error("Please log in to add items to cart.");
-      return;
-    }
-
-    // Prepare cart item payload. This should match your CartItem interface.
-    // Ensure all required fields for CartItem are present.
-    const cartItemPayload = {
-      id: item.product_id, // This needs to be 'product_id' in the payload if backend expects that
-      name: item.product_name, // This needs to be 'product_name'
-      image: item.product_image, // This needs to be 'product_image'
-      price: item.selling_price, // This needs to be 'product_price'
+    const cartItem = {
+      id: item.product_id,
+      name: item.product_name,
+      // --- FIX: Robust image URL for cart item ---
+      image:
+        item.product_image && item.product_image.startsWith("/")
+          ? `https://nxadmin.consociate.co.in${item.product_image}`
+          : `https://nxadmin.consociate.co.in/media/placeholder.png`, // Use a remote placeholder if your local one isn't served
+      // --- END FIX ---
+      price: item.selling_price,
       quantity: 1,
       slug: item.slug,
       stock: item.stock,
-      // The payload for addOrUpdateWishlistItem expects these specific keys:
-      customer: user.id.toString(), // Missing in your cartItemPayload construction for wishlist update
-      product_id: item.product_id,
-      is_cart: false, // Explicitly false for wishlist
-      base_price: item.base_price, // Make sure WishlistItem has base_price
-      selling_price: item.selling_price,
-      // ... and other product details as specified in AddUpdateWishlistPayload
+      title: undefined,
+      isRare: undefined,
+      regularPrice: undefined,
+      isOnSale: false,
+      selectedVariantId: undefined,
+      color: undefined,
+      size: undefined,
     };
-
-    // Dispatch the synchronous addToCart action
-    dispatch(addToCart(cartItemPayload));
-
-    // Show success toast immediately after dispatching
+    dispatch(addToCart(cartItem));
     toast.success(`${item.product_name} added to cart!`);
-
-    // Optionally, remove from wishlist immediately after adding to cart
-    // This is an async operation, so it keeps its .then/.catch structure.
-    handleRemoveFromWishlist(item.product_id);
+    handleRemoveFromWishlist(item);
   };
-
-  const getImageUrl = (path: string) => {
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path;
-    }
-    // Adjust this base URL if your media files are served differently
-    return `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(
-      "/api",
-      ""
-    )}${path}`;
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <div className="container mx-auto p-8 text-center mt-20">
-        <h1 className="text-2xl font-bold mb-4">Please Log In</h1>
-        <p className="text-gray-600">
-          You need to be logged in to view your wishlist.
-        </p>
-        <button
-          onClick={() => router.push("/login")}
-          className="mt-4 px-6 py-3 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors"
-        >
-          Go to Login
-        </button>
-      </div>
-    );
-  }
 
   if (status === "loading") {
-    return (
-      <div className="container mx-auto p-8 text-center mt-20">
-        <p className="text-xl">Loading wishlist...</p>
-      </div>
-    );
+    return <div className="p-4 text-center">Loading wishlist...</div>;
   }
 
   if (status === "failed") {
+    return <div className="p-4 text-center text-red-500">Error: {error}</div>;
+  }
+
+  if (!isAuthenticated) {
     return (
-      <div className="container mx-auto p-8 text-center mt-20">
-        <h1 className="text-2xl font-bold text-red-500 mb-4">
-          Error loading wishlist
-        </h1>
-        <p className="text-gray-600">
-          {error || "An unexpected error occurred."}
-        </p>
+      <div className="p-4 text-center">
+        Please log in to view your wishlist.
       </div>
     );
   }
 
-  return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8 mt-20">
-      <h1 className="text-3xl font-bold mb-8 text-center">My Wishlist</h1>
+  if (wishlistItems.length === 0) {
+    return <div className="p-4 text-center">Your wishlist is empty.</div>;
+  }
 
-      {wishlistItems.length === 0 ? (
-        <div className="text-center py-10 border rounded-lg shadow-sm bg-white">
-          <p className="text-xl text-gray-600 mb-4">Your wishlist is empty.</p>
-          <p className="text-md text-gray-500">
-            Start adding products you love to your wishlist!
-          </p>
-          <Link
-            href="/"
-            className="mt-6 inline-block bg-orange-500 text-white px-6 py-3 rounded-md hover:bg-orange-600 transition-colors"
-          >
-            Continue Shopping
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {wishlistItems.map((item) => (
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6 text-center">Your Wishlist</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {wishlistItems.map(
+          (
+            item,
+            index // --- FIX: Add index to key for uniqueness ---
+          ) => (
             <div
-              key={item.id}
-              className="border rounded-lg p-4 shadow-md flex flex-col items-center text-center relative bg-white"
+              key={`${item.id}-${index}`}
+              className="border p-4 rounded-lg shadow-md flex flex-col items-center"
             >
               <Link
                 href={`/product/${item.slug}`}
-                className="flex flex-col items-center text-center w-full"
+                className="w-full text-center"
               >
-                <div className="relative w-full h-48 mb-4">
-                  <Image
-                    src={getImageUrl(item.product_image)}
-                    alt={item.product_name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                    className="object-contain rounded-md"
-                    onError={(e) => {
-                      e.currentTarget.src = "/placeholder.png";
-                    }}
-                  />
-                </div>
-                <h2 className="text-lg font-semibold truncate mb-1 w-full px-2">
+                <Image
+                  // --- FIX: Robust image URL for wishlist item ---
+                  src={
+                    item.product_image && item.product_image.startsWith("/")
+                      ? `https://nxadmin.consociate.co.in${item.product_image}`
+                      : `https://nxadmin.consociate.co.in/media/placeholder.png` // Use a remote placeholder if your local one isn't served
+                  }
+                  // --- END FIX ---
+                  alt={item.product_name}
+                  width={200}
+                  height={200}
+                  className="object-contain mb-4"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      "https://placehold.co/200x200/cccccc/333333?text=No+Image";
+                  }}
+                />
+                <h2 className="text-lg font-semibold line-clamp-1">
                   {item.product_name}
                 </h2>
-                <p className="text-gray-700 mb-4">
-                  ₹{item.product_price.toFixed(2)}
-                </p>
               </Link>
-              <div className="flex gap-2 mt-auto w-full justify-center">
+              <p className="text-gray-700 mt-2">₹{item.selling_price}</p>
+              <div className="mt-4 flex gap-2">
                 <button
                   onClick={() => handleAddToCartFromWishlist(item)}
-                  className="flex items-center justify-center gap-2 bg-blue-500 text-white text-sm px-4 py-2 rounded-full hover:bg-blue-600 transition-colors flex-grow"
+                  className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
                 >
-                  <ShoppingBag size={18} /> Add to Cart
+                  Add to Cart
                 </button>
                 <button
-                  onClick={() => handleRemoveFromWishlist(item.product_id)}
-                  className="flex items-center justify-center p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                  aria-label="Remove from wishlist"
+                  onClick={() => handleRemoveFromWishlist(item)}
+                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition"
                 >
-                  <Trash2 size={20} />
+                  Remove
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          )
+        )}
+      </div>
     </div>
   );
-};
-
-export default WishlistPage;
+}

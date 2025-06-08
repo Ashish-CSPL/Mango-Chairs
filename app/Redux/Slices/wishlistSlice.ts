@@ -1,116 +1,28 @@
 // app/Redux/Slices/wishlistSlice.ts
 
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import toast from 'react-hot-toast';
-import { RootState } from '../Store/store'; // Import RootState to access the entire store
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { toast } from "react-hot-toast";
+import fetchData from "@/api/fetchdata";
 
-// Define your API base URL. Ensure this environment variable is set in your .env.local file
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-// -----------------------------------------------------------
-// 1. Define the WishlistItem Interface
+// Define the structure of a single wishlist item received from the backend
 export interface WishlistItem {
-  id: string; // Unique ID of the wishlist entry (e.g., from backend after adding)
-  customer_id: string;
-  product_id: string; // ID of the product
+  id: string; // This is the ID of the wishlist entry itself (from backend)
+  customer: string;
+  product_id: string; // The ID of the product (important for matching)
+  quantity: number;
+  is_cart: boolean;
   product_name: string;
-  product_image: string; // URL or path to the product image
-  product_price: number; // The current selling price of the product
-  slug: string; // Product slug
-  stock: number; // Product stock
-  base_price: number; // Base price of the product
-  selling_price: number; // Selling price of the product
-  quantity: number; // For wishlist, usually 1, but if backend uses same for cart, it might vary
+  product_image: string;
+  product_price: number;
+  base_price: number;
+  selling_price: number;
+  slug: string;
+  stock: number;
+  // Add any other properties your API returns for a wishlist item
 }
 
-// State interface for the wishlist slice
-interface WishlistState {
-  wishlistItems: WishlistItem[];
-  status: 'idle' | 'loading' | 'succeeded' | 'failed';
-  error: string | null;
-}
-
-const initialState: WishlistState = {
-  wishlistItems: [],
-  status: 'idle',
-  error: null,
-};
-
-// Helper function to handle fetch response and errors
-async function handleFetchResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    let errorData: any;
-    let rawResponseText: string | null = null; // To capture raw text for debugging
-
-    try {
-      rawResponseText = await response.text(); // Get raw text first
-      errorData = JSON.parse(rawResponseText); // Then attempt to parse as JSON
-    } catch (e: any) {
-      // If JSON parsing fails, use the raw text or statusText as the message
-      errorData = { message: rawResponseText || response.statusText || `Error ${response.status}` };
-      console.error("JSON parsing failed for error response:", e); // Log the parsing error itself
-    }
-
-    console.error("Fetch Error Details (refined):", {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-      rawResponseText: rawResponseText, // Log the raw response text
-      parsedResponseBody: errorData,    // Log the parsed (or fallback) body
-    });
-
-    // Prioritize specific error fields from the backend, then generic fallbacks
-    throw new Error(
-      errorData.detail || // Common for Django REST Framework auth errors like this one
-      errorData.message || // For generic messages
-      (typeof errorData === 'string' ? errorData : Object.values(errorData).flat().join(', ')) || // Handle string errors or object errors
-      `HTTP Error: ${response.status} ${response.statusText}`
-    );
-  }
-  return response.json();
-}
-
-// -----------------------------------------------------------
-// 2. Async Thunks for API Calls
-
-// Fetch Wishlist Items
-// GET: /user/cart-wishlist/get/?customer=158&is_cart=false
-export const fetchWishlistItems = createAsyncThunk(
-  'wishlist/fetchItems',
-  async (customerId: string, { getState, rejectWithValue }) => {
-    try {
-      const state = getState() as RootState;
-      const token = state.auth.token; // Access the authentication token
-
-      console.log("fetchWishlistItems: Token found in state:", !!token); // Debugging token presence
-
-      if (!token) {
-        return rejectWithValue("Authentication token not found. Please log in.");
-      }
-
-      const url = new URL(`${API_BASE_URL}/user/cart-wishlist/get/`);
-      url.searchParams.append('customer', customerId);
-      url.searchParams.append('is_cart', 'false');
-
-      const response = await fetch(url.toString(), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, // ADDED AUTHORIZATION HEADER
-        },
-      });
-
-      return await handleFetchResponse<WishlistItem[]>(response);
-    } catch (error: any) {
-      console.error("API Error fetching wishlist:", error.message);
-      return rejectWithValue(error.message || "Failed to fetch wishlist items.");
-    }
-  }
-);
-
-// Add or Update Wishlist Item
-// POST: /user/cart-wishlist/update/
-interface AddUpdateWishlistPayload {
+// Define the shape of the data needed to add/update a wishlist item (payload for API)
+export interface AddWishlistPayload {
   customer: string;
   product_id: string;
   quantity: number;
@@ -123,155 +35,184 @@ interface AddUpdateWishlistPayload {
   slug: string;
   stock: number;
 }
-export const addOrUpdateWishlistItem = createAsyncThunk(
-  'wishlist/addOrUpdateItem',
-  async (payload: AddUpdateWishlistPayload, { getState, rejectWithValue }) => {
-    try {
-      const state = getState() as RootState;
-      const token = state.auth.token; // Access the authentication token
 
-      console.log("addOrUpdateWishlistItem: Token found in state:", !!token); // Debugging token presence
-
-      if (!token) {
-        return rejectWithValue("Authentication token not found. Please log in.");
-      }
-
-      const response = await fetch(`${API_BASE_URL}/user/cart-wishlist/update/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, // ADDED AUTHORIZATION HEADER
-        },
-        body: JSON.stringify(payload),
-      });
-
-      return await handleFetchResponse<WishlistItem>(response);
-    } catch (error: any) {
-      console.error("API Error adding/updating wishlist item:", error.message);
-      return rejectWithValue(error.message || "Failed to add/update wishlist item.");
-    }
-  }
-);
-
-// Remove Wishlist Item
-// DELETE: /user/cart-wishlist/remove/
+// Define the shape of the data needed to remove a wishlist item (payload for API)
 interface RemoveWishlistPayload {
-  customer_id: string;
+  customer: string;
   product_id: string;
+  is_cart: boolean;
 }
 
-export const removeWishlistItem = createAsyncThunk(
-  'wishlist/removeItem',
-  async (payload: RemoveWishlistPayload, { getState, rejectWithValue }) => {
-    try {
-      const state = getState() as RootState;
-      const token = state.auth.token; // Access the authentication token
+// Define the expected structure of the GET /get/ wishlist response
+interface GetWishlistResponse {
+  customer: number; // or string, depending on your backend
+  products: WishlistItem[]; // This is the array we need!
+}
 
-      console.log("removeWishlistItem: Token found in state:", !!token); // Debugging token presence
+// Define the state for the wishlist slice
+export interface WishlistState {
+  wishlistItems: WishlistItem[];
+  productIdsInWishlist: string[]; // For quick lookup of product IDs in the wishlist
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
+}
+
+const initialState: WishlistState = {
+  wishlistItems: [],
+  productIdsInWishlist: [],
+  status: "idle",
+  error: null,
+};
+
+// --- Async Thunk for Fetching Wishlist Items ---
+export const fetchWishlistItems = createAsyncThunk(
+  "wishlist/fetchWishlistItems",
+  async (customerId: string, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as { auth: { token: string | null } };
+      const token = state.auth.token;
 
       if (!token) {
-        return rejectWithValue("Authentication token not found. Please log in.");
+        return rejectWithValue("Authentication token not found.");
       }
 
-      const response = await fetch(`${API_BASE_URL}/user/cart-wishlist/remove/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, // ADDED AUTHORIZATION HEADER
-        },
-        body: JSON.stringify(payload),
-      });
-
-      // For DELETE, if the backend sends 204 No Content, response.json() would fail.
-      // We return the payload directly on success to update the local state.
-      if (response.status === 204) {
-        return payload; // No content, so just return the input payload
-      }
-
-      // If response.ok is false, handleFetchResponse will throw an error with more details.
-      // If response.ok is true AND not 204, then it should have a JSON body.
-      return await handleFetchResponse(response); // This will handle non-204 successful responses or throw on errors
+      const response = await fetchData<GetWishlistResponse>( // <--- IMPORTANT: Change expected type here
+        "user/cart-wishlist/get/",
+        "GET",
+        {
+          queryParams: { customer: customerId, is_cart: false },
+          token: token,
+        }
+      );
+      return response; // This will now be {customer: ..., products: [...]}
     } catch (error: any) {
-      console.error("API Error removing wishlist item:", error.message);
-      return rejectWithValue(error.message || "Failed to remove wishlist item.");
+      toast.error(error.message || "Failed to fetch wishlist.");
+      return rejectWithValue(error.message || "Failed to fetch wishlist.");
     }
   }
 );
 
+// --- Async Thunk for Toggling (Add/Remove) Wishlist Item ---
+export const toggleWishlistItem = createAsyncThunk(
+  "wishlist/toggleWishlistItem",
+  async (productPayload: AddWishlistPayload, { getState, rejectWithValue }) => {
+    const state = getState() as {
+      wishlist: WishlistState;
+      auth: { token: string | null };
+    };
+    const token = state.auth.token;
+    const { product_id, customer, is_cart } = productPayload;
 
-// -----------------------------------------------------------
-// 3. Wishlist Slice Definition
+    if (!token) {
+      return rejectWithValue("Authentication token not found.");
+    }
+
+    const isCurrentlyInWishlist =
+      state.wishlist.productIdsInWishlist.includes(product_id);
+
+    try {
+      if (isCurrentlyInWishlist) {
+        const removePayload: RemoveWishlistPayload = {
+          customer: customer,
+          product_id: product_id,
+          is_cart: is_cart,
+        };
+        await fetchData("/user/cart-wishlist/remove/", "DELETE", {
+          body: removePayload,
+          token: token,
+        });
+        toast.success("Product removed from wishlist!");
+        return { type: "remove", product_id };
+      } else {
+        await fetchData<WishlistItem>("/user/cart-wishlist/update/", "POST", {
+          body: productPayload,
+          token: token,
+        });
+        toast.success("Product added to wishlist!");
+        return { type: "add", productPayload };
+      }
+    } catch (error: any) {
+      console.error("API error during wishlist toggle:", error);
+      toast.error(error.message || "Failed to update wishlist.");
+      return rejectWithValue(error.message || "Failed to update wishlist.");
+    }
+  }
+);
+
 const wishlistSlice = createSlice({
-  name: 'wishlist',
+  name: "wishlist",
   initialState,
-  reducers: {
-    clearWishlist(state) {
-      state.wishlistItems = [];
-      state.status = 'idle';
-      state.error = null;
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       // --- Fetch Wishlist Items ---
       .addCase(fetchWishlistItems.pending, (state) => {
-        state.status = 'loading';
+        state.status = "loading";
+        console.log("wishlistSlice: fetchWishlistItems.pending");
       })
-      .addCase(fetchWishlistItems.fulfilled, (state, action: PayloadAction<WishlistItem[]>) => {
-        state.status = 'succeeded';
-        state.wishlistItems = action.payload;
-        state.error = null;
-      })
-      .addCase(fetchWishlistItems.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload as string;
-        toast.error(action.payload as string || "Failed to load wishlist.");
-      })
-      // --- Add or Update Wishlist Item ---
-      .addCase(addOrUpdateWishlistItem.pending, (state) => {
-        state.status = 'loading';
-      })
-      .addCase(addOrUpdateWishlistItem.fulfilled, (state, action: PayloadAction<WishlistItem>) => {
-        state.status = 'succeeded';
-        state.error = null;
-        const addedItem = action.payload;
-        const existingItemIndex = state.wishlistItems.findIndex(
-          (item) => item.product_id === addedItem.product_id
-        );
+      .addCase(
+        fetchWishlistItems.fulfilled,
+        (state, action: PayloadAction<GetWishlistResponse>) => { // <--- IMPORTANT: Expect GetWishlistResponse payload
+          state.status = "succeeded";
+          // FIX: Access the 'products' array from the payload object
+          const fetchedProducts = action.payload.products;
 
-        if (existingItemIndex !== -1) {
-          state.wishlistItems[existingItemIndex] = addedItem;
-          toast.success("Wishlist item updated!");
-        } else {
-          state.wishlistItems.push(addedItem);
-          toast.success("Product added to wishlist!");
+          if (Array.isArray(fetchedProducts)) { // <--- Check if products is an array
+            state.wishlistItems = fetchedProducts;
+            state.productIdsInWishlist = fetchedProducts.map(
+              (item) => item.product_id
+            );
+            console.log("wishlistSlice: fetchWishlistItems.fulfilled. Fetched productIdsInWishlist:", state.productIdsInWishlist);
+          } else {
+            console.warn("wishlistSlice: fetchWishlistItems.fulfilled: 'products' was not an array in the payload:", action.payload);
+            state.wishlistItems = [];
+            state.productIdsInWishlist = [];
+            console.log("wishlistSlice: fetchWishlistItems.fulfilled. Set empty productIdsInWishlist due to unexpected 'products' format.");
+          }
+        }
+      )
+      .addCase(fetchWishlistItems.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload as string;
+        console.error("wishlistSlice: fetchWishlistItems.rejected:", action.payload);
+      })
+      // --- Toggle Wishlist Item (Add/Remove) ---
+      .addCase(toggleWishlistItem.pending, (state) => {
+        state.status = "loading";
+        console.log("wishlistSlice: toggleWishlistItem.pending");
+      })
+      .addCase(toggleWishlistItem.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        const { type, product_id, productPayload } = action.payload;
+
+        if (type === "remove") {
+          state.wishlistItems = state.wishlistItems.filter(
+            (item) => item.product_id !== product_id
+          );
+          state.productIdsInWishlist = state.productIdsInWishlist.filter(
+            (id) => id !== product_id
+          );
+          console.log("wishlistSlice: REMOVE fulfilled. New productIdsInWishlist:", state.productIdsInWishlist);
+        } else if (type === "add" && productPayload) {
+          if (!state.productIdsInWishlist.includes(productPayload.product_id)) {
+            const newItem: WishlistItem = {
+              id: `${productPayload.product_id}-${Date.now()}`,
+              ...productPayload,
+            };
+            state.wishlistItems.push(newItem);
+            state.productIdsInWishlist.push(productPayload.product_id);
+            console.log("wishlistSlice: ADD fulfilled. New productIdsInWishlist:", state.productIdsInWishlist);
+          } else {
+            console.log("wishlistSlice: ADD fulfilled, but item already in productIdsInWishlist. No change to state.");
+          }
         }
       })
-      .addCase(addOrUpdateWishlistItem.rejected, (state, action) => {
-        state.status = 'failed';
+      .addCase(toggleWishlistItem.rejected, (state, action) => {
+        state.status = "failed";
         state.error = action.payload as string;
-        toast.error(action.payload as string || "Failed to add to wishlist.");
-      })
-      // --- Remove Wishlist Item ---
-      .addCase(removeWishlistItem.pending, (state) => {
-        state.status = 'loading';
-      })
-      .addCase(removeWishlistItem.fulfilled, (state, action: PayloadAction<RemoveWishlistPayload>) => {
-        state.status = 'succeeded';
-        state.error = null;
-        state.wishlistItems = state.wishlistItems.filter(
-          (item) => item.product_id !== action.payload.product_id
-        );
-        toast.success("Product removed from wishlist!");
-      })
-      .addCase(removeWishlistItem.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload as string;
-        toast.error(action.payload as string || "Failed to remove from wishlist.");
+        console.error("wishlistSlice: toggleWishlistItem.rejected:", action.payload);
       });
   },
 });
-
-export const { clearWishlist } = wishlistSlice.actions;
 
 export default wishlistSlice.reducer;

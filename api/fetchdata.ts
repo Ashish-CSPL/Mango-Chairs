@@ -1,6 +1,6 @@
 // app/api/fetchdata.ts
 
-const BASE_URL = "https://nxadmin.consociate.co.in/"; 
+const BASE_URL = "https://nxadmin.consociate.co.in/";
 
 type CustomRequestBody = Record<string, any> | FormData;
 
@@ -34,7 +34,7 @@ async function fetchData<T>(
     const searchParams = new URLSearchParams();
     for (const key in options.queryParams) {
       const value = options.queryParams[key];
-      if (value !== undefined) { 
+      if (value !== undefined) {
         searchParams.append(key, String(value));
       }
     }
@@ -48,13 +48,11 @@ async function fetchData<T>(
     ...(options?.headers || {}),
   };
   if (options?.token) {
-    // --- THIS IS THE ONLY LINE THAT NEEDS TO BE CHANGED ---
-    // Change 'Bearer' to 'Token' to match Django Rest Framework's default TokenAuthentication
-    headers["Authorization"] = `Token ${options.token}`; 
+    headers["Authorization"] = `Token ${options.token}`;
   }
 
   let requestBody: BodyInit | undefined;
-  if (method !== "GET" && method !== "HEAD") { 
+  if (method !== "GET" && method !== "HEAD") {
     if (options?.body instanceof FormData) {
       requestBody = options.body;
     } else if (options?.body) {
@@ -65,12 +63,12 @@ async function fetchData<T>(
     }
   }
 
-  const { 
-    body: _body, 
-    headers: _headers, 
-    token: _token, 
-    queryParams: _queryParams, 
-    ...fetchInitOptions 
+  const {
+    body: _body,
+    headers: _headers,
+    token: _token,
+    queryParams: _queryParams,
+    ...fetchInitOptions
   } = options || {};
 
   try {
@@ -116,13 +114,16 @@ async function fetchData<T>(
 
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
+      if (response.status === 204) {
+        return {} as T;
+      }
       return await response.json();
     } else {
       console.warn(`Fetch operation for ${url}: Response was not JSON. Content-Type: ${contentType}. Trying to read as text.`);
       const textResponse = await response.text();
 
       if (response.status === 204 || !textResponse) {
-        return {} as T; 
+        return {} as T;
       }
 
       throw new Error(`Fetch operation for ${url}: Non-JSON response received. Expected JSON. Raw response: "${textResponse.substring(0, 200)}..."`);
