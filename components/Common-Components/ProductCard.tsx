@@ -16,61 +16,43 @@ import { addToCart, CartItem } from "@/app/Redux/Store/cartSlice";
 import {
   toggleWishlistItem,
   fetchWishlistItems,
-  WishlistItem as WishlistItemType,
-} from "@/app/Redux/Slices/wishlistSlice";
+  AddWishlistPayload, // Import AddWishlistPayload
+} from "@/app/Redux/Slices/wishlistSlice"; // Adjust import if WishlistItemType is also used here
 
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 export const useAppSelector = useSelector.withTypes<RootState>();
 
-// --- FIX: Define ProductCardProps interface ---
+// Define ProductCardProps interface
 interface ProductCardProps {
   product: Product; // Assuming Product type is defined in "@/types/Products"
 }
-// --- END FIX ---
 
 export default function ProductCard({ product }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
 
   const dispatch = useAppDispatch();
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-
-  const { wishlistItems, productIdsInWishlist } = useAppSelector((state) => {
-    console.log(
-      "ProductCard Render: For Product ID:",
-      product.id.toString(),
-      "Current Redux productIdsInWishlist:",
-      state.wishlist.productIdsInWishlist
-    );
-    return state.wishlist;
-  });
-
-  const isInWishlist = productIdsInWishlist?.includes(product.id.toString());
-  console.log(
-    "ProductCard Render: isInWishlist calculated as:",
-    isInWishlist,
-    "for product:",
-    product.id.toString()
+  const { wishlistItems, productIdsInWishlist, status } = useAppSelector(
+    (state) => state.wishlist
   );
 
-  // Fetch wishlist on component mount if user is authenticated and wishlist is empty
+  // Determine if the current product's ID is in the wishlist
+  const isInWishlist = productIdsInWishlist?.includes(product.id.toString());
+  // console.log("ProductCard Render: isInWishlist calculated as:", isInWishlist, "for product:", product.id.toString());
+
+  // Fetch wishlist on component mount if user is authenticated and wishlist is empty/idle
   useEffect(() => {
-    console.log(
-      "ProductCard useEffect: Re-evaluating. isAuthenticated:",
-      isAuthenticated,
-      "user.id:",
-      user?.id,
-      "wishlistItems.length:",
-      wishlistItems?.length
-    );
-    if (isAuthenticated && user?.id && wishlistItems?.length === 0) {
-      console.log(
-        "ProductCard useEffect: Dispatching fetchWishlistItems due to initial load/empty wishlist."
-      );
+    // console.log("ProductCard useEffect: Re-evaluating. isAuthenticated:", isAuthenticated, "user.id:", user?.id, "wishlistItems.length:", wishlistItems?.length, "status:", status);
+    if (
+      isAuthenticated &&
+      user?.id &&
+      (status === "idle" || wishlistItems?.length === 0)
+    ) {
+      // console.log("ProductCard useEffect: Dispatching fetchWishlistItems due to initial load/empty wishlist.");
       dispatch(fetchWishlistItems(user.id.toString()));
     }
-  }, [isAuthenticated, user?.id, dispatch, wishlistItems?.length]);
+  }, [isAuthenticated, user?.id, dispatch, wishlistItems?.length, status]);
 
-  // --- FIX: More robust image source handling ---
   const getDisplayImageUrl = (
     imagePath: string | undefined | null | string[]
   ) => {
@@ -84,16 +66,12 @@ export default function ProductCard({ product }: ProductCardProps) {
     if (finalPath && finalPath.startsWith("/")) {
       return `https://nxadmin.consociate.co.in${finalPath}`;
     }
-    // Fallback if no valid image path is found
-    // If '/placeholder.png' is a local image, it should not have the full domain.
-    // If it's a remote placeholder, use the full domain. Assuming remote for consistency.
-    return `https://nxadmin.consociate.co.in/media/placeholder.png`; // Added a default media path if your placeholder is in media folder
+    return `https://nxadmin.consociate.co.in/media/placeholder.png`;
   };
 
   const displayImageUrl = getDisplayImageUrl(
-    selectedVariant?.images || product.images // Pass the array directly if possible
+    selectedVariant?.images || product.images
   );
-  // --- END FIX ---
 
   const displayPrice =
     selectedVariant?.selling_price ?? product.selling_price ?? "0";
@@ -105,7 +83,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     const cartItem: CartItem = {
       id: itemToAdd.id,
       name: (itemToAdd as Product).name || product.name,
-      image: getDisplayImageUrl(itemToAdd.images), // Use the robust function
+      image: getDisplayImageUrl(itemToAdd.images),
       price: parseFloat(displayPrice.toString()),
       quantity: 1,
       slug: product.slug,
@@ -134,14 +112,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     const productPrice = parseFloat(product.selling_price.toString());
     const productBasePrice = parseFloat(product.base_price.toString());
 
-    const wishlistPayload: WishlistItemType = {
-      id: product.id.toString(), // This 'id' is for the payload, might be product_id
+    // Construct the payload for toggleWishlistItem
+    const wishlistPayload: AddWishlistPayload = {
       customer: user.id.toString(),
       product_id: product.id.toString(),
       quantity: 1,
-      is_cart: false,
+      is_cart: false, // Indicates this is for wishlist, not cart
       product_name: product.name,
-      product_image: product.images?.[0] || "/media/placeholder.png", // Ensure this fallback is also a valid path
+      product_image: product.images?.[0] || "/media/placeholder.png",
       product_price: productPrice,
       base_price: productBasePrice,
       selling_price: productPrice,
@@ -152,9 +130,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     dispatch(toggleWishlistItem(wishlistPayload))
       .unwrap()
       .then(() => {
-        console.log(
-          "ProductCard: toggleWishlistItem DISPATCHED AND SUCCEEDED (from .then() block)"
-        );
+        // console.log("ProductCard: toggleWishlistItem DISPATCHED AND SUCCEEDED (from .then() block)");
       })
       .catch((error: any) => {
         console.error(
@@ -174,24 +150,24 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.slug ? (
             <Link href={`/product/${product.slug}`}>
               <Image
-                src={displayImageUrl} // Use the fully constructed URL
+                src={displayImageUrl}
                 width={300}
                 height={300}
                 className="object-cover rounded mb-3"
-                alt={product.name}
+                alt={product.name || "Product Image"} // FIX: Added alt prop
                 onError={(e) => {
                   e.currentTarget.src =
-                    "https://placehold.co/300x300/cccccc/333333?text=No+Image"; // This is a client-side fallback for failed loads
+                    "https://placehold.co/300x300/cccccc/333333?text=No+Image";
                 }}
               />
             </Link>
           ) : (
             <Image
-              src={displayImageUrl} // Use the fully constructed URL
+              src={displayImageUrl}
               width={300}
               height={300}
               className="object-cover rounded mb-3"
-              alt={product.name}
+              alt={product.name || "Product Image"} // FIX: Added alt prop
               onError={(e) => {
                 e.currentTarget.src =
                   "https://placehold.co/300x300/cccccc/333333?text=No+Image";
@@ -200,7 +176,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
 
           <div className="absolute top-1 right-1 z-20 bg-white p-1 rounded-full shadow hover:text-red-500 h-8 w-8 flex items-center justify-center">
-            <button onClick={handleToggleWishlist} aria-label="Add to wishlist">
+            <button
+              onClick={handleToggleWishlist}
+              aria-label="Toggle wishlist item"
+            >
               <Heart
                 size={16}
                 strokeWidth={1.5}
@@ -237,11 +216,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 
             <div className="flex gap-1 mt-1 flex-wrap">
               {product.has_variant &&
-                product.variant_list?.slice(0, 3).map(
-                  (
-                    variant: Variant,
-                    index: number // --- FIX: Explicitly type variant and index ---
-                  ) => (
+                product.variant_list
+                  ?.slice(0, 3)
+                  .map((variant: Variant, index: number) => (
                     <div
                       key={variant.id ?? `variant-${index}`}
                       title={variant.specification?.colour}
@@ -254,16 +231,19 @@ export default function ProductCard({ product }: ProductCardProps) {
                     >
                       {variant.images?.[0] && (
                         <Image
-                          src={getDisplayImageUrl(variant.images)} // Use the robust function
-                          alt={variant.specification?.colour || "Variant"}
+                          src={getDisplayImageUrl(variant.images)}
+                          alt={
+                            variant.specification?.colour ||
+                            product.name ||
+                            "Variant Image"
+                          } // FIX: Added alt prop
                           width={20}
                           height={20}
                           className="object-contain"
                         />
                       )}
                     </div>
-                  )
-                )}
+                  ))}
             </div>
 
             <button

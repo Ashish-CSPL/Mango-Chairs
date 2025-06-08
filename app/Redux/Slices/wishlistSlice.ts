@@ -36,13 +36,6 @@ export interface AddWishlistPayload {
   stock: number;
 }
 
-// Define the shape of the data needed to remove a wishlist item (payload for API)
-interface RemoveWishlistPayload {
-  customer: string;
-  product_id: string;
-  is_cart: boolean;
-}
-
 // Define the expected structure of the GET /get/ wishlist response
 interface GetWishlistResponse {
   customer: number; // or string, depending on your backend
@@ -76,7 +69,7 @@ export const fetchWishlistItems = createAsyncThunk(
         return rejectWithValue("Authentication token not found.");
       }
 
-      const response = await fetchData<GetWishlistResponse>( // <--- IMPORTANT: Change expected type here
+      const response = await fetchData<GetWishlistResponse>(
         "user/cart-wishlist/get/",
         "GET",
         {
@@ -84,7 +77,7 @@ export const fetchWishlistItems = createAsyncThunk(
           token: token,
         }
       );
-      return response; // This will now be {customer: ..., products: [...]}
+      return response;
     } catch (error: any) {
       toast.error(error.message || "Failed to fetch wishlist.");
       return rejectWithValue(error.message || "Failed to fetch wishlist.");
@@ -93,6 +86,8 @@ export const fetchWishlistItems = createAsyncThunk(
 );
 
 // --- Async Thunk for Toggling (Add/Remove) Wishlist Item ---
+// This thunk will now take the full productPayload as before,
+// but internally, it will find the existing wishlist item's unique ID for removal.
 export const toggleWishlistItem = createAsyncThunk(
   "wishlist/toggleWishlistItem",
   async (productPayload: AddWishlistPayload, { getState, rejectWithValue }) => {
@@ -101,40 +96,61 @@ export const toggleWishlistItem = createAsyncThunk(
       auth: { token: string | null };
     };
     const token = state.auth.token;
-    const { product_id, customer, is_cart } = productPayload;
+    const { product_id, customer, is_cart } = productPayload; // Destructure necessary info
 
     if (!token) {
       return rejectWithValue("Authentication token not found.");
     }
 
-    const isCurrentlyInWishlist =
-      state.wishlist.productIdsInWishlist.includes(product_id);
+    // Determine if the product is currently in the wishlist based on its product_id
+    const existingWishlistItem = state.wishlist.wishlistItems.find(
+      (item) => item.product_id === product_id
+    );
+    const isCurrentlyInWishlist = !!existingWishlistItem;
 
     try {
       if (isCurrentlyInWishlist) {
-        const removePayload: RemoveWishlistPayload = {
-          customer: customer,
-          product_id: product_id,
+        // --- CRITICAL FIX FOR 500 ERROR: Pass the unique wishlist entry ID for removal ---
+        if (!existingWishlistItem?.id) {
+          // This ensures we have the actual ID of the wishlist entry to delete
+          // This case should ideally not be hit if fetchWishlistItems is populating 'id' correctly
+          throw new Error("Cannot remove: Existing wishlist item ID not found in state.");
+        }
+        
+        // This is the payload sent to your backend for deletion
+        const removePayload = {
+          id: existingWishlistItem.id, // <--- This is the unique ID of the wishlist entry itself
+          customer: customer,          // Still useful for backend verification
+          product_id: product_id,      // Still useful for backend verification
           is_cart: is_cart,
         };
+
+        // Make the DELETE request.
+        // Assuming your backend's /remove/ endpoint expects the ID in the request body.
         await fetchData("/user/cart-wishlist/remove/", "DELETE", {
-          body: removePayload,
+          body: removePayload, // Send the unique ID of the wishlist entry
           token: token,
         });
+
         toast.success("Product removed from wishlist!");
         return { type: "remove", product_id };
+
       } else {
-        await fetchData<WishlistItem>("/user/cart-wishlist/update/", "POST", {
+        // --- Logic for Adding a Product ---
+        // The backend should return the full WishlistItem object upon successful add,
+        // including its newly generated unique 'id'.
+        const addedItem = await fetchData<WishlistItem>("/user/cart-wishlist/update/", "POST", {
           body: productPayload,
           token: token,
         });
         toast.success("Product added to wishlist!");
-        return { type: "add", productPayload };
+        return { type: "add", productPayload: addedItem }; // Backend should return the full WishlistItem with its ID
       }
     } catch (error: any) {
       console.error("API error during wishlist toggle:", error);
-      toast.error(error.message || "Failed to update wishlist.");
-      return rejectWithValue(error.message || "Failed to update wishlist.");
+      const errorMessage = error.message || "Failed to update wishlist.";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -152,12 +168,11 @@ const wishlistSlice = createSlice({
       })
       .addCase(
         fetchWishlistItems.fulfilled,
-        (state, action: PayloadAction<GetWishlistResponse>) => { // <--- IMPORTANT: Expect GetWishlistResponse payload
+        (state, action: PayloadAction<GetWishlistResponse>) => {
           state.status = "succeeded";
-          // FIX: Access the 'products' array from the payload object
           const fetchedProducts = action.payload.products;
 
-          if (Array.isArray(fetchedProducts)) { // <--- Check if products is an array
+          if (Array.isArray(fetchedProducts)) {
             state.wishlistItems = fetchedProducts;
             state.productIdsInWishlist = fetchedProducts.map(
               (item) => item.product_id
@@ -186,6 +201,7 @@ const wishlistSlice = createSlice({
         const { type, product_id, productPayload } = action.payload;
 
         if (type === "remove") {
+          // Filter out the item that was removed
           state.wishlistItems = state.wishlistItems.filter(
             (item) => item.product_id !== product_id
           );
@@ -194,16 +210,22 @@ const wishlistSlice = createSlice({
           );
           console.log("wishlistSlice: REMOVE fulfilled. New productIdsInWishlist:", state.productIdsInWishlist);
         } else if (type === "add" && productPayload) {
+          // Add the new item returned by the backend.
+          // This uses the actual WishlistItem object returned by the backend POST request,
+          // which includes its unique 'id'.
+          // Ensure no duplicates if it was already optimistically added
           if (!state.productIdsInWishlist.includes(productPayload.product_id)) {
-            const newItem: WishlistItem = {
-              id: `${productPayload.product_id}-${Date.now()}`,
-              ...productPayload,
-            };
-            state.wishlistItems.push(newItem);
+            state.wishlistItems.push(productPayload);
             state.productIdsInWishlist.push(productPayload.product_id);
             console.log("wishlistSlice: ADD fulfilled. New productIdsInWishlist:", state.productIdsInWishlist);
           } else {
-            console.log("wishlistSlice: ADD fulfilled, but item already in productIdsInWishlist. No change to state.");
+            // If it was already in the list (e.g., from initial optimistic update),
+            // update it with the full data from the backend response.
+            const existingIndex = state.wishlistItems.findIndex(item => item.product_id === productPayload.product_id);
+            if (existingIndex !== -1) {
+              state.wishlistItems[existingIndex] = productPayload; // Update with full backend data (including 'id')
+            }
+            console.log("wishlistSlice: ADD fulfilled, item already present (likely from optimistic update or backend POST response). State updated/confirmed.");
           }
         }
       })
@@ -211,6 +233,8 @@ const wishlistSlice = createSlice({
         state.status = "failed";
         state.error = action.payload as string;
         console.error("wishlistSlice: toggleWishlistItem.rejected:", action.payload);
+        // Optional: If optimistic update happened before rejection, revert it here.
+        // This is complex and often handled by re-fetching on page load or by manual re-addition in UI.
       });
   },
 });

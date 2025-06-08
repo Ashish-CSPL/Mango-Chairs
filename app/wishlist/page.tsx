@@ -2,18 +2,21 @@
 
 "use client";
 
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/app/Redux/Store/store";
-import {
-  fetchWishlistItems,
-  toggleWishlistItem,
-  WishlistItem,
-} from "@/app/Redux/Slices/wishlistSlice";
-import { addToCart } from "@/app/Redux/Store/cartSlice";
+import React, { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect } from "react";
 import toast from "react-hot-toast";
+
+// --- REDUX IMPORTS ---
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "@/app/Redux/Store/store";
+import { addToCart, CartItem } from "@/app/Redux/Store/cartSlice";
+import {
+  toggleWishlistItem,
+  fetchWishlistItems,
+  WishlistItem, // Make sure WishlistItem interface is imported
+  AddWishlistPayload, // Also need this for the payload structure when dispatching
+} from "@/app/Redux/Slices/wishlistSlice";
 
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
 export const useAppSelector = useSelector.withTypes<RootState>();
@@ -26,16 +29,16 @@ export default function WishlistPage() {
   );
 
   useEffect(() => {
-    console.log(
-      "WishlistPage useEffect: Checking for wishlist fetch. isAuthenticated:",
-      isAuthenticated,
-      "user.id:",
-      user?.id
-    );
-    if (isAuthenticated && user?.id) {
+    // console.log("WishlistPage useEffect: Checking for wishlist fetch. isAuthenticated:", isAuthenticated, "user.id:", user?.id, "status:", status);
+    // Only fetch if authenticated and user ID is available, and if status is idle or no items are loaded yet
+    if (
+      isAuthenticated &&
+      user?.id &&
+      (status === "idle" || wishlistItems.length === 0)
+    ) {
       dispatch(fetchWishlistItems(user.id.toString()));
     }
-  }, [isAuthenticated, user?.id, dispatch]);
+  }, [isAuthenticated, user?.id, dispatch, status, wishlistItems.length]); // Added wishlistItems.length to dependencies
 
   const handleRemoveFromWishlist = (itemToRemove: WishlistItem) => {
     if (!isAuthenticated || !user?.id) {
@@ -43,11 +46,15 @@ export default function WishlistPage() {
       return;
     }
 
-    const payloadForToggle = {
+    // This payload is sent to the `toggleWishlistItem` thunk.
+    // The thunk internally will find the actual `id` of the wishlist entry for deletion.
+    const payloadForToggle: AddWishlistPayload = {
       customer: user.id.toString(),
       product_id: itemToRemove.product_id,
-      quantity: itemToRemove.quantity,
-      is_cart: false,
+      quantity: itemToRemove.quantity, // Preserve quantity if needed, but for removal, it's just about the item's ID
+      is_cart: false, // Ensure this matches your backend's expectation for wishlist items
+      // Include other fields as AddWishlistPayload requires, even if not directly used for removal API call,
+      // as the thunk expects this shape.
       product_name: itemToRemove.product_name,
       product_image: itemToRemove.product_image,
       product_price: itemToRemove.product_price,
@@ -60,40 +67,41 @@ export default function WishlistPage() {
     dispatch(toggleWishlistItem(payloadForToggle))
       .unwrap()
       .then(() => {
-        console.log(
-          "WishlistPage: Successfully dispatched toggleWishlistItem (remove)"
-        );
+        // console.log("WishlistPage: Successfully dispatched toggleWishlistItem (remove)");
       })
       .catch((err) => {
         console.error("WishlistPage: Failed to remove from wishlist:", err);
+        // You might want to re-fetch wishlist items here if removal failed to sync UI with backend
+        // if (isAuthenticated && user?.id) {
+        //   dispatch(fetchWishlistItems(user.id.toString()));
+        // }
       });
   };
 
   const handleAddToCartFromWishlist = (item: WishlistItem) => {
-    const cartItem = {
-      id: item.product_id,
+    const cartItem: CartItem = {
+      id: item.product_id, // Using product_id as the cart item ID
       name: item.product_name,
-      // --- FIX: Robust image URL for cart item ---
       image:
         item.product_image && item.product_image.startsWith("/")
           ? `https://nxadmin.consociate.co.in${item.product_image}`
-          : `https://nxadmin.consociate.co.in/media/placeholder.png`, // Use a remote placeholder if your local one isn't served
-      // --- END FIX ---
+          : `https://nxadmin.consociate.co.in/media/placeholder.png`,
       price: item.selling_price,
-      quantity: 1,
+      quantity: 1, // Assuming adding one to cart from wishlist
       slug: item.slug,
       stock: item.stock,
+      // Optional/undefined properties for CartItem
       title: undefined,
       isRare: undefined,
       regularPrice: undefined,
       isOnSale: false,
-      selectedVariantId: undefined,
+      selectedVariantId: undefined, // If wishlist items don't store variant info
       color: undefined,
       size: undefined,
     };
     dispatch(addToCart(cartItem));
     toast.success(`${item.product_name} added to cart!`);
-    handleRemoveFromWishlist(item);
+    handleRemoveFromWishlist(item); // Optionally remove from wishlist after adding to cart
   };
 
   if (status === "loading") {
@@ -120,58 +128,48 @@ export default function WishlistPage() {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6 text-center">Your Wishlist</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {wishlistItems.map(
-          (
-            item,
-            index // --- FIX: Add index to key for uniqueness ---
-          ) => (
-            <div
-              key={`${item.id}-${index}`}
-              className="border p-4 rounded-lg shadow-md flex flex-col items-center"
-            >
-              <Link
-                href={`/product/${item.slug}`}
-                className="w-full text-center"
+        {wishlistItems.map((item, index) => (
+          <div
+            key={`${item.id}-${index}`}
+            className="border p-4 rounded-lg shadow-md flex flex-col items-center"
+          >
+            <Link href={`/product/${item.slug}`} className="w-full text-center">
+              <Image
+                src={
+                  item.product_image && item.product_image.startsWith("/")
+                    ? `https://nxadmin.consociate.co.in${item.product_image}`
+                    : `https://nxadmin.consociate.co.in/media/placeholder.png`
+                }
+                alt={item.product_name || "Wishlist Item Image"} // FIX: Added alt prop
+                width={200}
+                height={200}
+                className="object-contain mb-4"
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "https://placehold.co/200x200/cccccc/333333?text=No+Image";
+                }}
+              />
+              <h2 className="text-lg font-semibold line-clamp-1">
+                {item.product_name}
+              </h2>
+            </Link>
+            <p className="text-gray-700 mt-2">₹{item.selling_price}</p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => handleAddToCartFromWishlist(item)}
+                className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
               >
-                <Image
-                  // --- FIX: Robust image URL for wishlist item ---
-                  src={
-                    item.product_image && item.product_image.startsWith("/")
-                      ? `https://nxadmin.consociate.co.in${item.product_image}`
-                      : `https://nxadmin.consociate.co.in/media/placeholder.png` // Use a remote placeholder if your local one isn't served
-                  }
-                  // --- END FIX ---
-                  alt={item.product_name}
-                  width={200}
-                  height={200}
-                  className="object-contain mb-4"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      "https://placehold.co/200x200/cccccc/333333?text=No+Image";
-                  }}
-                />
-                <h2 className="text-lg font-semibold line-clamp-1">
-                  {item.product_name}
-                </h2>
-              </Link>
-              <p className="text-gray-700 mt-2">₹{item.selling_price}</p>
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => handleAddToCartFromWishlist(item)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
-                >
-                  Add to Cart
-                </button>
-                <button
-                  onClick={() => handleRemoveFromWishlist(item)}
-                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition"
-                >
-                  Remove
-                </button>
-              </div>
+                Add to Cart
+              </button>
+              <button
+                onClick={() => handleRemoveFromWishlist(item)}
+                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition"
+              >
+                Remove
+              </button>
             </div>
-          )
-        )}
+          </div>
+        ))}
       </div>
     </div>
   );
