@@ -1,5 +1,6 @@
 // app/API_Calls/order.ts
 import fetchData from "@/api/fetchdata";
+import fetchSecondary from "@/api/fetchSecondary";
 import { OrderDetails } from "@/app/Redux/Slices/orderSlice"; // Import OrderDetails for getCustomerOrders
 
 // Define the payload structure for the place order API (for the request)
@@ -46,8 +47,8 @@ export interface PaginatedOrdersResponse {
  */
 export async function placeOrder(payload: PlaceOrderPayload, token: string): Promise<PlaceOrderSuccessResponse> {
   try {
-    const response = await fetchData<PlaceOrderSuccessResponse>( // <PlaceOrderSuccessResponse> here!
-      "order/place-order/",
+    const response = await fetchSecondary<PlaceOrderSuccessResponse>( // <PlaceOrderSuccessResponse> here!
+      "/order/place-order/",
       "POST",
       {
         token,

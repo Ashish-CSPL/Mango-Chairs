@@ -9,12 +9,34 @@ import {
   setAuthSuccess,
 } from "@/app/Redux/Slices/authSlice";
 import { loginCustomer } from "@/app/API_Calls/auth"; // Adjust path as needed
-import { toast } from "react-hot-toast"; // Assuming you have react-hot-toast installed
+import { toast } from "react-hot-toast";
 
 interface LoginFormProps {
   onSuccess: () => void; // Callback after successful login
   onSwitchToRegister: () => void; // Callback to switch to registration form
 }
+
+// Assuming these interfaces exist or you define them in app/types/auth.ts or app/API_Calls/auth.ts
+// If they don't exist, create them:
+/*
+interface LoginCredentials {
+  email: string; // Key change: from username to email
+  password: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  // ... other user properties
+}
+
+interface AuthResponse {
+  user: User;
+  token: string;
+}
+*/
 
 const LoginForm: React.FC<LoginFormProps> = ({
   onSuccess,
@@ -22,7 +44,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const dispatch = useDispatch();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState(""); // Changed from username
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -31,8 +53,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
     setLoading(true);
     dispatch(setAuthLoading(true));
     try {
-      // Assuming loginCustomer returns { user: userData, token: string }
-      const response = await loginCustomer({ username, password });
+      // Pass 'email' and 'password' as per the LoginCredentials type
+      const response = await loginCustomer({ email, password });
 
       // Ensure the response contains user and token as expected
       if (!response || !response.user || !response.token) {
@@ -56,10 +78,20 @@ const LoginForm: React.FC<LoginFormProps> = ({
       toast.success("Login successful!");
       onSuccess(); // Execute callback (e.g., close modal, redirect client-side)
     } catch (error: any) {
-      const errorMessage =
-        error.response?.data?.message || // Axios error response
-        error.message ||
-        "Login failed. Please check your credentials.";
+      let errorMessage = "Login failed. Please check your credentials.";
+
+      // Check for custom error properties from fetchSecondary
+      if (
+        error.responseBody &&
+        typeof error.responseBody.message === "string"
+      ) {
+        errorMessage = error.responseBody.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      }
+
       toast.error(errorMessage);
       dispatch(setAuthError(errorMessage));
       console.error("LoginForm Error:", error);
@@ -75,17 +107,17 @@ const LoginForm: React.FC<LoginFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
-            htmlFor="loginUsername"
+            htmlFor="loginEmail" // Changed from loginUsername
             className="block text-sm font-medium text-gray-700"
           >
-            Email/Username
+            Email
           </label>
           <input
-            type="text"
-            id="loginUsername"
+            type="email" // Changed type to email for better validation
+            id="loginEmail" // Changed from loginUsername
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={email} // Using email state
+            onChange={(e) => setEmail(e.target.value)} // Updating email state
             required
             disabled={loading}
           />

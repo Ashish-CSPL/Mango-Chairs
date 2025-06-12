@@ -15,6 +15,7 @@ import {
   clearCart,
 } from "@/app/Redux/Store/cartSlice";
 import toast, { Toaster } from "react-hot-toast";
+import fetchSecondary from "@/api/fetchSecondary"; // Make sure this path is correct
 
 // Define the interface for locally managed addresses
 export interface LocalAddressItem {
@@ -27,29 +28,28 @@ export interface LocalAddressItem {
   state: string;
   zipcode: string;
   country: string;
-  address_type: "BILLING" | "SHIPPING" | "BOTH"; // Keep address_type for internal logic
+  address_type: "BILLING" | "SHIPPING" | "BOTH";
 }
 
-// Define the interface for the data received from AddressForm (WITHOUT address_type)
-interface LocalAddressPayload {
-  full_name: string;
-  phone_number: string;
-  address: string;
-  locality: string;
-  city: string;
-  state: string;
-  zipcode: string;
-  country: string;
+// Define the interface for the expected order placement response
+interface OrderResponse {
+  id: string;
+  message?: string;
+  // Add any other fields that the order placement API returns (e.g., razorpay_order_id)
 }
 
-// Define the API Base URL (adjust this to your actual ngrok URL when deploying backend)
-const API_BASE_URL = "http://localhost:8080/";
+// Define interfaces for other API responses if needed
+interface OrdersListResponse {
+  orders: OrderResponse[];
+  totalCount: number;
+}
 
 const CheckoutPage: React.FC = () => {
   const dispatch = useDispatch();
   const router = useRouter();
 
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
+  const { token } = useSelector((state: RootState) => state.auth); // Access the token from Redux
 
   const [savedAddresses, setSavedAddresses] = useState<LocalAddressItem[]>([]);
   const [selectedBillingAddress, setSelectedBillingAddress] =
@@ -60,35 +60,47 @@ const CheckoutPage: React.FC = () => {
   const [couponCode, setCouponCode] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     "razorpay" | "cod"
-  >("razorpay");
+  >("razorpay"); // Default to Razorpay
+
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressToEdit, setAddressToEdit] = useState<LocalAddressItem | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(false);
-
   const [isSameAsBilling, setIsSameAsBilling] = useState(true);
-
-  // State to track the purpose of adding/editing an address
   const [formPurpose, setFormPurpose] = useState<
     "billing" | "shipping" | "general"
   >("general");
 
+  // --- Dynamic Order Summary States (Hardcoded for now - replace with API calls) ---
+  const [taxAmount, setTaxAmount] = useState<number>(0);
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [deliveryChargeAmount, setDeliveryChargeAmount] = useState<number>(0);
+
+  // States for payment details that would come from a payment gateway
+  const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null); // e.g., "SUCCESS", "FAILED", "PENDING"
+  const [paymentDatetime, setPaymentDatetime] = useState<string | null>(null); // ISO 8601 string
+
+  // Calculate Subtotal from Cart Items
   const totalAmount = cartItems.reduce((total: number, item: any) => {
     const priceValue = typeof item.price === "number" ? item.price : 0;
     return total + priceValue * item.quantity;
   }, 0);
 
+  // Calculate Final Total
+  const finalTotal = totalAmount + taxAmount + deliveryChargeAmount - discountAmount;
+
   // --- Helper functions for localStorage ---
   const loadAddressesFromLocalStorage = (): LocalAddressItem[] => {
-    if (typeof window === "undefined") return []; // Defensive check for SSR
+    if (typeof window === "undefined") return [];
     try {
       const storedAddresses = localStorage.getItem("user_saved_addresses");
       if (storedAddresses) {
         const parsedAddresses: LocalAddressItem[] = JSON.parse(storedAddresses);
         const validatedAddresses = parsedAddresses.map((addr) => ({
           ...addr,
-          address_type: addr.address_type || "BOTH", // Default to 'BOTH' if undefined
+          address_type: addr.address_type || "BOTH",
         }));
         if (Array.isArray(validatedAddresses)) {
           return validatedAddresses;
@@ -108,11 +120,11 @@ const CheckoutPage: React.FC = () => {
       localStorage.removeItem("user_saved_addresses");
       toast.error("Error loading saved addresses.");
     }
-    return []; // Return empty array if nothing found or error
+    return [];
   };
 
   const saveAddressesToLocalStorage = (addresses: LocalAddressItem[]) => {
-    if (typeof window === "undefined") return; // Defensive check for SSR
+    if (typeof window === "undefined") return;
     try {
       localStorage.setItem("user_saved_addresses", JSON.stringify(addresses));
     } catch (error) {
@@ -124,11 +136,11 @@ const CheckoutPage: React.FC = () => {
   // --- useEffect for initial load ---
   useEffect(() => {
     setSavedAddresses(loadAddressesFromLocalStorage());
-  }, []); // Run once on component mount
+  }, []);
 
-  // --- useEffect for managing selected addresses ---
+  // --- useEffect for managing selected addresses & dynamic totals ---
   useEffect(() => {
-    // Filter addresses by type. If "BOTH", they are available for both.
+    // Address selection logic
     const availableBillingAddresses = savedAddresses.filter(
       (addr) => addr.address_type === "BILLING" || addr.address_type === "BOTH"
     );
@@ -136,7 +148,6 @@ const CheckoutPage: React.FC = () => {
       (addr) => addr.address_type === "SHIPPING" || addr.address_type === "BOTH"
     );
 
-    // If currently selected billing address is not in the filtered list
     if (
       !selectedBillingAddress ||
       !availableBillingAddresses.some(
@@ -151,10 +162,8 @@ const CheckoutPage: React.FC = () => {
     }
 
     if (isSameAsBilling) {
-      // If shipping is same as billing, update shipping whenever billing changes
       setSelectedShippingAddress(selectedBillingAddress);
     } else {
-      // If shipping is different, ensure selected shipping is still valid
       if (
         !selectedShippingAddress ||
         !availableShippingAddresses.some(
@@ -168,12 +177,30 @@ const CheckoutPage: React.FC = () => {
         );
       }
     }
+
+    // --- Placeholder for dynamic charges (replace with actual API calls) ---
+    // In a real app, you'd likely call an API here to get tax, delivery, and discount
+    // based on cart items, selected addresses, and coupon code.
+    setTaxAmount(totalAmount * 0.18); // Example: 18% tax
+    setDeliveryChargeAmount(50.0); // Example: Fixed delivery charge
+
+    // For discount, you would need to validate the coupon code via an API
+    // and then set the discount amount. For now, it's 0 unless you apply logic.
+    // if (couponCode === "FIRSTORDER") {
+    //   setDiscountAmount(20.0);
+    // } else {
+    //   setDiscountAmount(0);
+    // }
+
   }, [
     savedAddresses,
     selectedBillingAddress,
     selectedShippingAddress,
     isSameAsBilling,
+    totalAmount, // Recalculate if cart total changes
+    couponCode, // Recalculate if coupon changes
   ]);
+
 
   const handleRemove = (id: string | number, name: string) => {
     dispatch(removeFromCart(id));
@@ -239,7 +266,7 @@ const CheckoutPage: React.FC = () => {
               ...newAddressData,
               id: addressToEdit.id,
               address_type: addressToEdit.address_type,
-            } // Use existing type
+            }
           : addr
       );
       toast.custom(
@@ -264,19 +291,19 @@ const CheckoutPage: React.FC = () => {
       } else if (formPurpose === "shipping") {
         determinedType = "SHIPPING";
       } else {
-        determinedType = "BOTH"; // Default for general addition
+        determinedType = "BOTH";
       }
 
       const newAddressWithId: LocalAddressItem = {
         ...newAddressData,
-        id: Date.now().toString(), // Ensure unique ID for new addresses
-        address_type: determinedType, // Assign determined type
+        id: Date.now().toString(),
+        address_type: determinedType,
       };
       updatedAddresses = [...savedAddresses, newAddressWithId];
     }
 
-    setSavedAddresses(updatedAddresses); // Update state
-    saveAddressesToLocalStorage(updatedAddresses); // Explicitly save to localStorage immediately
+    setSavedAddresses(updatedAddresses);
+    saveAddressesToLocalStorage(updatedAddresses);
     setShowAddressForm(false);
     setAddressToEdit(null);
     setFormPurpose("general");
@@ -308,10 +335,9 @@ const CheckoutPage: React.FC = () => {
     const updatedAddresses = savedAddresses.filter(
       (addr) => addr.id !== addressId
     );
-    setSavedAddresses(updatedAddresses); // Update state
-    saveAddressesToLocalStorage(updatedAddresses); // Explicitly save to localStorage immediately
+    setSavedAddresses(updatedAddresses);
+    saveAddressesToLocalStorage(updatedAddresses);
 
-    // Adjust selected addresses if the deleted one was selected
     const availableBilling = updatedAddresses.filter(
       (addr) => addr.address_type === "BILLING" || addr.address_type === "BOTH"
     );
@@ -394,43 +420,94 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
+    if (!token) {
+        toast.error("You must be logged in to place an order.");
+        router.push("/login"); // Redirect to login if no token
+        return;
+    }
+
+    // --- Payment Method Specific Logic ---
+    let currentTransactionId: string | null = null;
+    let currentPaymentStatus: string | null = null;
+    let currentPaymentDatetime: string | null = null;
+
+    if (selectedPaymentMethod === "razorpay") {
+      // --- IMPORTANT: RAZORPAY INTEGRATION GOES HERE ---
+      // This is a placeholder. You would typically initiate the Razorpay payment.
+      // On successful payment, Razorpay will provide transaction details.
+      toast.error("Razorpay payment integration is not implemented yet. Please choose 'Cash on Delivery' for now.");
+      console.log("Initiating Razorpay payment for amount:", finalTotal);
+
+      // Example placeholder:
+      // try {
+      //   const razorpayResponse = await initiateRazorpayPayment({
+      //     amount: finalTotal,
+      //     currency: "INR",
+      //     // Pass user details, order details etc.
+      //   });
+      //   if (razorpayResponse.success) {
+      //     currentTransactionId = razorpayResponse.razorpay_payment_id;
+      //     currentPaymentStatus = "SUCCESS";
+      //     currentPaymentDatetime = new Date().toISOString();
+      //   } else {
+      //     toast.error("Payment failed: " + razorpayResponse.error.description);
+      //     return; // Stop if payment fails
+      //   }
+      // } catch (razorpayError) {
+      //   console.error("Razorpay initiation error:", razorpayError);
+      //   toast.error("Failed to initiate payment. Please try again.");
+      //   return; // Stop if payment fails
+      // }
+
+      return; // Prevent order placement until Razorpay is fully integrated or COD is selected
+    } else if (selectedPaymentMethod === "cod") {
+      // For Cash on Delivery
+      currentTransactionId = "COD_" + Date.now().toString(); // Unique ID for COD
+      currentPaymentStatus = "PENDING"; // Or "AWAITING_PAYMENT"
+      currentPaymentDatetime = new Date().toISOString(); // Current time
+    }
+
     setIsLoading(true);
 
     const orderPayload = {
+      subTotal: totalAmount,
+      tax: taxAmount,
+      discount: discountAmount,
+      deliveryCharge: deliveryChargeAmount,
+      finalTotal: finalTotal,
       billingAddress: formatAddressToString(selectedBillingAddress),
       deliveryAddress: formatAddressToString(selectedShippingAddress),
       products: cartItems.map((item) => ({
         productId: item.id,
-        unitPrice: item.price,
+        unitPrice: typeof item.price === "number" ? item.price : 0, // Ensure price is number
         quantity: item.quantity,
       })),
       paymentType: selectedPaymentMethod.toUpperCase(),
-      subTotal: totalAmount,
+      transactionId: currentTransactionId,
+      paymentStatus: currentPaymentStatus,
+      paymentDatetime: currentPaymentDatetime,
       couponCode: couponCode || null,
     };
 
+    console.log("Order Payload to be sent:", orderPayload);
+
     try {
-      const response = await fetch(`${API_BASE_URL}order/place-order`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(orderPayload),
-      });
+      // Explicitly define the return type for fetchSecondary
+      const orderResponse = await fetchSecondary<OrderResponse>(
+        "/order/place-order",
+        "POST",
+        {
+          body: orderPayload,
+          token: token, // <--- THIS IS WHERE THE TOKEN IS SENT EXPLICITLY
+        }
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to place order due to a server error."
-        );
-      }
-
-      const orderResponse = await response.json();
       console.log("Order placed successfully!", orderResponse);
       toast.success("Order placed successfully!");
 
-      dispatch(clearCart());
-      router.push(`/order-confirmation/${orderResponse.orderId || "success"}`);
+      dispatch(clearCart()); // Clear cart after successful order
+      // Redirect to a confirmation page with orderId
+      router.push(`/order-confirmation/${orderResponse.id || "success"}`);
     } catch (error: any) {
       console.error("Error placing order:", error);
       toast.error(error.message || "Could not place order. Please try again.");
@@ -439,43 +516,9 @@ const CheckoutPage: React.FC = () => {
     }
   };
 
-  const getOrders = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}order/get-orders`, {
-        method: "GET",
-        headers: {},
-      });
-      if (!response.ok) {
-        throw new Error("Failed to fetch orders.");
-      }
-      const orders = await response.json();
-      console.log("All orders:", orders);
-      return orders;
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      toast.error("Failed to load orders.");
-      return [];
-    }
-  };
 
-  const getSingleOrder = async (orderId: string | number) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}order/orderid/${orderId}`, {
-        method: "GET",
-        headers: {},
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch order ${orderId}.`);
-      }
-      const order = await response.json();
-      console.log(`Order ${orderId}:`, order);
-      return order;
-    } catch (error) {
-      console.error(`Error fetching order ${orderId}:`, error);
-      toast.error(`Failed to load order ${orderId}.`);
-      return null;
-    }
-  };
+
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -500,7 +543,7 @@ const CheckoutPage: React.FC = () => {
               onDeleteAddress={handleDeleteAddress}
               onAddNewAddress={() => handleAddNewAddress("billing")}
               forPurpose="billing"
-              isSameAsBilling={isSameAsBilling} // Pass isSameAsBilling to Billing AddressList
+              isSameAsBilling={isSameAsBilling}
             />
 
             <div className="flex items-center mt-6 mb-4 p-3 bg-gray-50 rounded-md">
@@ -536,7 +579,6 @@ const CheckoutPage: React.FC = () => {
                   onDeleteAddress={handleDeleteAddress}
                   onAddNewAddress={() => handleAddNewAddress("shipping")}
                   forPurpose="shipping"
-                  // No need to pass isSameAsBilling to shipping list, as its label is not affected
                 />
               </div>
             )}
@@ -685,7 +727,10 @@ const CheckoutPage: React.FC = () => {
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value)}
               />
-              <button className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-md transition duration-200">
+              <button
+                className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-md transition duration-200"
+                onClick={() => toast.success("Coupon application not implemented yet!")}
+              >
                 Apply
               </button>
             </div>
@@ -702,9 +747,21 @@ const CheckoutPage: React.FC = () => {
               <span>Subtotal:</span>
               <span>₹{totalAmount.toFixed(2)}</span>
             </div>
+            <div className="flex justify-between mb-2 text-gray-700">
+              <span>Tax ({ (taxAmount / totalAmount * 100 || 0).toFixed(0) }%):</span>
+              <span>₹{taxAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between mb-2 text-gray-700">
+              <span>Discount:</span>
+              <span>- ₹{discountAmount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between mb-4 text-gray-700">
+              <span>Delivery Charge:</span>
+              <span>₹{deliveryChargeAmount.toFixed(2)}</span>
+            </div>
             <div className="flex justify-between items-center text-xl font-bold text-gray-900 border-t pt-4 mt-4">
               <span>Total:</span>
-              <span>₹{totalAmount.toFixed(2)}</span>
+              <span>₹{finalTotal.toFixed(2)}</span>
             </div>
             <button
               className="mt-6 w-full bg-orange-600 hover:bg-orange-700 text-white text-lg font-semibold py-3 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -713,7 +770,8 @@ const CheckoutPage: React.FC = () => {
                 !selectedBillingAddress ||
                 !selectedShippingAddress ||
                 cartItems.length === 0 ||
-                isLoading
+                isLoading ||
+                !token // Disable if no token
               }
             >
               {isLoading ? "Placing Order..." : "Place Order"}

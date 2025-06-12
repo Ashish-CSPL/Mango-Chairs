@@ -6,7 +6,7 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD";
   body?: CustomRequestBody;
   headers?: Record<string, string>;
-  token?: string;
+  token?: string | null;
   queryParams?: Record<string, string | number | boolean | undefined>;
 }
 
