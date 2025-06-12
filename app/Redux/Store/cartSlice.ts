@@ -8,6 +8,7 @@ export interface CartItem { // <--- Ensure this is exported as well
   image: string;
   price: number;
   quantity: number;
+  variant: string; 
   slug?: string; // Add this if you want to store it in the cart item
   selectedVariantId?: string | number; // <--- CHANGE THIS LINE
   color?: string; // Add this if you want to store it in the cart item

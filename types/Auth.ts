@@ -25,18 +25,18 @@ export interface OtpResponse {
 // !! IMPORTANT: Ensure 'export' keyword is present here !!
 export interface RegistrationData {
   email: string;
-  otp: string;
-  first_name: string;
-  last_name: string;
-  phone_number: string;
-  country_code_for_phone_number: string;
+  // otp: string;
+  name: string;
+  // last_name: string;
+  // phone_number: string;
+  // country_code_for_phone_number: string;
   profile_picture?: File;
-  address: string;
-  locality: string;
-  city: string;
-  state: string;
-  country: string;
-  zipcode: string;
+  // address: string;
+  // locality: string;
+  // city: string;
+  // state: string;
+  // country: string;
+  // zipcode: string;
   password: string;
   confirm_password: string;
 }

@@ -2,6 +2,7 @@
 
 const BASE_URL = "https://nxadmin.consociate.co.in/";
 
+
 type CustomRequestBody = Record<string, any> | FormData;
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {

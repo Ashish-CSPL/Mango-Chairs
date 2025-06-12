@@ -1,88 +1,64 @@
-// types/Products.ts
+// Ensure these types are in your @/types/Products.ts file
+// They are duplicated here for context but should ideally be in one place.
 
 // Define the structure of a product variant's specifications
 interface Specification {
+  type?: string;
   colour?: string;
-  material: string;
-  weight: string;
-  size?: string | number | (string | number)[];
-  // Add any other specific variant attributes here (e.g., size, material if they vary by variant)
-}
-
-// Define the structure for product dimensions
-interface Dimensions {
-  height: number | null;
-  weight: number | null;
-  length: number | null;
-  width: number | null;
-}
-
-// Define the structure for product details
-interface ProductDetails {
   material?: string;
-  weight_bearing_number?: number;
-  is_stackable?: boolean;
-  stackable_pieces_number?: number;
-  // Add other product details as needed
+  weight?: string;
+  size?: string | number | (string | number)[];
+}
+
+// Define the structure for a product variant image
+export interface VariantImage {
+  id: number;
+  url: string;
+  variantId: number;
 }
 
 // Define the structure for a product variant
 export interface Variant {
   id: number;
-  specification?: Specification;
   description?: string;
-  colour_code?: string;
-  selling_price: string;
-  seo_title?: string;
-  seo_description?: string | null;
-  seo_keyword?: string | null;
-  is_selected: boolean;
-  dimensions?: Dimensions | null;
-  product_details?: ProductDetails | null;
-  care_instruction?: string | null;
-  warranty?: string | null;
-  delivery_or_installation_tips?: string | null;
-  base_and_selling_price_difference_in_percent: number;
+  specification?: Specification;
+  Price?: number; // Note capital P in API response
+  price?: number; // Lowercase p for consistency
   stock: number;
-  images: string[];
+  productId: number;
+  images: VariantImage[] | string[];
 }
 
-// Define the structure for the main product
-export interface Product {
+// Define the structure for product categories
+interface Category {
   id: number;
-  slug: string;
-  variant_id: number;
-  sequence_number: number;
   name: string;
-  category_id: number;
-  category_name: string;
-  minimum_order_quantity: number;
-  description: string;
-  seo_title?: string;
-  seo_description?: string | null;
-  seo_keyword?: string | null;
-  base_price: string;
-  selling_price: string;
-  base_and_selling_price_difference_in_percent: number;
+  parentId: number | null;
+}
+
+// Define the main product structure
+export interface Product {
+  items: any;
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  userId: number;
   stock: number;
   is_new_arrival: boolean;
-  images: string[];
-  tags: string[];
-  has_variant: boolean;
-  variant_list?: Variant[]; // Optional, as some products might not have variants
-  dimensions?: Dimensions | null; // Added based on variant structure, might be top-level for product too
-  product_details?: ProductDetails | null; // Added based on variant structure
-  care_instruction?: string | null;
-  warranty?: string | null;
-  delivery_or_installation_tips?: string | null;
+  is_active: boolean;
+  tag: string[];
+  slug: string;
+  description: string;
+  categories: Category[];
+  variants: Variant[];
+  
 }
 
-// --- NEW: Define and export ProductsApiResponse ---
+// Define API response structure - CORRECTED
 export interface ProductsApiResponse {
-  products: Product[];
-  total_pages: number;
-  current_page: number;
-  page_size: number;
-  total_products: number; // Added this line
-  // Add any other top-level properties expected from your API response
+  page: number;
+  totalPages: number; // Correct property name from API
+  totalItems: number; // Correct property name from API
+  items: Product[]; // Correct property name from API
 }

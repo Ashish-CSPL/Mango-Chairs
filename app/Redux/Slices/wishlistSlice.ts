@@ -6,7 +6,7 @@ import fetchData from "@/api/fetchdata";
 
 // Define the structure of a single wishlist item received from the backend
 export interface WishlistItem {
-  id: string; // This is the ID of the wishlist entry itself (from backend)
+  id: string; // This is the ID of the wishlist entry itself (from backend) - OR product_id if backend doesn't provide unique ID
   customer: string;
   product_id: string; // The ID of the product (important for matching)
   quantity: number;
@@ -86,8 +86,6 @@ export const fetchWishlistItems = createAsyncThunk(
 );
 
 // --- Async Thunk for Toggling (Add/Remove) Wishlist Item ---
-// This thunk will now take the full productPayload as before,
-// but internally, it will find the existing wishlist item's unique ID for removal.
 export const toggleWishlistItem = createAsyncThunk(
   "wishlist/toggleWishlistItem",
   async (productPayload: AddWishlistPayload, { getState, rejectWithValue }) => {
@@ -110,41 +108,61 @@ export const toggleWishlistItem = createAsyncThunk(
 
     try {
       if (isCurrentlyInWishlist) {
-        // --- CRITICAL FIX FOR 500 ERROR: Pass the unique wishlist entry ID for removal ---
+        // --- REMOVAL PATH: Use the unique wishlist entry ID for removal ---
         if (!existingWishlistItem?.id) {
-          // This ensures we have the actual ID of the wishlist entry to delete
-          // This case should ideally not be hit if fetchWishlistItems is populating 'id' correctly
+          // This should ideally not happen if fetchWishlistItems populates 'id' correctly
           throw new Error("Cannot remove: Existing wishlist item ID not found in state.");
         }
         
-        // This is the payload sent to your backend for deletion
         const removePayload = {
-          id: existingWishlistItem.id, // <--- This is the unique ID of the wishlist entry itself
-          customer: customer,          // Still useful for backend verification
-          product_id: product_id,      // Still useful for backend verification
+          id: existingWishlistItem.id, // <--- This is the unique ID of the wishlist entry
+          customer: customer,          
+          product_id: product_id,      
           is_cart: is_cart,
         };
 
-        // Make the DELETE request.
-        // Assuming your backend's /remove/ endpoint expects the ID in the request body.
         await fetchData("/user/cart-wishlist/remove/", "DELETE", {
-          body: removePayload, // Send the unique ID of the wishlist entry
+          body: removePayload, 
           token: token,
         });
 
         toast.success("Product removed from wishlist!");
-        return { type: "remove", product_id };
+        // Return product_id for reducer to filter out the item
+        return { type: "remove", product_id }; 
 
       } else {
-        // --- Logic for Adding a Product ---
-        // The backend should return the full WishlistItem object upon successful add,
-        // including its newly generated unique 'id'.
-        const addedItem = await fetchData<WishlistItem>("/user/cart-wishlist/update/", "POST", {
-          body: productPayload,
+        // --- ADDITION PATH: Construct full WishlistItem from backend response and original payload ---
+        const backendResponse = await fetchData<any>("/user/cart-wishlist/update/", "POST", {
+          body: productPayload, // This 'productPayload' has all the details we sent
           token: token,
         });
+
+        if (!backendResponse || !Array.isArray(backendResponse.products) || backendResponse.products.length === 0) {
+            throw new Error("Backend response to add product was invalid or empty.");
+        }
+
+        const returnedProductInfo = backendResponse.products[0];
+
+        // Construct a full WishlistItem using details from the original payload
+        // and the 'id' (which is effectively the product_id from the backend response).
+        const constructedWishlistItem: WishlistItem = {
+            id: returnedProductInfo.id.toString(), // Use the 'id' (product_id) from backend response
+            customer: productPayload.customer,
+            product_id: productPayload.product_id,
+            quantity: productPayload.quantity,
+            is_cart: productPayload.is_cart,
+            product_name: productPayload.product_name,
+            product_image: productPayload.product_image,
+            product_price: productPayload.product_price,
+            base_price: productPayload.base_price,
+            selling_price: productPayload.selling_price,
+            slug: productPayload.slug,
+            stock: productPayload.stock,
+        };
+
         toast.success("Product added to wishlist!");
-        return { type: "add", productPayload: addedItem }; // Backend should return the full WishlistItem with its ID
+        // Return constructed WishlistItem for reducer to add to state
+        return { type: "add", productPayload: constructedWishlistItem }; 
       }
     } catch (error: any) {
       console.error("API error during wishlist toggle:", error);
@@ -198,34 +216,42 @@ const wishlistSlice = createSlice({
       })
       .addCase(toggleWishlistItem.fulfilled, (state, action) => {
         state.status = "succeeded";
-        const { type, product_id, productPayload } = action.payload;
+        const { type, product_id, productPayload } = action.payload; 
 
         if (type === "remove") {
-          // Filter out the item that was removed
+          console.log("--- REMOVE ACTION FULFILLED (Reducer) ---");
+          console.log("Attempting to remove product_id (from action.payload):", product_id);
+          console.log("Current wishlistItems BEFORE filter (product_ids):", state.wishlistItems.map(item => item.product_id));
+
           state.wishlistItems = state.wishlistItems.filter(
-            (item) => item.product_id !== product_id
+            (item) => {
+              const keepItem = item.product_id !== product_id;
+              console.log(`  Comparing item.product_id (${item.product_id}) with target product_id (${product_id}). Keep item: ${keepItem}`);
+              return keepItem;
+            }
           );
           state.productIdsInWishlist = state.productIdsInWishlist.filter(
             (id) => id !== product_id
           );
-          console.log("wishlistSlice: REMOVE fulfilled. New productIdsInWishlist:", state.productIdsInWishlist);
+          console.log("Current wishlistItems AFTER filter (product_ids):", state.wishlistItems.map(item => item.product_id));
+          console.log("New productIdsInWishlist (AFTER filter):", state.productIdsInWishlist);
+          console.log("--- END REMOVE ACTION FULFILLED (Reducer) ---");
+
         } else if (type === "add" && productPayload) {
-          // Add the new item returned by the backend.
-          // This uses the actual WishlistItem object returned by the backend POST request,
-          // which includes its unique 'id'.
-          // Ensure no duplicates if it was already optimistically added
+          // Add the new item to the state, ensuring it's not a duplicate.
+          // productPayload is now a properly constructed WishlistItem.
           if (!state.productIdsInWishlist.includes(productPayload.product_id)) {
             state.wishlistItems.push(productPayload);
             state.productIdsInWishlist.push(productPayload.product_id);
             console.log("wishlistSlice: ADD fulfilled. New productIdsInWishlist:", state.productIdsInWishlist);
           } else {
-            // If it was already in the list (e.g., from initial optimistic update),
-            // update it with the full data from the backend response.
+            // If it was already in the list (e.g., from an optimistic update or a previous load),
+            // update it with the full data from the constructed item.
             const existingIndex = state.wishlistItems.findIndex(item => item.product_id === productPayload.product_id);
             if (existingIndex !== -1) {
-              state.wishlistItems[existingIndex] = productPayload; // Update with full backend data (including 'id')
+              state.wishlistItems[existingIndex] = productPayload; // Update with full data
             }
-            console.log("wishlistSlice: ADD fulfilled, item already present (likely from optimistic update or backend POST response). State updated/confirmed.");
+            console.log("wishlistSlice: ADD fulfilled, item already present (likely from optimistic update or fetch). State updated/confirmed.");
           }
         }
       })
@@ -233,8 +259,6 @@ const wishlistSlice = createSlice({
         state.status = "failed";
         state.error = action.payload as string;
         console.error("wishlistSlice: toggleWishlistItem.rejected:", action.payload);
-        // Optional: If optimistic update happened before rejection, revert it here.
-        // This is complex and often handled by re-fetching on page load or by manual re-addition in UI.
       });
   },
 });

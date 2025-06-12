@@ -79,9 +79,9 @@ const ForgotPassword: React.FC = () => {
     try {
       await resetCustomerPassword({
         email,
-        otp: Number(otp),
         password: newPassword,
-        confirm_password: confirmNewPassword,
+        otp: 0,
+        confirm_password: "",
       });
       alert("Password reset successfully!");
       dispatch(setNewPasswordStage("success"));

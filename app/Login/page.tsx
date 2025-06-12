@@ -5,10 +5,11 @@ import React, { useState, ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  sendOtpForVerification,
+  // sendOtpForVerification,
   verifyOtp,
   registerCustomer,
   loginCustomer,
+  sendOtpForVerification,
 } from "@/app/API_Calls/auth";
 
 import { RegistrationData } from "@/types/Auth";
@@ -32,7 +33,7 @@ const LoginPage: React.FC = () => {
     try {
       // FIX: Changed 'email' to 'username' when calling loginCustomer
       const data = await loginCustomer({
-        username: loginUsername, // Pass the state variable that holds the email as 'username'
+        email: loginUsername, // Pass the state variable that holds the email as 'username'
         password: loginPassword,
       });
       console.log("Login successful response data:", data);
@@ -141,18 +142,18 @@ const LoginPage: React.FC = () => {
     try {
       const registrationData: RegistrationData = {
         email: registerEmail, // Keep as 'email' for registration if your backend API expects it for registration
-        otp: otp,
-        first_name: firstName,
-        last_name: lastName,
-        phone_number: phoneNumber,
-        country_code_for_phone_number: countryCode,
-        profile_picture: profilePicture || undefined,
-        address: address,
-        locality: locality,
-        city: city,
-        state: state,
-        country: country,
-        zipcode: zipcode,
+        // otp: otp,
+        name: firstName,
+        // last_name: lastName,
+        // phone_number: phoneNumber,
+        // country_code_for_phone_number: countryCode,
+        // profile_picture: profilePicture || undefined,
+        // address: address,
+        // locality: locality,
+        // city: city,
+        // state: state,
+        // country: country,
+        // zipcode: zipcode,
         password: registerPassword,
         confirm_password: confirmPassword,
       };

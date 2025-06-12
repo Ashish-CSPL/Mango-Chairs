@@ -14,8 +14,8 @@ import { addToCart, CartItem } from "@/app/Redux/Store/cartSlice";
 import {
   toggleWishlistItem,
   fetchWishlistItems,
-  WishlistItem, // Make sure WishlistItem interface is imported
-  AddWishlistPayload, // Also need this for the payload structure when dispatching
+  WishlistItem,
+  AddWishlistPayload,
 } from "@/app/Redux/Slices/wishlistSlice";
 
 export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
@@ -24,12 +24,11 @@ export const useAppSelector = useSelector.withTypes<RootState>();
 export default function WishlistPage() {
   const dispatch = useAppDispatch();
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
-  const { wishlistItems, status, error } = useAppSelector(
-    (state) => state.wishlist
+  const { wishlistItems, status, error } = useSelector(
+    (state: RootState) => state.wishlist
   );
 
   useEffect(() => {
-    // console.log("WishlistPage useEffect: Checking for wishlist fetch. isAuthenticated:", isAuthenticated, "user.id:", user?.id, "status:", status);
     // Only fetch if authenticated and user ID is available, and if status is idle or no items are loaded yet
     if (
       isAuthenticated &&
@@ -38,7 +37,7 @@ export default function WishlistPage() {
     ) {
       dispatch(fetchWishlistItems(user.id.toString()));
     }
-  }, [isAuthenticated, user?.id, dispatch, status, wishlistItems.length]); // Added wishlistItems.length to dependencies
+  }, [isAuthenticated, user?.id, dispatch, status, wishlistItems.length]);
 
   const handleRemoveFromWishlist = (itemToRemove: WishlistItem) => {
     if (!isAuthenticated || !user?.id) {
@@ -46,15 +45,20 @@ export default function WishlistPage() {
       return;
     }
 
-    // This payload is sent to the `toggleWishlistItem` thunk.
-    // The thunk internally will find the actual `id` of the wishlist entry for deletion.
+    console.log(
+      "WishlistPage: Calling handleRemoveFromWishlist for item:",
+      itemToRemove.product_name
+    );
+    console.log(
+      "WishlistPage: Product ID being sent for removal:",
+      itemToRemove.product_id
+    );
+
     const payloadForToggle: AddWishlistPayload = {
       customer: user.id.toString(),
       product_id: itemToRemove.product_id,
-      quantity: itemToRemove.quantity, // Preserve quantity if needed, but for removal, it's just about the item's ID
-      is_cart: false, // Ensure this matches your backend's expectation for wishlist items
-      // Include other fields as AddWishlistPayload requires, even if not directly used for removal API call,
-      // as the thunk expects this shape.
+      quantity: itemToRemove.quantity,
+      is_cart: false,
       product_name: itemToRemove.product_name,
       product_image: itemToRemove.product_image,
       product_price: itemToRemove.product_price,
@@ -67,14 +71,10 @@ export default function WishlistPage() {
     dispatch(toggleWishlistItem(payloadForToggle))
       .unwrap()
       .then(() => {
-        // console.log("WishlistPage: Successfully dispatched toggleWishlistItem (remove)");
+        console.log("WishlistPage: toggleWishlistItem (remove) SUCCEEDED.");
       })
       .catch((err) => {
-        console.error("WishlistPage: Failed to remove from wishlist:", err);
-        // You might want to re-fetch wishlist items here if removal failed to sync UI with backend
-        // if (isAuthenticated && user?.id) {
-        //   dispatch(fetchWishlistItems(user.id.toString()));
-        // }
+        console.error("WishlistPage: toggleWishlistItem (remove) FAILED:", err);
       });
   };
 
@@ -87,7 +87,7 @@ export default function WishlistPage() {
           ? `https://nxadmin.consociate.co.in${item.product_image}`
           : `https://nxadmin.consociate.co.in/media/placeholder.png`,
       price: item.selling_price,
-      quantity: 1, // Assuming adding one to cart from wishlist
+      quantity: 1,
       slug: item.slug,
       stock: item.stock,
       // Optional/undefined properties for CartItem
@@ -140,7 +140,7 @@ export default function WishlistPage() {
                     ? `https://nxadmin.consociate.co.in${item.product_image}`
                     : `https://nxadmin.consociate.co.in/media/placeholder.png`
                 }
-                alt={item.product_name || "Wishlist Item Image"} // FIX: Added alt prop
+                alt={item.product_name || "Wishlist Item Image"}
                 width={200}
                 height={200}
                 className="object-contain mb-4"

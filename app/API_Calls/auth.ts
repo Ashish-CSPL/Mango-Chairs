@@ -1,4 +1,5 @@
 import fetchData from "@/api/fetchdata";
+import fetchSecondary from "@/api/fetchSecondary";
 import {
   LoginApiResponse,
   RegisterApiResponse,
@@ -11,7 +12,7 @@ import {
 
 // UPDATED: Changed 'email' to 'username' to match backend API structure for login
 interface LoginCredentials {
-  username: string; // This will now send the email address as 'username'
+  email: string; // This will now send the email address as 'username'
   password: string;
 }
 
@@ -20,8 +21,8 @@ export async function sendOtpForVerification(
 ): Promise<OtpResponse> {
   try {
     // Assuming your OTP API still expects 'email'
-    const response = await fetchData<OtpResponse>(
-      "user/verify-email/customer/send-otp/",
+    const response = await fetchSecondary<OtpResponse>(
+      "/api/auth/sendotp",
       "POST",
       {
         body: { email: email },
@@ -34,11 +35,36 @@ export async function sendOtpForVerification(
   }
 }
 
+// export const sendOtp = async (email: string) => {
+//   try {
+//   const response = await fetch("https://536d-2401-4900-1c17-494a-48de-d34b-96f0-fe55.ngrok-free.app/api/auth/sendotp", {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({ email }),
+//   });
+
+//   if (!response.ok) {
+//     throw new Error(`Server responded with status ${response.status}`);
+//   }
+
+//   const res = await response.json();
+//   console.log(res, "API Call");
+//   return res;
+// } catch (error) {
+//   console.error("Error sending OTP:", error);
+//   return { status: false, message: "Something went wrong" };
+// }
+
+// };
+
+
 export async function verifyOtp(email: string, otp: string): Promise<OtpResponse> {
   try {
     // Assuming your OTP verification API still expects 'email' and 'otp'
-    const response = await fetchData<OtpResponse>(
-      "/user/verify-email/verify-otp/",
+    const response = await fetchSecondary<OtpResponse>(
+      "/api/auth/verifyotp",
       "POST",
       {
         body: { email: email, otp: otp },
@@ -83,8 +109,8 @@ export async function registerCustomer(
     }
 
     // fetchData will now correctly handle FormData (no manual Content-Type or JSON.stringify)
-    const response = await fetchData<RegisterApiResponse>(
-      "user/customer-registration/",
+    const response = await fetchSecondary<RegisterApiResponse>(
+      "/api/auth/register",
       "POST",
       {
         body: bodyToSend,
@@ -102,8 +128,8 @@ export async function loginCustomer(
 ): Promise<LoginApiResponse> {
   try {
     // UPDATED: credentials now correctly contains 'username' and 'password'
-    const response = await fetchData<LoginApiResponse>(
-      "user/customer-login/", // Ensure this endpoint is correct
+    const response = await fetchSecondary<LoginApiResponse>(
+      "/api/auth/login", // Ensure this endpoint is correct
       "POST",
       {
         body: credentials, // credentials is a plain object, so fetchData will JSON.stringify it and set Content-Type correctly
@@ -121,8 +147,8 @@ export async function sendOtpForResetPassword(
   email: string
 ): Promise<OtpResponse> {
   try {
-    const response = await fetchData<OtpResponse>(
-      "/user/reset-password/customer/send-otp/",
+    const response = await fetchSecondary<OtpResponse>(
+      "/api/auth/sendotp",
       "POST",
       {
         body: { email: email },
@@ -140,8 +166,8 @@ export async function verifyOtpForResetPassword(
   otp: string
 ): Promise<OtpResponse> {
   try {
-    const response = await fetchData<OtpResponse>(
-      "/user/reset-password/verify-otp/",
+    const response = await fetchSecondary<OtpResponse>(
+      "/api/auth/verifyotp",
       "POST",
       {
         body: { email: email, otp: otp },
@@ -160,8 +186,8 @@ export async function resetCustomerPassword(
   // Using RegisterApiResponse as a placeholder for a generic success response,
   // you might want to create a specific type for reset password success if the API returns different data.
   try {
-    const response = await fetchData<RegisterApiResponse>(
-      "/user/reset-password/",
+    const response = await fetchSecondary<RegisterApiResponse>(
+      "/api/auth/resetpassword",
       "POST",
       {
         body: resetData,

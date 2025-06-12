@@ -1,47 +1,32 @@
-// app/page.tsx or pages/index.tsx
-
-import Head from "next/head"; // <-- ADD THIS
+// app/page.tsx
+import Head from "next/head";
 import Banner from "@/components/Server-side-codes/Banner/Banner";
-import fetchData from "../api/fetchdata";
+import fetchData from "../api/fetchdata"; // Assuming fetchData uses your primary API
 import Category from "@/components/Server-side-codes/Category/Category";
 import Speciality from "@/components/Server-side-codes/What-Make-Us-Special/Speciality";
 import WhyChooseUsSection, {
   getWhyChooseUsData,
 } from "@/components/Server-side-codes/Why-Choose-Us/WhyChooseUS";
 import Stories from "@/components/Server-side-codes/Stories/Stories";
-import ProductsPage from "@/components/Client-side-server/New-Arrival/AllProducts";
-import NewArrivals from "@/components/Client-side-server/New-Arrival/NewArrival";
 import TestimonialSliderClient from "@/components/Client-side-server/New-Arrival/Testimonials";
-import {
-  fetchNewArrivals,
-  fetchAllProducts,
-  getTestimonials,
-} from "./Function";
+import { getTestimonials } from "./API_Calls/Function"; // Assuming these are in app/Function.ts
 import YouTubePlayer from "@/components/Server-side-codes/VideoPlayer/YouTubePlayer";
+// import ProductsDisplay from "@/components/Server-side-codes/Products/ProductDisplay";
 
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import ProductList from "@/components/Server-side-codes/ProductSecondarySection/ProductList";
 
 const Home = async () => {
   // Fetch all data in parallel
-  // Inside app/page.tsx
-
-  const [
-    bannerData,
-    categoryData,
-    newArrivals,
-    allProducts,
-    testimonials,
-    whyChooseUsData,
-  ] = await Promise.all([
-    fetchData("frontend/banners", "GET"),
-    fetchData("frontend/categories", "GET"),
-    fetchNewArrivals(),
-    fetchAllProducts(),
-    getTestimonials(),
-    getWhyChooseUsData(),
-  ]);
-
+  const [bannerData, categoryData, testimonials, whyChooseUsData] =
+    await Promise.all([
+      fetchData("frontend/banners", "GET"),
+      fetchData("frontend/categories", "GET"),
+      getTestimonials(),
+      getWhyChooseUsData(),
+    ]);
+  // console.log(getTestimonials(),"fa")
   const categories = categoryData.product_categories || [];
 
   // Get the first banner image for LCP preload
@@ -50,7 +35,7 @@ const Home = async () => {
 
   return (
     <>
-      {/* ✅ Preload the first banner image to improve LCP */}
+      {/* Preload the first banner image to improve LCP */}
       <Head>
         {firstBannerImage && baseUrl && (
           <link
@@ -73,8 +58,9 @@ const Home = async () => {
       <Category categories={categories} />
       <Speciality />
       <WhyChooseUsSection whyChooseUsData={whyChooseUsData} />
-      <ProductsPage products={allProducts} />
-      <NewArrivals products={newArrivals} />
+      <ProductList />
+      {/* NEW: Display all products */}
+
       <YouTubePlayer />
       <Stories />
       <TestimonialSliderClient testimonials={testimonials} />

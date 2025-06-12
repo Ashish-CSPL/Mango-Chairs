@@ -1,165 +1,69 @@
 // components/checkout/AddressForm.tsx
-"use client";
-
 import React, { useState, useEffect } from "react";
-import { CustomerAddress } from "@/app/Redux/Slices/addressSlice";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/app/Redux/Store/store";
-import {
-  addAddress,
-  updateAddress, // Ensure updateAddress action is imported
-  setAddressLoading,
-  setAddressError,
-} from "@/app/Redux/Slices/addressSlice";
-import {
-  createCustomerAddress,
-  updateCustomerAddress,
-  AddressPayload, // Import AddressPayload from your API file
-} from "@/app/API_Calls/customerAddress";
-import toast from "react-hot-toast";
+// Import LocalAddressItem for type safety, but the form won't directly set address_type
+import { LocalAddressItem } from "@/app/checkout/page";
 
-// Define the interface for the form data, aligned with CustomerAddress and AddressPayload
-interface FormData {
-  id?: number; // Optional for new addresses
-  customer: number;
-  full_name: string;
-  phone_number: string;
-  address: string;
-  locality: string;
-  city: string;
-  state: string;
-  zipcode: string;
-  country: string;
-  is_default_billing: boolean; // Only billing default remains
-}
-
-// Define the props for the AddressForm component
 interface AddressFormProps {
-  addressToEdit: CustomerAddress | null;
-  customerId: number;
-  token: string;
-  onSave: () => void;
+  addressToEdit: LocalAddressItem | null;
+  // The onSave function will no longer expect address_type directly from the form
+  // It will be passed in by the parent component.
+  onSave: (address: Omit<LocalAddressItem, "id" | "address_type">) => void; // Removed address_type from payload type
   onCancel: () => void;
 }
 
 const AddressForm: React.FC<AddressFormProps> = ({
   addressToEdit,
-  customerId,
-  token,
   onSave,
   onCancel,
 }) => {
-  const dispatch = useDispatch();
-  const allAddresses = useSelector(
-    (state: RootState) => state.address.addresses
-  );
-
-  const [formData, setFormData] = useState<FormData>({
-    id: addressToEdit?.id || undefined,
-    customer: customerId,
-    full_name: addressToEdit?.full_name || "",
-    phone_number: addressToEdit?.phone_number || "",
-    address: addressToEdit?.address || "",
-    locality: addressToEdit?.locality || "",
-    city: addressToEdit?.city || "",
-    state: addressToEdit?.state || "",
-    zipcode: addressToEdit?.zipcode || "",
-    country: addressToEdit?.country || "",
-    is_default_billing: addressToEdit?.is_default_billing || false,
+  const [formData, setFormData] = useState({
+    full_name: "",
+    phone_number: "",
+    address: "",
+    locality: "",
+    city: "",
+    state: "",
+    zipcode: "",
+    country: "",
   });
 
   useEffect(() => {
-    setFormData({
-      id: addressToEdit?.id || undefined,
-      customer: customerId,
-      full_name: addressToEdit?.full_name || "",
-      phone_number: addressToEdit?.phone_number || "",
-      address: addressToEdit?.address || "",
-      locality: addressToEdit?.locality || "",
-      city: addressToEdit?.city || "",
-      state: addressToEdit?.state || "",
-      zipcode: addressToEdit?.zipcode || "",
-      country: addressToEdit?.country || "",
-      is_default_billing: addressToEdit?.is_default_billing || false,
-    });
-  }, [addressToEdit, customerId]);
+    if (addressToEdit) {
+      setFormData({
+        full_name: addressToEdit.full_name,
+        phone_number: addressToEdit.phone_number,
+        address: addressToEdit.address,
+        locality: addressToEdit.locality,
+        city: addressToEdit.city,
+        state: addressToEdit.state,
+        zipcode: addressToEdit.zipcode,
+        country: addressToEdit.country,
+      });
+    } else {
+      // Clear form if no address to edit (i.e., adding a new address)
+      setFormData({
+        full_name: "",
+        phone_number: "",
+        address: "",
+        locality: "",
+        city: "",
+        state: "",
+        zipcode: "",
+        country: "",
+      });
+    }
+  }, [addressToEdit]);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!token) {
-      toast.error("Authentication token is missing. Please log in.");
-      return;
-    }
-
-    dispatch(setAddressLoading(true));
-    try {
-      // --- Logic to unset other default billing addresses in Redux before API call ---
-      if (formData.is_default_billing) {
-        allAddresses.forEach((a: CustomerAddress) => {
-          if (a.id !== formData.id && a.is_default_billing) {
-            dispatch(updateAddress({ ...a, is_default_billing: false }));
-            // IMPORTANT: In a real application, you would also send an API call
-            // to update this other address on the backend to unset its default flag.
-            // Example: await updateCustomerAddress(a.id, { ...a, is_default_billing: false }, customerId, token);
-          }
-        });
-      }
-      // --- End of default unsetting logic ---
-
-      let responseAddress: CustomerAddress;
-      const payload: AddressPayload = {
-        full_name: formData.full_name,
-        phone_number: formData.phone_number,
-        address: formData.address,
-        locality: formData.locality,
-        city: formData.city,
-        state: formData.state,
-        zipcode: formData.zipcode,
-        country: formData.country,
-        is_selected: formData.is_default_billing, // is_selected in payload now only reflects is_default_billing
-      };
-
-      if (formData.id) {
-        responseAddress = await updateCustomerAddress(
-          formData.id,
-          payload,
-          customerId,
-          token
-        );
-        dispatch(updateAddress(responseAddress)); // Update Redux store with the response
-        toast.success("Address updated successfully!");
-      } else {
-        responseAddress = await createCustomerAddress(
-          payload,
-          customerId,
-          token
-        );
-        dispatch(addAddress(responseAddress)); // Add to Redux store with the response
-        toast.success("Address added successfully!");
-      }
-      onSave();
-    } catch (error: any) {
-      console.error("Error saving address:", error);
-      dispatch(setAddressError(error.message || "Failed to save address."));
-      toast.error(error.message || "Failed to save address.");
-    } finally {
-      dispatch(setAddressLoading(false));
-    }
+    onSave(formData); // Now, formData does NOT include address_type
   };
 
   return (
@@ -207,7 +111,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
             htmlFor="address"
             className="block text-sm font-medium text-gray-700"
           >
-            Address Line 1
+            Address (House No., Building, Street)
           </label>
           <input
             type="text"
@@ -224,7 +128,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
             htmlFor="locality"
             className="block text-sm font-medium text-gray-700"
           >
-            Address Line 2 (Optional)
+            Area / Locality
           </label>
           <input
             type="text"
@@ -277,7 +181,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
               htmlFor="zipcode"
               className="block text-sm font-medium text-gray-700"
             >
-              Postal Code
+              Zip Code
             </label>
             <input
               type="text"
@@ -308,34 +212,59 @@ const AddressForm: React.FC<AddressFormProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center">
-          <input
-            id="is_default_billing"
-            name="is_default_billing"
-            type="checkbox"
-            checked={formData.is_default_billing}
-            onChange={handleChange}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-          <label
-            htmlFor="is_default_billing"
-            className="ml-2 block text-sm text-gray-900"
-          >
-            Set as default billing address
-          </label>
+        {/* REMOVED ADDRESS TYPE SELECTION */}
+        {/*
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Address Type</label>
+          <div className="flex space-x-4">
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="address_type"
+                value="BILLING"
+                checked={formData.address_type === 'BILLING'}
+                onChange={handleChange}
+                className="form-radio text-blue-600 h-4 w-4"
+              />
+              <span className="ml-2 text-gray-700">Billing</span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="address_type"
+                value="SHIPPING"
+                checked={formData.address_type === 'SHIPPING'}
+                onChange={handleChange}
+                className="form-radio text-blue-600 h-4 w-4"
+              />
+              <span className="ml-2 text-gray-700">Delivery</span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="address_type"
+                value="BOTH"
+                checked={formData.address_type === 'BOTH'}
+                onChange={handleChange}
+                className="form-radio text-blue-600 h-4 w-4"
+              />
+              <span className="ml-2 text-gray-700">Both</span>
+            </label>
+          </div>
         </div>
+        */}
 
-        <div className="flex justify-end gap-3 mt-6">
+        <div className="flex justify-end space-x-3 mt-6">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             {addressToEdit ? "Save Changes" : "Add Address"}
           </button>

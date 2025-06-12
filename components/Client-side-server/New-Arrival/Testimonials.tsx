@@ -20,6 +20,7 @@ interface Props {
 
 export default function CustomTestimonialSlider({ testimonials }: Props) {
   const [swiperInstance, setSwiperInstance] = useState<any>(null);
+  console.log(testimonials);
 
   const handlePrev = () => {
     swiperInstance?.slidePrev();
@@ -30,7 +31,7 @@ export default function CustomTestimonialSlider({ testimonials }: Props) {
   };
 
   const currentSlide = swiperInstance?.realIndex || 0;
-  const maxSlideIndex = (testimonials.length || 0) - 1;
+  const maxSlideIndex = (testimonials?.length || 0) - 1;
 
   return (
     <div

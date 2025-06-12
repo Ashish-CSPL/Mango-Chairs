@@ -1,16 +1,14 @@
-// next.config.ts
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true, // Keep this if you want React's strict mode
-  images: {
-    domains: [
-      'nxadmin.consociate.co.in',
-      'localhost', // Typically for local development images
-      'placehold.co', // **Crucially, add this for your placeholder images**
-      // Add any other domains where your product images are hosted (e.g., S3, Cloudinary, etc.)
-    ],
-  },
-  // Add other Next.js configurations here if needed
+  reactStrictMode: true,
+ images: {
+  domains: [
+    'nxadmin.consociate.co.in',
+    'e8a3-2401-4900-889e-9b38-adc3-3ada-6623-b1ba.ngrok-free.app',
+    'placehold.co',
+  ],
+},
+
 };
 
 module.exports = nextConfig;

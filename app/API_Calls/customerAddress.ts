@@ -1,129 +1,146 @@
-// app/API_Calls/customerAddress.ts (Your provided version)
+import fetchSecondary from "@/api/fetchSecondary";
 
-import fetchData from "@/api/fetchdata";
-import { CustomerAddress } from "@/app/Redux/Slices/addressSlice"; // This will also be updated below
-
-// Type for creating/updating an address payload sent to the backend
-// UPDATED FIELD NAMES: address, locality, is_selected
+// Define the structure of data sent to the backend for creating/updating an address
 export interface AddressPayload {
   full_name: string;
   phone_number: string;
-  address: string; // Changed from address_line1
-  locality?: string; // Changed from address_line2
+  address: string; // Corresponds to 'street' in your example response
+  locality: string; // Common address field, add if your backend expects it
   city: string;
   state: string;
-  zipcode: string;
+  zipcode: string; // Corresponds to 'postalCode' in your example response
   country: string;
-  is_selected?: boolean; // Changed from is_default
+  address_type: "BILLING" | "SHIPPING" | "BOTH"; // Type of address
 }
 
-// Function to get all customer addresses for a specific customer
-export async function getCustomerAddresses(customerId: number, token: string): Promise<CustomerAddress[]> {
-  try {
-    const response = await fetchData<any>( // Use 'any' to start, then cast
-      "user/customer-address/",
-      "GET",
-      {
-        token,
-        queryParams: { customer: customerId }
-      }
-    );
-
-    // CRITICAL UPDATE HERE: Handle the "addresses" key
-    if (response && typeof response === 'object' && 'addresses' in response && Array.isArray(response.addresses)) {
-      console.log("Found 'addresses' key in response. Extracting addresses.");
-      return response.addresses; // Extract the array from the "addresses" key
-    } else if (Array.isArray(response)) {
-      return response; // Direct array response (less likely now, but kept for robustness)
-    } else if (response && typeof response === 'object' && 'results' in response && Array.isArray(response.results)) {
-        console.warn("Backend response for getCustomerAddresses contained a 'results' array. Extracting it.");
-        return response.results; // Handle pagination "results" key
-    } else {
-      console.error("API response for getCustomerAddresses was not a recognized array format (direct, 'results', or 'addresses'):", response);
-      return []; // Return empty array if unexpected format
-    }
-  } catch (error) {
-    console.error("Error fetching customer addresses:", error);
-    throw error;
-  }
+// Define the structure of an address object received from the backend
+export interface CustomerAddress extends AddressPayload {
+  id: number; // Unique ID for the address
+  customer: number; // The ID of the customer this address belongs to
+  is_active: boolean; // Assuming an active status for addresses
+  created_at: string;
+  updated_at: string;
 }
 
-// Function to create a new customer address
-export async function createCustomerAddress(addressData: AddressPayload, customerId: number, token: string): Promise<CustomerAddress> {
+/**
+ * Creates a new customer address.
+ * @param customerId - The ID of the customer.
+ * @param addressData - The data for the new address.
+ * @param token - The authentication token.
+ * @returns A Promise that resolves to the created CustomerAddress.
+ */
+export const createCustomerAddress = async (
+  customerId: number,
+  addressData: AddressPayload,
+  token: string
+): Promise<CustomerAddress> => {
   try {
-    const backendPayload = {
-      customer: customerId,
-      address: addressData.address, // Changed from address_line1
-      locality: addressData.locality || "", // Changed from address_line2
-      full_name: addressData.full_name,
-      phone_number: addressData.phone_number,
-      city: addressData.city,
-      state: addressData.state,
-      zipcode: addressData.zipcode,
-      country: addressData.country,
-      is_selected: addressData.is_selected, // Changed from is_default
-    };
-
-    const response = await fetchData<CustomerAddress>(
-      "user/customer-address/",
+    const response = await fetchSecondary<CustomerAddress>(
+      `user/address/create`,
       "POST",
       {
-        token,
-        body: backendPayload,
+        body: {
+          ...addressData,
+          customer: customerId, // Ensure customer ID is explicitly sent if required by backend
+        },
+        token: token,
       }
     );
     return response;
   } catch (error) {
-    console.error("Error creating customer address:", error);
+    console.error("API Call Error: Failed to create address.", error);
     throw error;
   }
-}
+};
 
-// Function to update an existing customer address (using PATCH)
-export async function updateCustomerAddress(id: number, addressData: AddressPayload, customerId: number, token: string): Promise<CustomerAddress> {
+/**
+ * Fetches all addresses for a given customer.
+ * @param customerId - The ID of the customer whose addresses are to be fetched.
+ * @param token - The authentication token.
+ * @returns A Promise that resolves to an array of CustomerAddress.
+ */
+export const getCustomerAddresses = async (
+  customerId: number,
+  token: string
+): Promise<CustomerAddress[]> => {
   try {
-    const backendPayload = {
-      address: addressData.address, // Changed from address_line1
-      locality: addressData.locality || "", // Changed from address_line2
-      full_name: addressData.full_name,
-      phone_number: addressData.phone_number,
-      city: addressData.city,
-      state: addressData.state,
-      zipcode: addressData.zipcode,
-      country: addressData.country,
-      is_selected: addressData.is_selected, // Changed from is_default
-    };
-
-    const response = await fetchData<CustomerAddress>(
-      `user/customer-address/${id}/`,
-      "PATCH",
+    // Assuming 'user/address/get' endpoint can return multiple addresses for a customer
+    // and expects customer_id as a query parameter. Adjust if your API differs.
+    const response = await fetchSecondary<CustomerAddress[]>(
+      `user/address/get`,
+      "GET",
       {
-        token,
-        body: backendPayload,
-        queryParams: { customer: customerId }
+        token: token,
+        queryParams: { customer_id: customerId },
+      }
+    );
+    // Backend response for "get address" is shown as a single object.
+    // If 'user/address/get' always returns a single object even when trying to get all,
+    // this logic ensures it's always an array for the Redux state.
+    if (!Array.isArray(response)) {
+      console.warn(
+        "getCustomerAddresses received a non-array response. Coercing to array."
+      );
+      return response ? [response] : [];
+    }
+    return response;
+  } catch (error) {
+    console.error("API Call Error: Failed to fetch addresses.", error);
+    throw error;
+  }
+};
+
+/**
+ * Updates an existing customer address.
+ * @param addressId - The ID of the address to update.
+ * @param addressData - The partial data to update the address.
+ * @param token - The authentication token.
+ * @returns A Promise that resolves to the updated CustomerAddress.
+ */
+export const updateCustomerAddress = async (
+  addressId: number,
+  addressData: Partial<AddressPayload>, // Use Partial because not all fields might be updated
+  token: string
+): Promise<CustomerAddress> => {
+  try {
+    // IMPORTANT: Confirm this endpoint with your backend. Common patterns include /user/address/{id} or /user/address/update/{id}
+    const response = await fetchSecondary<CustomerAddress>(
+      `user/address/${addressId}/update`, // Example endpoint
+      "PUT", // Use PUT for full replacement or PATCH for partial updates based on API
+      {
+        body: addressData,
+        token: token,
       }
     );
     return response;
   } catch (error) {
-    console.error(`Error updating customer address with ID ${id}:`, error);
+    console.error(`API Call Error: Failed to update address with ID ${addressId}.`, error);
     throw error;
   }
-}
+};
 
-// Function to delete a customer address
-export async function deleteCustomerAddress(id: number, customerId: number, token: string): Promise<{ message: string }> {
+/**
+ * Deletes a customer address.
+ * @param addressId - The ID of the address to delete.
+ * @param token - The authentication token.
+ * @returns A Promise that resolves to a success message.
+ */
+export const deleteCustomerAddress = async (
+  addressId: number,
+  token: string
+): Promise<{ message: string }> => {
   try {
-    const response = await fetchData<{ message?: string }>(
-      `user/customer-address/${id}/`,
+    // IMPORTANT: Confirm this endpoint with your backend. Common patterns include /user/address/{id} or /user/address/delete/{id}
+    const response = await fetchSecondary<{ message: string }>(
+      `user/address/${addressId}/delete`, // Example endpoint
       "DELETE",
       {
-        token,
-        queryParams: { customer: customerId }
+        token: token,
       }
     );
-    return { message: response?.message || "Address deleted successfully." };
+    return response;
   } catch (error) {
-    console.error(`Error deleting customer address with ID ${id}:`, error);
+    console.error(`API Call Error: Failed to delete address with ID ${addressId}.`, error);
     throw error;
   }
-}
+};

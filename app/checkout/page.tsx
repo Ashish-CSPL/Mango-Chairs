@@ -1,34 +1,12 @@
-// checkout/page.tsx
+// app/checkout/page.tsx
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "@/app/Redux/Store/store";
+import { RootState } from "@/app/Redux/Store/store";
 import { useRouter } from "next/navigation";
-import { getCustomerAddresses } from "@/app/API_Calls/customerAddress";
-import {
-  setAddressLoading,
-  setAddresses,
-  setAddressError,
-  setSelectedBillingAddress,
-  setSelectedShippingAddress,
-  CustomerAddress,
-} from "@/app/Redux/Slices/addressSlice";
-import {
-  setOrderLoading,
-  setOrderSuccess,
-  setOrderError,
-  clearOrderState,
-  OrderDetails, // Ensure OrderDetails is imported from orderSlice
-} from "@/app/Redux/Slices/orderSlice";
-import {
-  placeOrder,
-  PlaceOrderPayload,
-  PlaceOrderSuccessResponse,
-} from "@/app/API_Calls/order";
 import AddressList from "@/components/checkout/AddressList";
 import AddressForm from "@/components/checkout/AddressForm";
-import GuestLoginPrompt from "@/components/checkout/GuestLoginPrompt";
 import Modal from "@/components/ui/Modal";
 import Image from "next/image";
 import {
@@ -38,35 +16,164 @@ import {
 } from "@/app/Redux/Store/cartSlice";
 import toast, { Toaster } from "react-hot-toast";
 
+// Define the interface for locally managed addresses
+export interface LocalAddressItem {
+  id: string;
+  full_name: string;
+  phone_number: string;
+  address: string;
+  locality: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  country: string;
+  address_type: "BILLING" | "SHIPPING" | "BOTH"; // Keep address_type for internal logic
+}
+
+// Define the interface for the data received from AddressForm (WITHOUT address_type)
+interface LocalAddressPayload {
+  full_name: string;
+  phone_number: string;
+  address: string;
+  locality: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  country: string;
+}
+
+// Define the API Base URL (adjust this to your actual ngrok URL when deploying backend)
+const API_BASE_URL = "http://localhost:8080/";
+
 const CheckoutPage: React.FC = () => {
-  const dispatch: AppDispatch = useDispatch();
+  const dispatch = useDispatch();
   const router = useRouter();
 
-  const { isAuthenticated, token, user } = useSelector(
-    (state: RootState) => state.auth
-  );
-  const {
-    addresses,
-    loading: addressesLoading,
-    error: addressError,
-    selectedBillingAddress,
-    selectedShippingAddress,
-  } = useSelector((state: RootState) => state.address);
-  const { loading: orderLoading, error: orderError } = useSelector(
-    (state: RootState) => state.order
-  );
-
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
+
+  const [savedAddresses, setSavedAddresses] = useState<LocalAddressItem[]>([]);
+  const [selectedBillingAddress, setSelectedBillingAddress] =
+    useState<LocalAddressItem | null>(null);
+  const [selectedShippingAddress, setSelectedShippingAddress] =
+    useState<LocalAddressItem | null>(null);
 
   const [couponCode, setCouponCode] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
     "razorpay" | "cod"
   >("razorpay");
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressToEdit, setAddressToEdit] = useState<LocalAddressItem | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [isSameAsBilling, setIsSameAsBilling] = useState(true);
+
+  // State to track the purpose of adding/editing an address
+  const [formPurpose, setFormPurpose] = useState<
+    "billing" | "shipping" | "general"
+  >("general");
 
   const totalAmount = cartItems.reduce((total: number, item: any) => {
     const priceValue = typeof item.price === "number" ? item.price : 0;
     return total + priceValue * item.quantity;
   }, 0);
+
+  // --- Helper functions for localStorage ---
+  const loadAddressesFromLocalStorage = (): LocalAddressItem[] => {
+    if (typeof window === "undefined") return []; // Defensive check for SSR
+    try {
+      const storedAddresses = localStorage.getItem("user_saved_addresses");
+      if (storedAddresses) {
+        const parsedAddresses: LocalAddressItem[] = JSON.parse(storedAddresses);
+        const validatedAddresses = parsedAddresses.map((addr) => ({
+          ...addr,
+          address_type: addr.address_type || "BOTH", // Default to 'BOTH' if undefined
+        }));
+        if (Array.isArray(validatedAddresses)) {
+          return validatedAddresses;
+        } else {
+          console.warn(
+            "Stored addresses in localStorage are not an array or are corrupted. Clearing data."
+          );
+          localStorage.removeItem("user_saved_addresses");
+          return [];
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Failed to parse addresses from localStorage, clearing data:",
+        error
+      );
+      localStorage.removeItem("user_saved_addresses");
+      toast.error("Error loading saved addresses.");
+    }
+    return []; // Return empty array if nothing found or error
+  };
+
+  const saveAddressesToLocalStorage = (addresses: LocalAddressItem[]) => {
+    if (typeof window === "undefined") return; // Defensive check for SSR
+    try {
+      localStorage.setItem("user_saved_addresses", JSON.stringify(addresses));
+    } catch (error) {
+      console.error("Failed to save addresses to localStorage:", error);
+      toast.error("Could not save addresses locally.");
+    }
+  };
+
+  // --- useEffect for initial load ---
+  useEffect(() => {
+    setSavedAddresses(loadAddressesFromLocalStorage());
+  }, []); // Run once on component mount
+
+  // --- useEffect for managing selected addresses ---
+  useEffect(() => {
+    // Filter addresses by type. If "BOTH", they are available for both.
+    const availableBillingAddresses = savedAddresses.filter(
+      (addr) => addr.address_type === "BILLING" || addr.address_type === "BOTH"
+    );
+    const availableShippingAddresses = savedAddresses.filter(
+      (addr) => addr.address_type === "SHIPPING" || addr.address_type === "BOTH"
+    );
+
+    // If currently selected billing address is not in the filtered list
+    if (
+      !selectedBillingAddress ||
+      !availableBillingAddresses.some(
+        (addr) => addr.id === selectedBillingAddress.id
+      )
+    ) {
+      setSelectedBillingAddress(
+        availableBillingAddresses.length > 0
+          ? availableBillingAddresses[0]
+          : null
+      );
+    }
+
+    if (isSameAsBilling) {
+      // If shipping is same as billing, update shipping whenever billing changes
+      setSelectedShippingAddress(selectedBillingAddress);
+    } else {
+      // If shipping is different, ensure selected shipping is still valid
+      if (
+        !selectedShippingAddress ||
+        !availableShippingAddresses.some(
+          (addr) => addr.id === selectedShippingAddress.id
+        )
+      ) {
+        setSelectedShippingAddress(
+          availableShippingAddresses.length > 0
+            ? availableShippingAddresses[0]
+            : null
+        );
+      }
+    }
+  }, [
+    savedAddresses,
+    selectedBillingAddress,
+    selectedShippingAddress,
+    isSameAsBilling,
+  ]);
 
   const handleRemove = (id: string | number, name: string) => {
     dispatch(removeFromCart(id));
@@ -111,120 +218,173 @@ const CheckoutPage: React.FC = () => {
     dispatch(updateQuantity({ id, change }));
   };
 
-  const [showAddressForm, setShowAddressForm] = useState(false);
-  const [addressToEdit, setAddressToEdit] = useState<CustomerAddress | null>(
-    null
-  );
-
-  const fetchAddresses = useCallback(async () => {
-    const customerId = user?.id;
-
-    if (isAuthenticated && token && typeof customerId === "number") {
-      dispatch(setAddressLoading(true));
-      try {
-        const fetchedAddresses = await getCustomerAddresses(customerId, token);
-        console.log("DEBUG: Fetched Addresses API Response:", fetchedAddresses);
-
-        if (Array.isArray(fetchedAddresses)) {
-          dispatch(setAddresses(fetchedAddresses));
-        } else {
-          console.error(
-            "fetchAddresses received non-array result from getCustomerAddresses:",
-            fetchedAddresses
-          );
-          dispatch(
-            setAddressError("Received unexpected data format for addresses.")
-          );
-          dispatch(setAddresses([]));
-        }
-      } catch (err: any) {
-        dispatch(setAddressError(err.message || "Failed to fetch addresses."));
-        console.error("Error fetching addresses in checkout:", err);
-        dispatch(setAddresses([]));
-      } finally {
-        dispatch(setAddressLoading(false));
-      }
-    } else if (!isAuthenticated) {
-      console.log("User not authenticated, not fetching addresses.");
-      dispatch(setAddresses([]));
-      dispatch(setAddressLoading(false));
-    } else if (user && typeof customerId !== "number") {
-      console.warn(
-        "Authenticated user found, but customer ID is missing or invalid. Cannot fetch addresses."
-      );
-      dispatch(
-        setAddressError(
-          "Authenticated user data incomplete. Cannot fetch addresses."
-        )
-      );
-      dispatch(setAddresses([]));
-      dispatch(setAddressLoading(false));
-    } else {
-      dispatch(setAddressLoading(false));
-    }
-  }, [isAuthenticated, token, user?.id, dispatch]);
-
-  useEffect(() => {
-    fetchAddresses();
-  }, [fetchAddresses]);
-
-  const handleSelectBilling = (address: CustomerAddress) => {
-    dispatch(setSelectedBillingAddress(address));
-  };
-
-  const handleSelectShipping = (address: CustomerAddress) => {
-    dispatch(setSelectedShippingAddress(address));
-  };
-
-  const handleEditAddress = (address: CustomerAddress) => {
-    setAddressToEdit(address);
-    setShowAddressForm(true);
-  };
-
-  const handleAddNewAddress = () => {
+  const handleAddNewAddress = (
+    purpose: "billing" | "shipping" | "general" = "general"
+  ) => {
     setAddressToEdit(null);
+    setFormPurpose(purpose);
     setShowAddressForm(true);
   };
 
-  const handleAddressFormSave = () => {
+  const handleAddressFormSave = (
+    newAddressData: Omit<LocalAddressItem, "id" | "address_type">
+  ) => {
+    let updatedAddresses: LocalAddressItem[];
+
+    if (addressToEdit) {
+      // Editing existing address
+      updatedAddresses = savedAddresses.map((addr) =>
+        addr.id === addressToEdit.id
+          ? {
+              ...newAddressData,
+              id: addressToEdit.id,
+              address_type: addressToEdit.address_type,
+            } // Use existing type
+          : addr
+      );
+      toast.custom(
+        (t) => (
+          <div
+            className={`${
+              t.visible ? "animate-enter" : "animate-leave"
+            } max-w-sm w-full bg-blue-500 text-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 p-4 items-center justify-center`}
+          >
+            <p className="text-sm font-medium text-center">
+              Address updated successfully!
+            </p>
+          </div>
+        ),
+        { position: "top-center", duration: 3000 }
+      );
+    } else {
+      // Adding new address
+      let determinedType: "BILLING" | "SHIPPING" | "BOTH";
+      if (formPurpose === "billing") {
+        determinedType = "BILLING";
+      } else if (formPurpose === "shipping") {
+        determinedType = "SHIPPING";
+      } else {
+        determinedType = "BOTH"; // Default for general addition
+      }
+
+      const newAddressWithId: LocalAddressItem = {
+        ...newAddressData,
+        id: Date.now().toString(), // Ensure unique ID for new addresses
+        address_type: determinedType, // Assign determined type
+      };
+      updatedAddresses = [...savedAddresses, newAddressWithId];
+    }
+
+    setSavedAddresses(updatedAddresses); // Update state
+    saveAddressesToLocalStorage(updatedAddresses); // Explicitly save to localStorage immediately
     setShowAddressForm(false);
     setAddressToEdit(null);
-    fetchAddresses(); // Re-fetch all addresses to ensure the list is up-to-date
+    setFormPurpose("general");
   };
 
   const handleAddressFormCancel = () => {
     setShowAddressForm(false);
     setAddressToEdit(null);
+    setFormPurpose("general");
   };
 
-  const customerId = user?.id;
-  const isReadyForForm =
-    isAuthenticated && token && typeof customerId === "number";
-
-  // Helper function to format address into a string
-  const formatAddressToString = (address: CustomerAddress): string => {
-    if (!address) return "";
-    // Note: Assuming address.address, address.locality, etc. are available on CustomerAddress
-    // Reconstruct the address string as your backend expects
-    let addressString = address.full_name;
-    addressString += `, ${address.address}`;
-    if (address.locality) addressString += `, ${address.locality}`;
-    addressString += `, ${address.city}, ${address.state} - ${address.zipcode}, ${address.country}`;
-    return addressString;
+  const handleSelectBilling = (address: LocalAddressItem) => {
+    setSelectedBillingAddress(address);
+    if (isSameAsBilling) {
+      setSelectedShippingAddress(address);
+    }
   };
 
-  // Handle Place Order
+  const handleSelectShipping = (address: LocalAddressItem) => {
+    setSelectedShippingAddress(address);
+  };
+
+  const handleEditAddress = (address: LocalAddressItem) => {
+    setAddressToEdit(address);
+    setShowAddressForm(true);
+  };
+
+  const performAddressDelete = (addressId: string) => {
+    const updatedAddresses = savedAddresses.filter(
+      (addr) => addr.id !== addressId
+    );
+    setSavedAddresses(updatedAddresses); // Update state
+    saveAddressesToLocalStorage(updatedAddresses); // Explicitly save to localStorage immediately
+
+    // Adjust selected addresses if the deleted one was selected
+    const availableBilling = updatedAddresses.filter(
+      (addr) => addr.address_type === "BILLING" || addr.address_type === "BOTH"
+    );
+    const availableShipping = updatedAddresses.filter(
+      (addr) => addr.address_type === "SHIPPING" || addr.address_type === "BOTH"
+    );
+
+    if (selectedBillingAddress?.id === addressId) {
+      setSelectedBillingAddress(
+        availableBilling.length > 0 ? availableBilling[0] : null
+      );
+    }
+    if (selectedShippingAddress?.id === addressId) {
+      setSelectedShippingAddress(
+        availableShipping.length > 0 ? availableShipping[0] : null
+      );
+    }
+    if (isSameAsBilling) {
+      setSelectedShippingAddress(selectedBillingAddress);
+    }
+    toast.error("Address deleted.");
+  };
+
+  const handleDeleteAddress = (addressId: string) => {
+    toast(
+      (t) => (
+        <div className="flex flex-col bg-white p-4 rounded-md shadow-lg border border-gray-200">
+          <p className="text-gray-800 font-semibold mb-3">
+            Are you sure you want to delete this address?
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+              onClick={() => toast.dismiss(t.id)}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              onClick={() => {
+                toast.dismiss(t.id);
+                performAddressDelete(addressId);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: Infinity,
+        position: "top-center",
+        className: "w-full max-w-xs md:max-w-md",
+      }
+    );
+  };
+
+  const formatAddressToString = (address: LocalAddressItem | null): string => {
+    if (!address) return "No address selected.";
+    return `${address.full_name}, ${address.address}${
+      address.locality ? `, ${address.locality}` : ""
+    }, ${address.city}, ${address.state} - ${address.zipcode}, ${
+      address.country
+    }, Phone: ${address.phone_number}`;
+  };
+
   const handlePlaceOrder = async () => {
-    if (!isAuthenticated || !token || typeof user?.id !== "number") {
-      toast.error("Please log in to place an order.");
+    if (!selectedBillingAddress) {
+      toast.error("Please select a billing address.");
       return;
     }
     if (!selectedShippingAddress) {
-      toast.error("Please select a shipping address.");
-      return;
-    }
-    if (!selectedBillingAddress) {
-      toast.error("Please select a billing address.");
+      toast.error("Please select a delivery address.");
       return;
     }
     if (cartItems.length === 0) {
@@ -234,108 +394,86 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
-    dispatch(setOrderLoading(true));
-    dispatch(clearOrderState()); // Clear previous order state
-    try {
-      const orderItems = cartItems.map((item) => ({
-        product_id: Number(item.id),
+    setIsLoading(true);
+
+    const orderPayload = {
+      billingAddress: formatAddressToString(selectedBillingAddress),
+      deliveryAddress: formatAddressToString(selectedShippingAddress),
+      products: cartItems.map((item) => ({
+        productId: item.id,
+        unitPrice: item.price,
         quantity: item.quantity,
-        unit_price: item.price,
-      }));
+      })),
+      paymentType: selectedPaymentMethod.toUpperCase(),
+      subTotal: totalAmount,
+      couponCode: couponCode || null,
+    };
 
-      const subTotal = totalAmount;
-      const tax = 0;
-      const discount = 0;
-      const deliveryCharge = 0;
-      const finalTotal = subTotal + tax + deliveryCharge - discount;
+    try {
+      const response = await fetch(`${API_BASE_URL}order/place-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderPayload),
+      });
 
-      const payload: PlaceOrderPayload = {
-        sub_total: subTotal,
-        tax: tax,
-        discount: discount,
-        delivery_charge: deliveryCharge,
-        final_total: finalTotal,
-        is_payment_done: selectedPaymentMethod === "cod",
-        payment_transaction_id:
-          selectedPaymentMethod === "cod" ? `COD-${Date.now()}` : "",
-        payment_type:
-          selectedPaymentMethod === "cod" ? "Cash on Delivery" : "Razorpay",
-        payment_datetime: new Date().toISOString(),
-        billing_address: formatAddressToString(selectedBillingAddress),
-        delivery_address: formatAddressToString(selectedShippingAddress),
-        products: orderItems,
-        ...(couponCode && { discount_coupon_id: Number(couponCode) }),
-      };
-
-      console.log(
-        "DEBUG: Place Order Payload (Final):",
-        JSON.stringify(payload, null, 2)
-      );
-
-      // Call placeOrder which now returns PlaceOrderSuccessResponse
-      const orderResponse: PlaceOrderSuccessResponse = await placeOrder(
-        payload,
-        token
-      );
-      console.log(
-        "DEBUG: Order Response after successful placeOrder API call:",
-        orderResponse
-      );
-
-      // Check if order_id is a string and exists
-      if (orderResponse && typeof orderResponse.order_id === "string") {
-        // Construct the full OrderDetails object for Redux state
-        // IMPORTANT: REMOVE 'id: undefined' as it does not exist in your OrderDetails type
-        const fullOrderDetails: OrderDetails = {
-          order_id: orderResponse.order_id,
-          external_order_id: orderResponse.external_order_id || null, // Ensure it's null if not present, matching interface
-          message: orderResponse.message || "Order placed successfully", // Default message if not present
-          customer: user.id,
-          sub_total: subTotal,
-          tax: tax,
-          discount: discount,
-          delivery_charge: deliveryCharge,
-          final_total: finalTotal,
-          is_payment_done: payload.is_payment_done,
-          payment_transaction_id: payload.payment_transaction_id,
-          payment_type: payload.payment_type,
-          payment_datetime: payload.payment_datetime,
-          billing_address: payload.billing_address,
-          delivery_address: payload.delivery_address,
-          products: payload.products, // Products from the payload
-          status: "Pending", // Set initial status or derive from response if available
-          discount_coupon_id: payload.discount_coupon_id || null, // Match interface nullable type
-          // REMOVED: id: undefined, // THIS LINE IS GONE!
-        };
-
-        dispatch(setOrderSuccess(fullOrderDetails)); // Dispatch the constructed full OrderDetails
-        dispatch(clearCart());
-        toast.success("Order placed successfully!");
-        router.push(`/order-confirmation/${orderResponse.order_id}`); // Use order_id for redirection
-      } else {
-        const errorMessage =
-          "Order placed, but no valid order ID (string) received for redirection.";
-        console.error("DEBUG: " + errorMessage, orderResponse);
-        dispatch(setOrderError(errorMessage));
-        toast.error(errorMessage);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Failed to place order due to a server error."
+        );
       }
-    } catch (err: any) {
-      console.error("DEBUG: Error placing order (full error object):", err);
-      let errorMessage = "Failed to place order.";
-      if (
-        err.responseBody &&
-        err.responseBody.message &&
-        err.responseBody.message.error &&
-        err.responseBody.message.error.description
-      ) {
-        errorMessage = err.responseBody.message.error.description;
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      dispatch(setOrderError(errorMessage));
-      toast.error(errorMessage);
+
+      const orderResponse = await response.json();
+      console.log("Order placed successfully!", orderResponse);
+      toast.success("Order placed successfully!");
+
+      dispatch(clearCart());
+      router.push(`/order-confirmation/${orderResponse.orderId || "success"}`);
+    } catch (error: any) {
+      console.error("Error placing order:", error);
+      toast.error(error.message || "Could not place order. Please try again.");
     } finally {
-      dispatch(setOrderLoading(false));
+      setIsLoading(false);
+    }
+  };
+
+  const getOrders = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}order/get-orders`, {
+        method: "GET",
+        headers: {},
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch orders.");
+      }
+      const orders = await response.json();
+      console.log("All orders:", orders);
+      return orders;
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders.");
+      return [];
+    }
+  };
+
+  const getSingleOrder = async (orderId: string | number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}order/orderid/${orderId}`, {
+        method: "GET",
+        headers: {},
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch order ${orderId}.`);
+      }
+      const order = await response.json();
+      console.log(`Order ${orderId}:`, order);
+      return order;
+    } catch (error) {
+      console.error(`Error fetching order ${orderId}:`, error);
+      toast.error(`Failed to load order ${orderId}.`);
+      return null;
     }
   };
 
@@ -343,67 +481,75 @@ const CheckoutPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <Toaster position="top-center" />
       <h1 className="text-3xl font-bold mb-8 text-gray-900">Checkout</h1>
+
       <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-2/3 space-y-6">
-          {!isAuthenticated ? (
-            <GuestLoginPrompt />
-          ) : (
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                Delivery & Billing Details
-              </h2>
-              {addressesLoading && (
-                <p className="text-center text-gray-600">
-                  Loading addresses...
-                </p>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+              Billing Address
+            </h2>
+            <AddressList
+              addresses={savedAddresses.filter(
+                (addr) =>
+                  addr.address_type === "BILLING" ||
+                  addr.address_type === "BOTH"
               )}
-              {addressError && (
-                <p className="text-center text-red-500">
-                  Error: {addressError}
-                </p>
-              )}
+              selectedAddress={selectedBillingAddress}
+              onSelect={handleSelectBilling}
+              onEditAddress={handleEditAddress}
+              onDeleteAddress={handleDeleteAddress}
+              onAddNewAddress={() => handleAddNewAddress("billing")}
+              forPurpose="billing"
+              isSameAsBilling={isSameAsBilling} // Pass isSameAsBilling to Billing AddressList
+            />
 
-              {!addressesLoading && !addressError && (
-                <AddressList
-                  addresses={Array.isArray(addresses) ? addresses : []}
-                  selectedBillingAddress={selectedBillingAddress}
-                  selectedShippingAddress={selectedShippingAddress}
-                  onSelectBilling={handleSelectBilling}
-                  onSelectShipping={handleSelectShipping}
-                  onEditAddress={handleEditAddress}
-                  onAddNewAddress={handleAddNewAddress}
-                />
-              )}
-
-              {isReadyForForm ? (
-                <Modal
-                  isOpen={showAddressForm}
-                  onClose={handleAddressFormCancel}
-                >
-                  <AddressForm
-                    addressToEdit={addressToEdit}
-                    customerId={customerId}
-                    token={token}
-                    onSave={handleAddressFormSave}
-                    onCancel={handleAddressFormCancel}
-                  />
-                </Modal>
-              ) : (
-                showAddressForm && (
-                  <Modal
-                    isOpen={showAddressForm}
-                    onClose={handleAddressFormCancel}
-                  >
-                    <p className="p-4 text-center text-red-600">
-                      Error: User authentication or customer ID is not fully
-                      loaded/valid for the address form. Please ensure you are
-                      logged in correctly.
-                    </p>
-                  </Modal>
-                )
-              )}
+            <div className="flex items-center mt-6 mb-4 p-3 bg-gray-50 rounded-md">
+              <input
+                type="checkbox"
+                id="sameAsBilling"
+                checked={isSameAsBilling}
+                onChange={(e) => setIsSameAsBilling(e.target.checked)}
+                className="form-checkbox h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label
+                htmlFor="sameAsBilling"
+                className="ml-2 text-gray-700 font-medium cursor-pointer"
+              >
+                Delivery address is same as billing address
+              </label>
             </div>
-          )}
+
+            {!isSameAsBilling && (
+              <div className="mt-6 bg-white p-6 rounded-lg shadow-md border border-dashed border-gray-300">
+                <h3 className="text-xl font-semibold mb-4 text-gray-800">
+                  Choose Delivery Address
+                </h3>
+                <AddressList
+                  addresses={savedAddresses.filter(
+                    (addr) =>
+                      addr.address_type === "SHIPPING" ||
+                      addr.address_type === "BOTH"
+                  )}
+                  selectedAddress={selectedShippingAddress}
+                  onSelect={handleSelectShipping}
+                  onEditAddress={handleEditAddress}
+                  onDeleteAddress={handleDeleteAddress}
+                  onAddNewAddress={() => handleAddNewAddress("shipping")}
+                  forPurpose="shipping"
+                  // No need to pass isSameAsBilling to shipping list, as its label is not affected
+                />
+              </div>
+            )}
+
+            <Modal isOpen={showAddressForm} onClose={handleAddressFormCancel}>
+              <AddressForm
+                addressToEdit={addressToEdit}
+                onSave={handleAddressFormSave}
+                onCancel={handleAddressFormCancel}
+              />
+            </Modal>
+          </div>
+
           <div className="bg-orange-600 text-white p-4 rounded-t-lg font-semibold text-lg">
             Payment Method
           </div>
@@ -535,7 +681,7 @@ const CheckoutPage: React.FC = () => {
               <input
                 type="text"
                 placeholder="Enter coupon code"
-                className="flex-grow p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-grow p-3 border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value)}
               />
@@ -556,15 +702,6 @@ const CheckoutPage: React.FC = () => {
               <span>Subtotal:</span>
               <span>₹{totalAmount.toFixed(2)}</span>
             </div>
-            {/* Displaying coupon discount if applicable */}
-            {/*
-            {couponCode && (
-              <div className="flex justify-between mb-2 text-green-700">
-                <span>Coupon Discount:</span>
-                <span>- ₹XX.XX</span> // Replace XX.XX with actual calculated discount
-              </div>
-            )}
-            */}
             <div className="flex justify-between items-center text-xl font-bold text-gray-900 border-t pt-4 mt-4">
               <span>Total:</span>
               <span>₹{totalAmount.toFixed(2)}</span>
@@ -573,17 +710,14 @@ const CheckoutPage: React.FC = () => {
               className="mt-6 w-full bg-orange-600 hover:bg-orange-700 text-white text-lg font-semibold py-3 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handlePlaceOrder}
               disabled={
-                orderLoading ||
-                !selectedShippingAddress ||
                 !selectedBillingAddress ||
-                cartItems.length === 0
+                !selectedShippingAddress ||
+                cartItems.length === 0 ||
+                isLoading
               }
             >
-              {orderLoading ? "Placing Order..." : "Place Order"}
+              {isLoading ? "Placing Order..." : "Place Order"}
             </button>
-            {orderError && (
-              <p className="text-red-500 text-center mt-2">{orderError}</p>
-            )}
           </div>
         </div>
       </div>
