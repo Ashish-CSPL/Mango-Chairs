@@ -364,15 +364,15 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 <div className="relative flex items-center gap-2 group">
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white cursor-pointer">
                     <Image
-                      src={getProfileImageUrl(user.profile_picture)}
-                      alt={user.first_name || "User"}
+                      src={getProfileImageUrl(user.profile) || "/chair.webp"}
+                      alt={user.name || "User"}
                       fill
                       className="object-cover"
                       unoptimized
                     />
                   </div>
                   <span className={`text-sm font-semibold ${dynamicTextColor}`}>
-                    Hi, {user.first_name || "User"}{" "}
+                    Hi, {user.name || "User"}{" "}
                   </span>
                   <button
                     onClick={handleLogout}

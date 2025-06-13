@@ -1,5 +1,6 @@
-import fetchData from "@/api/fetchdata";
-import fetchSecondary from "@/api/fetchSecondary";
+import fetchData from "@/api/fetchdata"; // Assuming this is for authenticated calls
+import fetchSecondary from "@/api/fetchSecondary"; // Assuming this is for public calls
+
 import {
   LoginApiResponse,
   RegisterApiResponse,
@@ -7,10 +8,10 @@ import {
   RegistrationData,
   ForgotPasswordSendOtpPayload,
   ForgotPasswordVerifyOtpPayload,
-  ForgotPasswordResetPayload, // Ensure this type is correctly defined below
+  ForgotPasswordResetPayload,
 } from "@/types/Auth";
 
-// UPDATED: Changed 'email' to 'username' to match backend API structure for login
+// UPDATED: 'email' field in LoginCredentials will be used as 'username' for the backend login API
 interface LoginCredentials {
   email: string; // This will now send the email address as 'username'
   password: string;
@@ -35,32 +36,10 @@ export async function sendOtpForVerification(
   }
 }
 
-// export const sendOtp = async (email: string) => {
-//   try {
-//   const response = await fetch("https://536d-2401-4900-1c17-494a-48de-d34b-96f0-fe55.ngrok-free.app/api/auth/sendotp", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//     body: JSON.stringify({ email }),
-//   });
-
-//   if (!response.ok) {
-//     throw new Error(`Server responded with status ${response.status}`);
-//   }
-
-//   const res = await response.json();
-//   console.log(res, "API Call");
-//   return res;
-// } catch (error) {
-//   console.error("Error sending OTP:", error);
-//   return { status: false, message: "Something went wrong" };
-// }
-
-// };
-
-
-export async function verifyOtp(email: string, otp: string): Promise<OtpResponse> {
+export async function verifyOtp(
+  email: string,
+  otp: string
+): Promise<OtpResponse> {
   try {
     // Assuming your OTP verification API still expects 'email' and 'otp'
     const response = await fetchSecondary<OtpResponse>(
@@ -83,32 +62,31 @@ export async function registerCustomer(
   try {
     let bodyToSend: Record<string, any> | FormData;
 
-    // Handle file upload (profile_picture) using FormData
-    if (registrationData.profile_picture) {
+    // Handle file upload (profile) using FormData
+    if (registrationData.profile) {
       const formData = new FormData();
+      // Append all other non-file properties to FormData
       for (const key in registrationData) {
         if (
-          key !== "profile_picture" &&
+          key !== "profile" && // Exclude 'profile' itself, it's handled separately
           Object.prototype.hasOwnProperty.call(registrationData, key)
         ) {
           const value = (registrationData as any)[key];
           if (value !== undefined) {
-            // Note: If your backend register API expects 'username' instead of 'email' for registration,
-            // you might need to adjust 'email' to 'username' here too.
-            // For now, assuming registrationData.email is correct for registration API.
             formData.append(key, String(value));
           }
         }
       }
-      formData.append("profile_picture", registrationData.profile_picture);
+      // Append the actual file with the key 'profile_picture' as expected by backend
+      formData.append("profile", registrationData.profile);
       bodyToSend = formData;
     } else {
       // If no profile picture, send as JSON
-      const { profile_picture, ...jsonBody } = registrationData; // Destructure to exclude profile_picture
+      const { profile, ...jsonBody } = registrationData; // Destructure to exclude profile
       bodyToSend = jsonBody;
     }
 
-    // fetchData will now correctly handle FormData (no manual Content-Type or JSON.stringify)
+    // fetchSecondary will now correctly handle FormData (no manual Content-Type or JSON.stringify)
     const response = await fetchSecondary<RegisterApiResponse>(
       "/api/auth/register",
       "POST",
@@ -127,12 +105,12 @@ export async function loginCustomer(
   credentials: LoginCredentials
 ): Promise<LoginApiResponse> {
   try {
-    // UPDATED: credentials now correctly contains 'username' and 'password'
+    // credentials now contains 'email' (for username) and 'password'
     const response = await fetchSecondary<LoginApiResponse>(
       "/api/auth/login", // Ensure this endpoint is correct
       "POST",
       {
-        body: credentials, // credentials is a plain object, so fetchData will JSON.stringify it and set Content-Type correctly
+        body: credentials, // credentials is a plain object, so fetchSecondary will JSON.stringify it and set Content-Type correctly
       }
     );
     return response;

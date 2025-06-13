@@ -1,9 +1,11 @@
+import { ReadonlyURLSearchParams } from "next/navigation"; // This import is not used, can be removed
+
 const BASE_API = process.env.NEXT_PUBLIC_SECONDARY_API;
 
 type CustomRequestBody = Record<string, any> | FormData;
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD";
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD"; // Make method optional with a default
   body?: CustomRequestBody;
   headers?: Record<string, string>;
   token?: string | null;
@@ -12,11 +14,11 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
 
 async function fetchSecondary<T>(
   endpoint: string,
-  method: RequestOptions["method"] = "GET",
+  method: RequestOptions["method"] = "GET", // Default to GET if not provided
   options?: Omit<RequestOptions, "method">
 ): Promise<T> {
   if (!BASE_API || typeof BASE_API !== 'string' || !BASE_API.startsWith('http')) {
-    const errorMsg = `Invalid NEXT_PUBLIC_SECONDARY_API configured in fetchSecondary.ts. Current value: "${BASE_API}"`;
+    const errorMsg = `Invalid NEXT_PUBLIC_SECONDARY_API configured. Current value: "${BASE_API}"`;
     console.error(errorMsg);
     throw new Error(errorMsg);
   }
@@ -46,7 +48,7 @@ async function fetchSecondary<T>(
   let requestBody: BodyInit | undefined;
   if (method !== "GET" && method !== "HEAD") {
     if (options?.body instanceof FormData) {
-      // If FormData is passed, Content-Type header should not be explicitly set.
+      // If FormData is passed, Content-Type header should NOT be explicitly set.
       // Fetch will automatically set it to 'multipart/form-data' with the correct boundary.
       requestBody = options.body;
     } else if (options?.body) {

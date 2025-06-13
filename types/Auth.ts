@@ -5,10 +5,10 @@ export interface LoginApiResponse {
   token: string;
   user_id: string;
   email: string;
-  username:string
+  username: string;
   first_name?: string;
   last_name?: string;
-  profile_picture?: string;
+  profile?: string;
 }
 
 export interface RegisterApiResponse {
@@ -23,23 +23,11 @@ export interface OtpResponse {
   message: string;
 }
 
-// !! IMPORTANT: Ensure 'export' keyword is present here !!
 export interface RegistrationData {
   email: string;
-  // otp: string;
   name: string;
-  // last_name: string;
-  // phone_number: string;
-  // country_code_for_phone_number: string;
-  profile_picture?: File;
-  // address: string;
-  // locality: string;
-  // city: string;
-  // state: string;
-  // country: string;
-  // zipcode: string;
+  profile?: File; // 'profile' expects a File object
   password: string;
-  confirm_password: string;
 }
 
 // NEW: Interfaces for Forgot Password API calls
@@ -52,10 +40,10 @@ export interface ForgotPasswordVerifyOtpPayload {
   otp: string;
 }
 
-// types/Auth.ts (Recommended Update)
+// Recommended Update
 export interface ForgotPasswordResetPayload {
   email: string;
   otp: number; // or string, depending on your backend
-  password: string; // Changed from new_password to password
+  password: string;
   confirm_password: string;
 }
