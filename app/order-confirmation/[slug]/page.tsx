@@ -11,8 +11,8 @@ import {
   CheckCircle,
   Truck,
   CreditCard,
-  CalendarDays,
   ShoppingCart,
+  FileDown,
 } from "lucide-react";
 
 interface Product {
@@ -85,7 +85,6 @@ export default function OrderConfirmationPage() {
         const data = await res.json();
         setOrder(data);
 
-        // Turn off confetti after 5 seconds
         setTimeout(() => setShowConfetti(false), 5000);
       } catch (err) {
         console.error("Fetch error:", err);
@@ -127,53 +126,47 @@ export default function OrderConfirmationPage() {
       {showConfetti && (
         <Confetti width={width} height={height} numberOfPieces={300} />
       )}
+
       <motion.div
         initial={{ opacity: 0, y: -30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
         className="max-w-5xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden"
       >
-        {/* Animated Header */}
+        {/* Header */}
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-green-100 text-green-700 px-6 py-5 flex items-center gap-3"
+          className="bg-green-100 text-green-700 px-6 py-5 flex items-center gap-3 justify-center text-center"
         >
-          <CheckCircle className="w-7 h-7 text-green-600 animate-pulse" />
+          <CheckCircle className="w-8 h-8 text-green-600 animate-pulse" />
           <div>
             <h2 className="text-xl font-bold">Thank you for your purchase!</h2>
-            <p>
-              Your order <strong>#{order.id}</strong> has been placed
-              successfully.
-            </p>
+            <p>Your order has been placed successfully.</p>
           </div>
         </motion.div>
 
-        {/* Order Info Section */}
+        {/* Body */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
           className="p-6 space-y-6"
         >
-          {/* Order Summary Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-gray-700">
-            <div className="space-y-2">
+            <div>
               <div className="flex items-center gap-2 font-semibold text-gray-900">
-                <Truck className="w-5 h-5" />
-                Shipping Address
+                <Truck className="w-5 h-5" /> Shipping Address
               </div>
               <p>{order.deliveryAddress}</p>
               <p>
                 Status: <span className="font-semibold">{order.status}</span>
               </p>
             </div>
-
-            <div className="space-y-2">
+            <div>
               <div className="flex items-center gap-2 font-semibold text-gray-900">
-                <CreditCard className="w-5 h-5" />
-                Payment Info
+                <CreditCard className="w-5 h-5" /> Payment Info
               </div>
               <p>Method: {order.payment.paymentType}</p>
               <p>Transaction ID: {order.payment.transactionId}</p>
@@ -184,11 +177,10 @@ export default function OrderConfirmationPage() {
             </div>
           </div>
 
-          {/* Product List */}
+          {/* Items */}
           <div>
             <div className="flex items-center gap-2 mb-3 font-semibold text-gray-900 text-lg">
-              <ShoppingCart className="w-5 h-5" />
-              Order Items
+              <ShoppingCart className="w-5 h-5" /> Order Items
             </div>
             <div className="space-y-4">
               {order.orderItems.map((item) => (
@@ -225,14 +217,14 @@ export default function OrderConfirmationPage() {
             </div>
           </div>
 
-          {/* Totals Section */}
+          {/* Totals */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
             className="mt-6 bg-gray-100 rounded-lg p-4"
           >
-            <div className="flex justify-end text-sm text-gray-700 space-y-1 flex-col md:items-end">
+            <div className="flex justify-end text-sm text-gray-700 flex-col md:items-end">
               <p>Subtotal: ₹{order.subTotal}</p>
               <p>Tax: ₹{order.tax}</p>
               <p>Delivery: ₹{order.deliveryCharge}</p>
@@ -248,7 +240,7 @@ export default function OrderConfirmationPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="mt-6 flex justify-center"
+            className="mt-6 flex flex-col items-center gap-4"
           >
             <a
               href="/"
@@ -256,6 +248,14 @@ export default function OrderConfirmationPage() {
             >
               Continue Shopping
             </a>
+
+            {/* Download Invoice Placeholder */}
+            <button
+              onClick={() => alert("Invoice download will be available soon.")}
+              className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+            >
+              <FileDown className="w-4 h-4" /> Download Invoice
+            </button>
           </motion.div>
         </motion.div>
       </motion.div>
