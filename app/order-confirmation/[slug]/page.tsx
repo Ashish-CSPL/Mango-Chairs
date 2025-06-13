@@ -14,6 +14,7 @@ import {
   ShoppingCart,
   FileDown,
 } from "lucide-react";
+import Link from "next/link";
 
 interface Product {
   id: number;
@@ -37,6 +38,7 @@ interface Payment {
 }
 
 interface Order {
+  invoiceUrl: string;
   id: number;
   subTotal: number;
   tax: number;
@@ -224,14 +226,26 @@ export default function OrderConfirmationPage() {
             transition={{ delay: 0.5 }}
             className="mt-6 bg-gray-100 rounded-lg p-4"
           >
-            <div className="flex justify-end text-sm text-gray-700 flex-col md:items-end">
-              <p>Subtotal: ₹{order.subTotal}</p>
-              <p>Tax: ₹{order.tax}</p>
-              <p>Delivery: ₹{order.deliveryCharge}</p>
-              <p>Discount: ₹{order.discount}</p>
-              <p className="text-xl font-bold text-gray-900 border-t pt-2 mt-2">
-                Total: ₹{order.finalTotal}
-              </p>
+            <div className="flex justify-between flex-col md:flex-row md:items-start text-sm text-gray-700">
+              {/* Download Button */}
+              <div className="mb-4 md:mb-0">
+                <Link href={order.invoiceUrl}>
+                  <button className="flex items-center gap-2 text-white bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-full text-sm shadow-md transition duration-300 cursor-pointer">
+                    <FileDown className="w-4 h-4" />
+                    Download Invoice
+                  </button>
+                </Link>
+              </div>
+
+              <div className="flex flex-col md:items-end space-y-1">
+                <p>Subtotal: ₹{order.subTotal}</p>
+                <p>Tax: ₹{order.tax}</p>
+                <p>Delivery: ₹{order.deliveryCharge}</p>
+                <p>Discount: ₹{order.discount}</p>
+                <p className="text-xl font-bold text-gray-900 border-t pt-2 mt-2">
+                  Total: ₹{order.finalTotal}
+                </p>
+              </div>
             </div>
           </motion.div>
 
@@ -243,19 +257,11 @@ export default function OrderConfirmationPage() {
             className="mt-6 flex flex-col items-center gap-4"
           >
             <a
-              href="/"
+              href="/shop"
               className="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-full transition duration-200"
             >
               Continue Shopping
             </a>
-
-            {/* Download Invoice Placeholder */}
-            <button
-              onClick={() => alert("Invoice download will be available soon.")}
-              className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
-            >
-              <FileDown className="w-4 h-4" /> Download Invoice
-            </button>
           </motion.div>
         </motion.div>
       </motion.div>

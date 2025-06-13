@@ -114,7 +114,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <button
           onClick={handleAddToCart}
           title="Add to Cart"
-          className="p-2 border border-indigo-500 text-indigo-600 rounded-full hover:scale-110 hover:border-indigo-600 hover:text-indigo-700 transition duration-300"
+          className="p-2 border border-indigo-500 text-indigo-600 rounded-full hover:scale-110 hover:border-indigo-600 hover:text-indigo-700 transition duration-300 cursor-pointer"
         >
           <ShoppingCart className="w-5 h-5" />
         </button>
