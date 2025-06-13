@@ -78,7 +78,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       <Link href={`/product/${product.slug}`}>
         <div className="relative w-full h-64 overflow-hidden rounded-xl mb-4 cursor-pointer">
           <Image
-            src={`${process.env.NEXT_PUBLIC_SECONDARY_API}${mainImage}`}
+            src={mainImage}
             alt={product.name}
             fill
             className="object-contain transition duration-300 group-hover:scale-105"
@@ -107,9 +107,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             }`}
           >
             <Image
-              src={`${process.env.NEXT_PUBLIC_SECONDARY_API}${
-                variant.images?.[0]?.url || product.image
-              }`}
+              src={variant.images?.[0]?.url || product.image}
               alt={`Variant ${variant.id}`}
               width={48}
               height={48}
