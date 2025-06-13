@@ -1,4 +1,3 @@
-// components/Navbar/Navbar.client.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -18,9 +17,9 @@ import { useRouter } from "next/navigation";
 // --- REDUX IMPORTS ---
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/app/Redux/Store/store";
-import { CartItem } from "@/app/Redux/Store/cartSlice"; // Assuming CartItem is defined here
-import { logout, setAuthSuccess } from "@/app/Redux/Slices/authSlice";
-import { fetchWishlistItems } from "@/app/Redux/Slices/wishlistSlice"; // Import fetchWishlistItems
+import { CartItem } from "@/app/Redux/Store/cartSlice";
+import { logout } from "@/app/Redux/Slices/authSlice";
+import { fetchWishlistItems } from "@/app/Redux/Slices/wishlistSlice";
 
 interface NavItem {
   pk: number;
@@ -40,11 +39,12 @@ interface NavbarClientProps {
 }
 
 interface UserData {
+  id?: number;
+  email?: string;
+  name?: string;
+  profile_picture?: string;
   first_name?: string;
   last_name?: string;
-  profile_picture?: string;
-  email?: string;
-  id?: string;
 }
 
 const selectCartCount = (state: RootState): number => {
@@ -54,7 +54,6 @@ const selectCartCount = (state: RootState): number => {
   );
 };
 
-// Selector for wishlist count
 const selectWishlistCount = (state: RootState): number => {
   return state.wishlist.wishlistItems.length;
 };
@@ -66,62 +65,51 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
 
-  const { user, token, isAuthenticated } = useSelector(
+  const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth
   );
+
+  useEffect(() => {
+    console.log("--- NavbarClient State Update ---");
+    console.log("isAuthenticated:", isAuthenticated);
+    console.log("User object from Redux:", user);
+    console.log("User profile_picture:", user?.profile_picture); // Confirm it exists here
+    if (user?.profile_picture) {
+      console.log(
+        "NavbarClient: Image URL passed to getProfileImageUrl:",
+        user.profile_picture
+      );
+      console.log(
+        "NavbarClient: Final constructed image URL from function:",
+        getProfileImageUrl(user.profile_picture)
+      );
+    } else {
+      console.log("NavbarClient: user.profile_picture is not available.");
+    }
+    console.log("-------------------------------");
+  }, [isAuthenticated, user]);
 
   const cartCount = useSelector(selectCartCount);
   const { cartItems } = useSelector((state: RootState) => state.cart);
 
-  // --- WISHLIST: Select wishlist items and count ---
   const wishlistCount = useSelector(selectWishlistCount);
   const wishlistStatus = useSelector(
     (state: RootState) => state.wishlist.status
   );
 
   useEffect(() => {
-    // Rehydrate user from localStorage
-    if (typeof window !== "undefined" && !isAuthenticated) {
-      const storedToken = localStorage.getItem("userToken");
-      const storedUserData = localStorage.getItem("userData");
-
-      if (storedToken && storedUserData) {
-        try {
-          const parsedUserData: UserData = JSON.parse(storedUserData);
-          dispatch(
-            setAuthSuccess({ user: parsedUserData, token: storedToken })
-          );
-        } catch (e) {
-          console.error(
-            "Navbar: Failed to parse user data from localStorage",
-            e
-          );
-          localStorage.removeItem("userToken");
-          localStorage.removeItem("userData");
-        }
-      }
-    }
-  }, [isAuthenticated, dispatch]);
-
-  // --- WISHLIST: Fetch wishlist items when authenticated ---
-  useEffect(() => {
     if (isAuthenticated && user?.id && wishlistStatus === "idle") {
-      // Only fetch if authenticated and wishlist hasn't been fetched yet
       dispatch(fetchWishlistItems(user.id.toString()));
     }
   }, [isAuthenticated, user?.id, wishlistStatus, dispatch]);
 
   const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("userToken");
-      localStorage.removeItem("userData");
-    }
     dispatch(logout());
     router.push("/login");
   };
 
   const handleWishlistClick = () => {
-    router.push("/wishlist"); // Navigate to the wishlist page
+    router.push("/wishlist");
     handleCloseMenu();
   };
 
@@ -170,6 +158,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 alt={cat.title}
                 fill
                 className="rounded-md object-cover"
+                priority
+                unoptimized
               />
             </div>
             <p className="text-sm font-semibold">{cat.title}</p>
@@ -224,31 +214,91 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     </div>
   );
 
+  // --- Crucial for image URL construction ---
   const getProfileImageUrl = (path?: string) => {
+    console.log("getProfileImageUrl: Input path:", path);
+
     if (!path) {
-      return "/images/default-profile.png";
+      console.warn(
+        "getProfileImageUrl: Path is empty/null/undefined. Returning default /profile.png"
+      );
+      return "/profile.png"; // Fallback to a default image in your public folder
     }
 
+    // Case 1: Already a full URL (e.g., from Cloudinary, absolute path on other domain)
     if (path.startsWith("http://") || path.startsWith("https://")) {
+      console.log(
+        "getProfileImageUrl: Path is already a full URL. Returning as is:",
+        path
+      );
       return path;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-    if (!baseUrl) {
-      console.error(
-        "Navbar Error: NEXT_PUBLIC_API_BASE_URL is not defined for image URL construction."
-      );
-      return "/images/default-profile.png";
+    // Case 2: Path starts with a slash, implying it's relative to the domain root
+    if (path.startsWith("/")) {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+      if (!baseUrl) {
+        console.error(
+          "getProfileImageUrl Error: NEXT_PUBLIC_API_BASE_URL is not defined in environment."
+        );
+        return "/profile.png";
+      }
+      // Ensure baseUrl is just the domain for absolute paths
+      try {
+        const urlObject = new URL(baseUrl);
+        const domainOnly = `${urlObject.protocol}//${urlObject.host}`;
+        const finalUrl = `${domainOnly}${path}`; // Concatenate domain with absolute path
+        console.log(
+          "getProfileImageUrl: Constructed URL from absolute path:",
+          finalUrl
+        );
+        return finalUrl;
+      } catch (e) {
+        console.error(
+          "getProfileImageUrl: Could not parse NEXT_PUBLIC_API_BASE_URL as a URL for absolute path:",
+          e
+        );
+        return "/profile.png"; // Fallback if base URL is malformed
+      }
     }
 
-    // This assumes your backend serves media from the root if the path doesn't start with /media/
-    // Adjust this logic if your media URLs are different.
-    const baseUrlParts = baseUrl.split("/api"); // Split at /api to get the domain part
-    const imageUrl = `${baseUrlParts[0]}${
-      path.startsWith("/") ? path : `/${path}`
-    }`;
-    return imageUrl;
+    // Case 3: Path without leading slash (e.g., media/profile_pics/image.jpg) - most common for Django media
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!baseUrl) {
+      console.error(
+        "getProfileImageUrl Error: NEXT_PUBLIC_API_BASE_URL is not defined for relative path."
+      );
+      return "/profile.png";
+    }
+
+    // Attempt to extract the domain part, removing /api/v1 if present
+    let domainPart: string;
+    try {
+      const urlObject = new URL(baseUrl);
+      domainPart = `${urlObject.protocol}//${urlObject.host}`;
+      console.log(
+        "getProfileImageUrl: Parsed domain part from NEXT_PUBLIC_API_BASE_URL:",
+        domainPart
+      );
+    } catch (e) {
+      console.error(
+        "getProfileImageUrl: Failed to parse NEXT_PUBLIC_API_BASE_URL as a full URL, assuming relative path for domain prepending.",
+        e
+      );
+      // Fallback for cases like "localhost:8000/api/v1" or if it's just a domain
+      domainPart = baseUrl.split("/api")[0]; // This might need adjustment depending on your exact ENV var format
+      if (!domainPart.startsWith("http")) {
+        // Ensure it still forms a valid URL
+        domainPart = `http://${domainPart}`; // Default to http if missing protocol
+      }
+    }
+
+    const fullUrl = `${domainPart}/${path}`;
+    console.log(
+      "getProfileImageUrl: Constructed full URL from path without leading slash:",
+      fullUrl
+    );
+    return fullUrl;
   };
 
   return (
@@ -282,6 +332,33 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
         /* Search input placeholder black */
         input::placeholder {
           color: black;
+          opacity: 1;
+        }
+
+        /* Tooltip styles */
+        .tooltip-container {
+          position: relative;
+          display: inline-block;
+        }
+        .tooltip-text {
+          visibility: hidden;
+          opacity: 0;
+          background-color: #333;
+          color: #fff;
+          text-align: center;
+          border-radius: 6px;
+          padding: 5px 8px;
+          position: absolute;
+          z-index: 60;
+          bottom: 125%; /* Position above the icon */
+          left: 50%;
+          transform: translateX(-50%);
+          white-space: nowrap;
+          transition: opacity 0.3s, visibility 0.3s;
+          font-size: 0.75rem; /* text-xs */
+        }
+        .tooltip-container:hover .tooltip-text {
+          visibility: visible;
           opacity: 1;
         }
       `}</style>
@@ -361,26 +438,35 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
               {/* Conditional User Display (Logged In vs. Logged Out) */}
               {isAuthenticated && user ? (
-                <div className="relative flex items-center gap-2 group">
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white cursor-pointer">
+                <div className="relative flex items-center gap-2">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white cursor-pointer">
                     <Image
-                      src={getProfileImageUrl(user.profile) || "/chair.webp"}
-                      alt={user.name || "User"}
+                      src={getProfileImageUrl(user.profile_picture)}
+                      alt={user.first_name || user.name || "User Profile"}
                       fill
                       className="object-cover"
-                      unoptimized
+                      unoptimized={user.profile_picture?.startsWith("http")}
+                      onError={(e) => {
+                        console.error("Image loading error (desktop):", e);
+                        e.currentTarget.src = "/profile.png"; // Fallback to a default image on error
+                      }}
                     />
                   </div>
                   <span className={`text-sm font-semibold ${dynamicTextColor}`}>
-                    Hi, {user.name || "User"}{" "}
+                    Hi, {user.first_name || user.name || "User"}{" "}
                   </span>
-                  <button
-                    onClick={handleLogout}
-                    className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500 ${dynamicTextColor}`}
-                  >
-                    <LogOut size={20} />
-                    <span className="hidden sm:inline">Logout</span>
-                  </button>
+                  <div className="tooltip-container ml-1">
+                    <button
+                      onClick={handleLogout}
+                      className={`flex items-center gap-1 font-semibold hover:text-red-500 ${dynamicTextColor}`}
+                      aria-label="Logout"
+                    >
+                      <LogOut size={20} />
+                    </button>
+                    <span className="tooltip-text">
+                      Do you want to log out?
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="relative cursor-pointer">
@@ -448,24 +534,34 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               {/* Conditional User Display for Mobile/Tablet */}
               {isAuthenticated && user ? (
                 <div className="relative flex items-center gap-2 group text-black">
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-black cursor-pointer">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-black cursor-pointer">
                     <Image
                       src={getProfileImageUrl(user.profile_picture)}
-                      alt={user.first_name || "User"}
+                      alt={user.first_name || user.name || "User Profile"}
                       fill
                       className="object-cover"
-                      unoptimized
+                      unoptimized={user.profile_picture?.startsWith("http")}
+                      onError={(e) => {
+                        console.error("Image loading error (mobile):", e);
+                        e.currentTarget.src = "/profile.png";
+                      }}
                     />
                   </div>
                   <span className={`text-sm font-semibold`}>
-                    Hi, {user.first_name || "User"}{" "}
+                    Hi, {user.first_name || user.name || "User"}{" "}
                   </span>
-                  <button
-                    onClick={handleLogout}
-                    className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500 text-black`}
-                  >
-                    <LogOut size={20} />
-                  </button>
+                  <div className="tooltip-container ml-1">
+                    <button
+                      onClick={handleLogout}
+                      className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500 text-black`}
+                      aria-label="Logout"
+                    >
+                      <LogOut size={20} />
+                    </button>
+                    <span className="tooltip-text">
+                      Do you want to log out?
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="relative cursor-pointer">
@@ -632,27 +728,35 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
             {/* Conditional User Display for Mobile Menu */}
             {isAuthenticated && user ? (
               <div className="relative flex items-center gap-2 group text-black">
-                <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-black cursor-pointer">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-black cursor-pointer">
                   <Image
                     src={getProfileImageUrl(user.profile_picture)}
-                    alt={user.first_name || "User"}
+                    alt={user.first_name || user.name || "User Profile"}
                     fill
                     className="object-cover"
-                    unoptimized
+                    unoptimized={user.profile_picture?.startsWith("http")}
+                    onError={(e) => {
+                      console.error("Image loading error (mobile menu):", e);
+                      e.currentTarget.src = "/profile.png";
+                    }}
                   />
                 </div>
                 <span className={`text-sm font-semibold`}>
-                  Hi, {user.first_name || "User"}
+                  Hi, {user.first_name || user.name || "User"}
                 </span>
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    handleCloseMenu();
-                  }}
-                  className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500`}
-                >
-                  <LogOut size={20} />
-                </button>
+                <div className="tooltip-container ml-1">
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      handleCloseMenu();
+                    }}
+                    className={`ml-2 flex items-center gap-1 font-semibold hover:text-red-500`}
+                    aria-label="Logout"
+                  >
+                    <LogOut size={20} />
+                  </button>
+                  <span className="tooltip-text">Do you want to log out?</span>
+                </div>
               </div>
             ) : (
               <div className="relative cursor-pointer">

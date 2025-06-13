@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { registerCustomer, loginCustomer } from "@/app/API_Calls/auth";
 
 import { RegistrationData } from "@/types/Auth"; // Ensure this import is correct
+import { useDispatch } from "react-redux";
+import { setAuthSuccess } from "../Redux/Slices/authSlice";
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
@@ -17,6 +19,8 @@ const LoginPage: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const dispatch = useDispatch();
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +37,8 @@ const LoginPage: React.FC = () => {
       if (data.token) {
         localStorage.setItem("userToken", data.token);
         localStorage.setItem("userData", JSON.stringify(data));
+        dispatch(setAuthSuccess(data))
+        
         alert("Login successful!");
         router.push("/");
       } else {

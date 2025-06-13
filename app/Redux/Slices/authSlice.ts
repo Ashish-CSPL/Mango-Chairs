@@ -1,8 +1,18 @@
 // app/Redux/Slices/authSlice.ts
+
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+interface UserData {
+  id: number;
+  email: string;
+  name: string;
+  profile_picture?: string; // This MUST be the key in your Redux state
+  first_name?: string;
+  last_name?: string;
+}
+
 interface AuthState {
-  user: any | null; // You might want a more specific type for user
+  user: UserData | null;
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;
@@ -21,25 +31,32 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    // Action to set loading state
-    setAuthLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
-      state.error = null; // Clear error when loading
-    },
-    // Action for successful login/registration
-    setAuthSuccess: (state, action: PayloadAction<{ user: any; token: string }>) => {
-      state.user = action.payload.user;
+    setAuthSuccess: (
+      state,
+      action: PayloadAction<{ user: any; token: string }>
+    ) => {
+      state.user = {
+        id: action.payload.user.id,
+        email: action.payload.user.email,
+        name: action.payload.user.name,
+        // *** CRUCIAL: Map 'profile' from API to 'profile_picture' in Redux state ***
+        profile_picture: action.payload.user.profile || null,
+        first_name: action.payload.user.first_name || action.payload.user.name,
+        last_name: action.payload.user.last_name || "",
+      };
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.loading = false;
       state.error = null;
     },
-    // Action for authentication failure
-    setAuthError: (state, action: PayloadAction<string>) => {
-      state.error = action.payload;
-      state.loading = false;
+    setAuthLoading: (state) => {
+      state.loading = true;
+      state.error = null;
     },
-    // Action for logout
+    setAuthError: (state, action: PayloadAction<string>) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
     logout: (state) => {
       state.user = null;
       state.token = null;
@@ -47,12 +64,10 @@ const authSlice = createSlice({
       state.loading = false;
       state.error = null;
     },
-    // Action to update user data (e.g., after profile update)
-    updateUser: (state, action: PayloadAction<any>) => {
-      state.user = { ...state.user, ...action.payload };
-    },
   },
 });
 
-export const { setAuthLoading, setAuthSuccess, setAuthError, logout, updateUser } = authSlice.actions;
+export const { setAuthSuccess, setAuthLoading, setAuthError, logout } =
+  authSlice.actions;
+
 export default authSlice.reducer;
