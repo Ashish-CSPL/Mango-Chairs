@@ -486,7 +486,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               )}
 
               {/* Wishlist Icon (Desktop) */}
-              <div className="relative cursor-pointer">
+              {/* <div className="relative cursor-pointer">
                 <Heart
                   size={24}
                   color={iconColor}
@@ -497,7 +497,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                     {wishlistCount}
                   </span>
                 )}
-              </div>
+              </div> */}
 
               {/* Shopping Cart Icon (Desktop) */}
               <div
@@ -575,14 +575,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               )}
 
               {/* Wishlist Icon (Tablet) */}
-              <div className="relative cursor-pointer">
-                <Heart size={24} color="black" onClick={handleWishlistClick} />
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {wishlistCount}
-                  </span>
-                )}
-              </div>
+              {/*
+               */}
 
               <div
                 onMouseEnter={() => setShowMiniCart(true)}
@@ -770,14 +764,14 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
             )}
 
             {/* Wishlist Icon (Mobile Menu) */}
-            <div className="relative cursor-pointer">
+            {/* <div className="relative cursor-pointer">
               <Heart size={24} color="black" onClick={handleWishlistClick} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {wishlistCount}
                 </span>
               )}
-            </div>
+            </div> */}
 
             <Link href="/cart" className="relative">
               <ShoppingBag size={24} color="black" />

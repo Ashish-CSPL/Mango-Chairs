@@ -1,9 +1,8 @@
-// components/CartClientPage.tsx
 "use client";
 
 import { useSelector, useDispatch } from "react-redux";
 import Image from "next/image";
-import { useRouter } from "next/navigation"; // <-- NEW: Import useRouter
+import { useRouter } from "next/navigation";
 import {
   CartItem,
   removeFromCart,
@@ -15,7 +14,7 @@ import { RootState } from "@/app/Redux/Store/store";
 export default function CartClientPage() {
   const cartItems = useSelector((state: RootState) => state.cart.cartItems);
   const dispatch = useDispatch();
-  const router = useRouter(); // <-- NEW: Initialize useRouter
+  const router = useRouter();
 
   const totalAmount = cartItems.reduce((total: number, item: CartItem) => {
     const priceValue = typeof item.price === "number" ? item.price : 0;
@@ -61,13 +60,12 @@ export default function CartClientPage() {
     );
   };
 
-  // <-- NEW: handleCheckout function
   const handleCheckout = () => {
     router.push("/checkout");
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen py-8">
+    <div className="bg-gray-100 min-h-screen py-8 overflow-x-hidden">
       <Toaster position="top-center" />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-sm text-gray-600 mb-4">
@@ -107,7 +105,7 @@ export default function CartClientPage() {
                       alt={item.name}
                       width={120}
                       height={120}
-                      className="object-cover rounded-lg border border-gray-200"
+                      className="object-cover rounded-lg border border-gray-200 w-[120px] h-[120px]"
                       priority
                     />
                     <div className="flex-grow">
@@ -155,15 +153,15 @@ export default function CartClientPage() {
                       <div className="flex flex-col items-end ml-4">
                         {item.isOnSale && regularPrice > currentPrice && (
                           <span className="text-sm text-gray-500 line-through">
-                            £{regularPrice.toFixed(2)}
+                            ₹{regularPrice.toFixed(2)}
                           </span>
                         )}
                         <span className="text-lg font-semibold text-gray-800">
-                          £{currentPrice.toFixed(2)}
+                          ₹{currentPrice.toFixed(2)}
                         </span>
                       </div>
                       <span className="text-lg font-semibold text-gray-800 ml-4">
-                        £{(currentPrice * item.quantity).toFixed(2)}
+                        ₹{(currentPrice * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -197,20 +195,20 @@ export default function CartClientPage() {
               <div className="space-y-3 mb-6 text-gray-700">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>£{totalAmount.toFixed(2)}</span>
+                  <span>₹{totalAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Delivery:</span>
-                  <span>£0.00</span>
+                  <span>₹0.00</span>
                 </div>
                 <div className="flex justify-between text-xl font-bold border-t pt-3">
                   <span>Total:</span>
-                  <span>£{totalAmount.toFixed(2)}</span>
+                  <span>₹{totalAmount.toFixed(2)}</span>
                 </div>
               </div>
 
               <button
-                onClick={handleCheckout} // <-- UPDATED: Add onClick handler
+                onClick={handleCheckout}
                 className="w-full bg-green-500 hover:bg-green-600 text-white text-lg font-semibold py-3 rounded-lg transition duration-200"
               >
                 Checkout

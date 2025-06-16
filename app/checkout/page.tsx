@@ -89,7 +89,8 @@ const CheckoutPage: React.FC = () => {
   }, 0);
 
   // Calculate Final Total
-  const finalTotal = totalAmount + taxAmount + deliveryChargeAmount - discountAmount;
+  const finalTotal =
+    totalAmount + taxAmount + deliveryChargeAmount - discountAmount;
 
   // --- Helper functions for localStorage ---
   const loadAddressesFromLocalStorage = (): LocalAddressItem[] => {
@@ -187,11 +188,10 @@ const CheckoutPage: React.FC = () => {
     // For discount, you would need to validate the coupon code via an API
     // and then set the discount amount. For now, it's 0 unless you apply logic.
     // if (couponCode === "FIRSTORDER") {
-    //   setDiscountAmount(20.0);
+    //    setDiscountAmount(20.0);
     // } else {
-    //   setDiscountAmount(0);
+    //    setDiscountAmount(0);
     // }
-
   }, [
     savedAddresses,
     selectedBillingAddress,
@@ -200,7 +200,6 @@ const CheckoutPage: React.FC = () => {
     totalAmount, // Recalculate if cart total changes
     couponCode, // Recalculate if coupon changes
   ]);
-
 
   const handleRemove = (id: string | number, name: string) => {
     dispatch(removeFromCart(id));
@@ -421,9 +420,9 @@ const CheckoutPage: React.FC = () => {
     }
 
     if (!token) {
-        toast.error("You must be logged in to place an order.");
-        router.push("/login"); // Redirect to login if no token
-        return;
+      toast.error("You must be logged in to place an order.");
+      router.push("/login"); // Redirect to login if no token
+      return;
     }
 
     // --- Payment Method Specific Logic ---
@@ -435,28 +434,30 @@ const CheckoutPage: React.FC = () => {
       // --- IMPORTANT: RAZORPAY INTEGRATION GOES HERE ---
       // This is a placeholder. You would typically initiate the Razorpay payment.
       // On successful payment, Razorpay will provide transaction details.
-      toast.error("Razorpay payment integration is not implemented yet. Please choose 'Cash on Delivery' for now.");
+      toast.error(
+        "Razorpay payment integration is not implemented yet. Please choose 'Cash on Delivery' for now."
+      );
       console.log("Initiating Razorpay payment for amount:", finalTotal);
 
       // Example placeholder:
       // try {
-      //   const razorpayResponse = await initiateRazorpayPayment({
-      //     amount: finalTotal,
-      //     currency: "INR",
-      //     // Pass user details, order details etc.
-      //   });
-      //   if (razorpayResponse.success) {
-      //     currentTransactionId = razorpayResponse.razorpay_payment_id;
-      //     currentPaymentStatus = "SUCCESS";
-      //     currentPaymentDatetime = new Date().toISOString();
-      //   } else {
-      //     toast.error("Payment failed: " + razorpayResponse.error.description);
-      //     return; // Stop if payment fails
-      //   }
+      //    const razorpayResponse = await initiateRazorpayPayment({
+      //      amount: finalTotal,
+      //      currency: "INR",
+      //      // Pass user details, order details etc.
+      //    });
+      //    if (razorpayResponse.success) {
+      //      currentTransactionId = razorpayResponse.razorpay_payment_id;
+      //      currentPaymentStatus = "SUCCESS";
+      //      currentPaymentDatetime = new Date().toISOString();
+      //    } else {
+      //      toast.error("Payment failed: " + razorpayResponse.error.description);
+      //      return; // Stop if payment fails
+      //    }
       // } catch (razorpayError) {
-      //   console.error("Razorpay initiation error:", razorpayError);
-      //   toast.error("Failed to initiate payment. Please try again.");
-      //   return; // Stop if payment fails
+      //    console.error("Razorpay initiation error:", razorpayError);
+      //    toast.error("Failed to initiate payment. Please try again.");
+      //    return; // Stop if payment fails
       // }
 
       return; // Prevent order placement until Razorpay is fully integrated or COD is selected
@@ -515,10 +516,6 @@ const CheckoutPage: React.FC = () => {
       setIsLoading(false);
     }
   };
-
-
-
-
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -639,7 +636,10 @@ const CheckoutPage: React.FC = () => {
                 {cartItems.map((item: any) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-4 pb-4 border-b last:border-b-0 last:pb-0"
+                    // Added flex-col for mobile, md:flex-row for tablet/desktop
+                    // Added items-center for vertical alignment in mobile, items-start for tablet/desktop
+                    // Added justify-between to push price to right for tablet/desktop
+                    className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pb-4 border-b last:border-b-0 last:pb-0"
                   >
                     <Image
                       src={item.image}
@@ -696,7 +696,8 @@ const CheckoutPage: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    <span className="font-semibold text-gray-800 text-lg">
+                    {/* Added text-right for tablet/desktop alignment */}
+                    <span className="font-semibold text-gray-800 text-lg sm:text-right w-full sm:w-auto mt-2 sm:mt-0">
                       ₹{(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
@@ -729,7 +730,9 @@ const CheckoutPage: React.FC = () => {
               />
               <button
                 className="bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-md transition duration-200"
-                onClick={() => toast.success("Coupon application not implemented yet!")}
+                onClick={() =>
+                  toast.success("Coupon application not implemented yet!")
+                }
               >
                 Apply
               </button>
@@ -748,7 +751,9 @@ const CheckoutPage: React.FC = () => {
               <span>₹{totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between mb-2 text-gray-700">
-              <span>Tax ({ (taxAmount / totalAmount * 100 || 0).toFixed(0) }%):</span>
+              <span>
+                Tax ({((taxAmount / totalAmount) * 100 || 0).toFixed(0)}%):
+              </span>
               <span>₹{taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between mb-2 text-gray-700">

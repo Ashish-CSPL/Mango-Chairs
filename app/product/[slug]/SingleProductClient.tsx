@@ -47,10 +47,10 @@ const SingleProductClient = ({ product }: Props) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8 mt-20">
+    <div className="max-w-6xl mx-auto px-4 md:px-8 mt-20 overflow-hidden">
       <div className="flex flex-col md:flex-row gap-6">
         {/* Variant Thumbnails */}
-        <div className="flex md:flex-col gap-3 max-h-[500px] overflow-auto">
+        <div className="flex md:flex-col gap-3 max-h-[500px] overflow-x-auto md:overflow-y-auto">
           {product.variants.map((variant) =>
             variant.images.map((img) => (
               <Image
@@ -59,7 +59,7 @@ const SingleProductClient = ({ product }: Props) => {
                 alt="Variant Thumbnail"
                 width={64}
                 height={64}
-                className="w-16 h-16 object-cover border cursor-pointer rounded"
+                className="w-16 h-16 object-cover border cursor-pointer rounded flex-shrink-0"
                 onClick={() => {
                   setMainImage(img.url);
                   setSelectedVariant(variant);
@@ -70,24 +70,25 @@ const SingleProductClient = ({ product }: Props) => {
         </div>
 
         {/* Main Image */}
-        <div className="flex-1">
+        <div className="flex-1 w-full">
           <Image
             src={formatImageUrl(mainImage)}
             alt={product.name}
             width={500}
             height={500}
-            className="w-full max-w-md h-auto object-cover border rounded"
+            className="w-full max-w-md h-auto object-cover border rounded mx-auto"
           />
         </div>
 
         {/* Product Info */}
-        <div className="flex-1">
+        <div className="flex-1 w-full">
           <h1 className="text-2xl font-semibold mb-2">{product.name}</h1>
           <p className="mb-4 text-gray-600">{product.description}</p>
 
-          <p className="text-lg font-medium text-gray-800 mb-2">
+          {/* Price (Mobile & Tablet view aligned below description) */}
+          <div className="text-lg font-medium text-gray-800 mb-2 md:mb-4">
             Price: ₹{selectedVariant?.Price ?? product.price}
-          </p>
+          </div>
 
           {/* Variant Selector */}
           <div className="flex gap-2 mb-4 flex-wrap">
@@ -111,7 +112,7 @@ const SingleProductClient = ({ product }: Props) => {
 
           <button
             onClick={handleAddToCart}
-            className="bg-black text-white px-5 py-2 rounded hover:bg-gray-800"
+            className="bg-black text-white px-5 py-2 rounded hover:bg-gray-800 w-full sm:w-auto"
           >
             Add to Cart
           </button>

@@ -124,7 +124,7 @@ export default function OrderConfirmationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-white py-10 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-white py-10 px-4 mt-10">
       {showConfetti && (
         <Confetti width={width} height={height} numberOfPieces={300} />
       )}
