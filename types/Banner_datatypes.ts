@@ -5,6 +5,6 @@ export interface BannerData {
     description?: string;
     button_text?: string;
     button_link?: string;
-    image?: string;
+    image?: string; 
     isActive?: boolean;
   }
