@@ -17,6 +17,7 @@ import {
   verifyOtpForResetPassword,
   resetCustomerPassword,
 } from "@/app/API_Calls/auth";
+import toast from "react-hot-toast";
 
 const ForgotPassword: React.FC = () => {
   const router = useRouter();
@@ -39,7 +40,7 @@ const ForgotPassword: React.FC = () => {
     dispatch(setError(null));
     try {
       await sendOtpForResetPassword(email);
-      alert("OTP sent to your email!");
+      toast.success("OTP sent to your email!");
       dispatch(setNewPasswordStage("otpVerification"));
     } catch (err: any) {
       console.error("Error sending OTP:", err.message);
@@ -55,7 +56,7 @@ const ForgotPassword: React.FC = () => {
     dispatch(setError(null));
     try {
       await verifyOtpForResetPassword(email, otp);
-      alert("OTP verified successfully! You can now reset your password.");
+      toast.success("OTP verified successfully! You can now reset your password.");
       dispatch(setNewPasswordStage("passwordResetForm"));
     } catch (err: any) {
       console.error("Error verifying OTP:", err.message);
@@ -83,7 +84,7 @@ const ForgotPassword: React.FC = () => {
         otp: 0,
         confirm_password: "",
       });
-      alert("Password reset successfully!");
+      toast.success("Password reset successfully!");
       dispatch(setNewPasswordStage("success"));
       router.push("/login"); // Redirect to login page after successful reset
       // No need to call resetForgotPasswordState here explicitly after router.push,

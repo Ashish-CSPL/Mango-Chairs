@@ -9,6 +9,7 @@ import { registerCustomer, loginCustomer } from "@/app/API_Calls/auth";
 import { RegistrationData } from "@/types/Auth"; // Ensure this import is correct
 import { useDispatch } from "react-redux";
 import { setAuthSuccess } from "../Redux/Slices/authSlice";
+import toast from "react-hot-toast";
 
 const LoginPage: React.FC = () => {
   const router = useRouter();
@@ -39,7 +40,7 @@ const LoginPage: React.FC = () => {
         localStorage.setItem("userData", JSON.stringify(data));
         dispatch(setAuthSuccess(data))
         
-        alert("Login successful!");
+        toast.success("Login successful!");
         router.push("/");
       } else {
         throw new Error("Login successful but no token received.");
@@ -85,7 +86,7 @@ const LoginPage: React.FC = () => {
       };
       const data = await registerCustomer(registrationData);
       console.log("Registration successful:", data);
-      alert("Registration successful! You can now log in.");
+      toast.success("Registration successful! You can now log in.");
 
       setIsLoginView(true);
       setLoginUsername(registerEmail);
