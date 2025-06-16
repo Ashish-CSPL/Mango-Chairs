@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Product, Variant, VariantImage } from "@/types/productTypes";
+import { Product, Variant } from "@/types/productTypes";
 import { useDispatch } from "react-redux";
 import { addToCart } from "@/app/Redux/Store/cartSlice";
 import toast from "react-hot-toast";
@@ -45,7 +45,7 @@ const SingleProductClient = ({ product }: Props) => {
         name: product.name,
         image: formatImageUrl(mainImage),
         price: selectedVariant.Price ?? product.price ?? 0,
-        variant: selectedVariant.description ?? "Default Variant",
+        variant: selectedVariant.description ?? "Variant", // ✅ FIXED HERE
         quantity: 1,
       })
     );
