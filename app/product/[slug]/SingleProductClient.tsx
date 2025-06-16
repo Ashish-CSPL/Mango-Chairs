@@ -6,6 +6,7 @@ import { useDispatch } from "react-redux";
 import { addToCart } from "@/app/Redux/Store/cartSlice";
 import toast from "react-hot-toast";
 import Image from "next/image";
+import { ShoppingCart } from "lucide-react";
 
 interface Props {
   product: Product;
@@ -90,7 +91,7 @@ const SingleProductClient = ({ product }: Props) => {
             alt={product.name}
             width={500}
             height={500}
-            className="w-full max-w-md h-auto object-cover border rounded mx-auto"
+            className="w-full max-w-md h-96 object-contain border rounded mx-auto"
           />
         </div>
 
@@ -100,8 +101,9 @@ const SingleProductClient = ({ product }: Props) => {
           <p className="mb-4 text-gray-600">{product.description}</p>
 
           {/* Price (Mobile & Tablet view aligned below description) */}
-          <div className="text-lg font-medium text-gray-800 mb-2 md:mb-4">
-            Price: ₹{selectedVariant?.Price ?? product.price ?? 0}
+          <div className="text-lg font-medium text-gray-800 mb-2 md:mb-4 flex gap-15">
+            <p> Price: ₹{selectedVariant?.Price ?? product.price ?? 0}</p>
+            <p>Stock : {selectedVariant?.stock}</p>
           </div>
 
           {/* Variant Selector */}
@@ -118,22 +120,25 @@ const SingleProductClient = ({ product }: Props) => {
                   setSelectedVariant(variant);
                   setMainImage(img || product.image);
                 }}
-                className={`px-3 py-1 border rounded ${
-                  selectedVariant?.id === variant.id
-                    ? "bg-black text-white"
-                    : "bg-white text-black"
-                }`}
+                // className={`px-3 py-1 border rounded ${
+                //   selectedVariant?.id === variant.id
+                //     ? "bg-black text-white"
+                //     : "bg-white text-black"
+                // }`}
               >
-                {variant.specification?.colour ?? "Default"}
+                {/* {variant.specification ? "Default"} */}
               </button>
             ))}
           </div>
 
           <button
             onClick={handleAddToCart}
-            className="bg-black text-white px-5 py-2 rounded hover:bg-gray-800 w-full sm:w-auto"
+            className="bg-black text-white px-5 py-2 rounded-lg hover:bg-gray-800 w-full sm:w-auto"
           >
-            Add to Cart
+            <p className="flex gap-3">
+              <ShoppingCart />
+              <span>Add to Cart</span>
+            </p>
           </button>
         </div>
       </div>
