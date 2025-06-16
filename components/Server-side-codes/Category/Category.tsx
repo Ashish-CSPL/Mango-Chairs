@@ -1,7 +1,10 @@
+// app/components/Category.tsx
+"use client";
+
 import React from "react";
 import Image from "next/image";
 
-interface Category {
+export interface Category {
   id: number;
   title: string;
   image: string;
@@ -26,7 +29,7 @@ const Category: React.FC<CategoryProps> = ({ categories }) => {
           fill
           className="object-cover"
         />
-        <div className="absolute top-0 left-0 p-4  w-full">
+        <div className="absolute top-0 left-0 p-4 w-full">
           <h3 className="text-white text-xl sm:text-2xl md:text-3xl font-semibold uppercase tracking-wider">
             {category.title}
           </h3>

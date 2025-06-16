@@ -14,8 +14,10 @@ interface WhyChooseUsSectionProps {
 }
 
 export async function getWhyChooseUsData() {
-  // Already correctly uses "GET" as the method
-  const data = await fetchData("frontend/whychooseus_sections/", "GET");
+  const data = (await fetchData("frontend/whychooseus_sections/", "GET")) as {
+    whychooseus_sections: WhyChooseUs[];
+  };
+
   if (data && Array.isArray(data.whychooseus_sections)) {
     return data.whychooseus_sections;
   }

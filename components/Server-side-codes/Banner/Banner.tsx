@@ -1,3 +1,4 @@
+// app/components/Banner.tsx
 "use client";
 
 import React from "react";
@@ -25,7 +26,6 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
           key={index}
           className="relative w-full h-[50vh] sm:h-[60vh] md:h-[55vh] lg:h-[90vh]"
         >
-          {/* Optimized Banner Image */}
           {banner.image && process.env.NEXT_PUBLIC_API_BASE_URL && (
             <Image
               src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${banner.image}`}
@@ -36,18 +36,9 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
             />
           )}
 
-          {/* Overlay */}
           <div className="absolute inset-0 bg-black/30 z-0" />
 
-          {/* Text Content */}
-          <div
-            className="
-              absolute inset-0 z-10
-              flex flex-col justify-center items-center text-center
-              px-4 sm:px-8 md:px-12
-              lg:items-start lg:text-left lg:px-20
-            "
-          >
+          <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center px-4 sm:px-8 md:px-12 lg:items-start lg:text-left lg:px-20">
             {banner.heading && (
               <p className="text-white font-semibold mb-2 sm:mb-4 text-base sm:text-lg md:text-base lg:text-2xl">
                 {banner.heading}
@@ -60,7 +51,6 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
             )}
           </div>
 
-          {/* Scroll Down Button */}
           <button
             onClick={handleScrollDown}
             className="hidden sm:flex absolute bottom-6 left-1/2 transform -translate-x-1/2 cursor-pointer animate-bounce text-white z-20 items-center"
