@@ -520,7 +520,7 @@ const CheckoutPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <Toaster position="top-center" />
-      <h1 className="text-3xl font-bold mb-8 text-gray-900">Checkout</h1>
+      <h1 className="text-3xl font-bold mb-8 text-gray-900 mt-20">Checkout</h1>
 
       <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-2/3 space-y-6">
