@@ -140,7 +140,7 @@ const ForgotPassword: React.FC = () => {
             <p className="mt-4 text-center text-gray-600">
               Remembered your password?{" "}
               <Link
-                href="/login"
+                href="/auth"
                 className="text-blue-500 hover:underline font-medium"
               >
                 Back to Login

@@ -105,7 +105,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
   const handleLogout = () => {
     dispatch(logout());
-    router.push("/Login");
+    router.push("/auth");
   };
 
   const handleWishlistClick = () => {
