@@ -1,21 +1,29 @@
-import fetchSecondary from "@/api/fetchSecondary";
+// app/product/[slug]/page.tsx
+
 import { notFound } from "next/navigation";
+import fetchSecondary from "@/api/fetchSecondary";
 import SingleProductClient from "./SingleProductClient";
 import { Product } from "@/types/productTypes";
+import { JSX } from "react/jsx-runtime";
 
-interface ProductPageProps {
-  params: { slug: string };
-}
+type Props = {
+  params: Promise<{ slug: string }>;
+};
 
-const ProductPage = async ({ params }: ProductPageProps) => {
-  const product: Product = await fetchSecondary(
-    `/product/product_info/${params.slug}`,
+export default async function ProductPage({
+  params,
+}: Props): Promise<JSX.Element> {
+  const { slug } = await params;
+
+  // Fetch product data
+  const product: Product | null = await fetchSecondary(
+    `/product/product_info/${slug}`,
     "GET"
   );
 
-  if (!product) return notFound();
+  if (!product) {
+    return notFound();
+  }
 
   return <SingleProductClient product={product} />;
-};
-
-export default ProductPage;
+}

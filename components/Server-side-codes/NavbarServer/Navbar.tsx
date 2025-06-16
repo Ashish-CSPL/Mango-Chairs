@@ -10,13 +10,11 @@ interface NavbarProps {
 }
 
 const Navbar = async ({ headerEndpoint, categoryEndpoint }: NavbarProps) => {
-  // Call fetchData with only the endpoint string
-  // Your fetchData function internally uses "GET" method.
-  const headerResponse = await fetchData(headerEndpoint);
-  const navData = headerResponse?.headers || [];
+  const headerResponse: any = await fetchData(headerEndpoint);
+  const navData = (headerResponse as any)?.headers || [];
 
-  const categoryResponse = await fetchData(categoryEndpoint);
-  const categories = categoryResponse?.product_categories || [];
+  const categoryResponse: any = await fetchData(categoryEndpoint);
+  const categories = (categoryResponse as any)?.product_categories || [];
 
   return (
     <>

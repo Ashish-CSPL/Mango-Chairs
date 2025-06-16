@@ -3,9 +3,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingBag, CircleUserRound } from "lucide-react";
 import SearchInput from "../searchInput";
-import UserIconSection from "./UserIconSection"; // Import UserIconSection
-import { User } from "@/app/Redux/Store/authSlice"; // Assuming User type is exported
+
+
 import { RefObject } from "react"; // Import RefObject
+import { User } from "@/types/user";
 
 interface NavItem {
   pk: number;
@@ -165,7 +166,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
 
           {/* User Icon Section for Mobile Menu (reusing component) */}
           {/* Note: userIconRef is passed from NavbarClient for global click outside */}
-          <UserIconSection
+          {/* <UserIconSection
             user={user}
             showLogoutDropdown={showLogoutDropdown}
             setShowLogoutDropdown={setShowLogoutDropdown}
@@ -173,7 +174,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             dynamicTextColor="text-black" // Always black in mobile menu
             iconColor="black" // Always black in mobile menu
             userIconRef={userIconRef}
-          />
+          /> */}
 
           {/* Cart Icon for Mobile Menu */}
           <Link href="/cart" className="relative">

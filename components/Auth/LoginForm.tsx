@@ -1,4 +1,3 @@
-// app/components/Auth/LoginForm.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -8,35 +7,13 @@ import {
   setAuthError,
   setAuthSuccess,
 } from "@/app/Redux/Slices/authSlice";
-import { loginCustomer } from "@/app/API_Calls/auth"; // Adjust path as needed
+import { loginCustomer } from "@/app/API_Calls/auth";
 import { toast } from "react-hot-toast";
 
 interface LoginFormProps {
-  onSuccess: () => void; // Callback after successful login
-  onSwitchToRegister: () => void; // Callback to switch to registration form
+  onSuccess: () => void;
+  onSwitchToRegister: () => void;
 }
-
-// Assuming these interfaces exist or you define them in app/types/auth.ts or app/API_Calls/auth.ts
-// If they don't exist, create them:
-/*
-interface LoginCredentials {
-  email: string; // Key change: from username to email
-  password: string;
-}
-
-interface User {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  // ... other user properties
-}
-
-interface AuthResponse {
-  user: User;
-  token: string;
-}
-*/
 
 const LoginForm: React.FC<LoginFormProps> = ({
   onSuccess,
@@ -44,19 +21,20 @@ const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const dispatch = useDispatch();
 
-  const [email, setEmail] = useState(""); // Changed from username
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    dispatch(setAuthLoading(true));
+
+    // ✅ Only dispatch without argument
+    dispatch(setAuthLoading());
+
     try {
-      // Pass 'email' and 'password' as per the LoginCredentials type
       const response = await loginCustomer({ email, password });
 
-      // Ensure the response contains user and token as expected
       if (!response || !response.user || !response.token) {
         throw new Error(
           "Login API did not return expected user data or token."
@@ -65,10 +43,8 @@ const LoginForm: React.FC<LoginFormProps> = ({
 
       const { user, token } = response;
 
-      // 1. Dispatch success action to update Redux state immediately
       dispatch(setAuthSuccess({ user, token }));
 
-      // 2. Persist user data and token to localStorage for re-hydration on refresh
       if (typeof window !== "undefined") {
         localStorage.setItem("userToken", token);
         localStorage.setItem("userData", JSON.stringify(user));
@@ -76,11 +52,10 @@ const LoginForm: React.FC<LoginFormProps> = ({
       }
 
       toast.success("Login successful!");
-      onSuccess(); // Execute callback (e.g., close modal, redirect client-side)
+      onSuccess();
     } catch (error: any) {
       let errorMessage = "Login failed. Please check your credentials.";
 
-      // Check for custom error properties from fetchSecondary
       if (
         error.responseBody &&
         typeof error.responseBody.message === "string"
@@ -97,7 +72,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
       console.error("LoginForm Error:", error);
     } finally {
       setLoading(false);
-      dispatch(setAuthLoading(false));
+      dispatch(setAuthLoading()); // ✅ Again, without boolean
     }
   };
 
@@ -107,17 +82,17 @@ const LoginForm: React.FC<LoginFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
-            htmlFor="loginEmail" // Changed from loginUsername
+            htmlFor="loginEmail"
             className="block text-sm font-medium text-gray-700"
           >
             Email
           </label>
           <input
-            type="email" // Changed type to email for better validation
-            id="loginEmail" // Changed from loginUsername
+            type="email"
+            id="loginEmail"
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-            value={email} // Using email state
-            onChange={(e) => setEmail(e.target.value)} // Updating email state
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
             disabled={loading}
           />
