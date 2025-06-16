@@ -50,7 +50,7 @@ export default function ClientStoriesSlider({ blogs }: Props) {
     <>
       <Slider {...settings} ref={sliderRef}>
         {blogs.map((post) => (
-          <div key={post.id} className="px-8 my-6">
+          <div key={post.id} className="px-4 md:px-6 my-6">
             <div
               className="overflow-hidden flex flex-col h-[450px] bg-white"
               style={{
@@ -58,19 +58,23 @@ export default function ClientStoriesSlider({ blogs }: Props) {
                   "rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 1px 3px 1px",
               }}
             >
+              {/* Image */}
               <div className="w-full h-[200px] relative overflow-hidden">
                 <Image
                   src={`https://nxadmin.consociate.co.in/${post.image}`}
                   alt={post.title}
                   fill
                   className="object-contain object-center"
-                  loading="lazy" // lazy load here to improve performance
-                  // remove priority here to avoid render-blocking
+                  loading="lazy"
                 />
               </div>
+
+              {/* Category */}
               <p className="mt-2 ml-6 text-orange-500 font-semibold text-sm md:text-base">
                 {post.product_category_name}
               </p>
+
+              {/* Content */}
               <div className="p-6 flex flex-col justify-between flex-1">
                 <div>
                   <div className="flex justify-between items-start gap-2">
@@ -83,7 +87,9 @@ export default function ClientStoriesSlider({ blogs }: Props) {
                     {stripHtmlTags(post.content)}
                   </p>
                 </div>
-                <div className="mt-[-15px] lg:mt-6">
+
+                {/* Author Info */}
+                <div className="mt-[-10px] lg:mt-6">
                   <p className="font-medium text-sm text-gray-700">
                     {post.author}
                   </p>
@@ -95,9 +101,10 @@ export default function ClientStoriesSlider({ blogs }: Props) {
         ))}
       </Slider>
 
+      {/* Navigation Buttons */}
       <div className="relative flex items-center justify-center mt-2 w-full">
-        <div className="absolute left-0 w-[calc(50%-4.5rem)] border-t-2 border-gray-300 lg:w-[calc(50%-5rem)]"></div>
-        <div className="absolute right-0 w-[calc(50%-4.5rem)] border-t-2 border-gray-300 lg:w-[calc(50%-5rem)]"></div>
+        <div className="absolute left-0 w-[calc(50%-4.5rem)] border-t-2 border-gray-300 lg:w-[calc(50%-5rem)]" />
+        <div className="absolute right-0 w-[calc(50%-4.5rem)] border-t-2 border-gray-300 lg:w-[calc(50%-5rem)]" />
 
         <div className="flex gap-4 px-4 z-10">
           <button
@@ -119,6 +126,7 @@ export default function ClientStoriesSlider({ blogs }: Props) {
               />
             </svg>
           </button>
+
           <button
             className="w-12 h-12 border-2 border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-100"
             onClick={() => sliderRef.current?.slickNext()}

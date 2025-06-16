@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
 import { addToCart } from "@/app/Redux/Store/cartSlice";
 import Link from "next/link";
-import { Product, Variant } from "@/types/Products";
+import { Product, Variant } from "@/types/productTypes"; // ✅ UPDATED HERE
 import { ShoppingCart } from "lucide-react";
 
 interface ProductCardProps {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Product, Variant } from "@/types/productTypes";
+import { Product, Variant, VariantImage } from "@/types/productTypes";
 import { useDispatch } from "react-redux";
 import { addToCart } from "@/app/Redux/Store/cartSlice";
 import toast from "react-hot-toast";
@@ -17,11 +17,17 @@ const SingleProductClient = ({ product }: Props) => {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
     product.variants[0] || null
   );
-  const [mainImage, setMainImage] = useState<string>(
-    selectedVariant?.images?.[0]?.url || product.image
-  );
 
-  const formatImageUrl = (url: string) => {
+  const initialImage =
+    selectedVariant?.images?.[0] &&
+    typeof selectedVariant.images[0] !== "string"
+      ? selectedVariant.images[0].url
+      : product.image || "/default.png";
+
+  const [mainImage, setMainImage] = useState<string>(initialImage);
+
+  const formatImageUrl = (url?: string) => {
+    if (!url) return "/default.png";
     return url.startsWith("http")
       ? url
       : `${process.env.NEXT_PUBLIC_SECONDARY_API}${url}`;
@@ -38,8 +44,8 @@ const SingleProductClient = ({ product }: Props) => {
         id: product.id,
         name: product.name,
         image: formatImageUrl(mainImage),
-        price: selectedVariant.Price,
-        variant: selectedVariant.description,
+        price: selectedVariant.Price ?? product.price ?? 0,
+        variant: selectedVariant.description ?? "Default Variant",
         quantity: 1,
       })
     );
@@ -52,20 +58,28 @@ const SingleProductClient = ({ product }: Props) => {
         {/* Variant Thumbnails */}
         <div className="flex md:flex-col gap-3 max-h-[500px] overflow-x-auto md:overflow-y-auto">
           {product.variants.map((variant) =>
-            variant.images.map((img) => (
-              <Image
-                key={img.id}
-                src={formatImageUrl(img.url)}
-                alt="Variant Thumbnail"
-                width={64}
-                height={64}
-                className="w-16 h-16 object-cover border cursor-pointer rounded flex-shrink-0"
-                onClick={() => {
-                  setMainImage(img.url);
-                  setSelectedVariant(variant);
-                }}
-              />
-            ))
+            variant.images.map((img, index) => {
+              const imageUrl =
+                typeof img === "string" ? img : img?.url ?? product.image;
+
+              const imageId =
+                typeof img === "string" ? `${variant.id}-${index}` : img?.id;
+
+              return (
+                <Image
+                  key={imageId}
+                  src={formatImageUrl(imageUrl)}
+                  alt="Variant Thumbnail"
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 object-cover border cursor-pointer rounded flex-shrink-0"
+                  onClick={() => {
+                    setMainImage(imageUrl || product.image);
+                    setSelectedVariant(variant);
+                  }}
+                />
+              );
+            })
           )}
         </div>
 
@@ -87,7 +101,7 @@ const SingleProductClient = ({ product }: Props) => {
 
           {/* Price (Mobile & Tablet view aligned below description) */}
           <div className="text-lg font-medium text-gray-800 mb-2 md:mb-4">
-            Price: ₹{selectedVariant?.Price ?? product.price}
+            Price: ₹{selectedVariant?.Price ?? product.price ?? 0}
           </div>
 
           {/* Variant Selector */}
@@ -96,8 +110,13 @@ const SingleProductClient = ({ product }: Props) => {
               <button
                 key={variant.id}
                 onClick={() => {
+                  const img =
+                    typeof variant.images?.[0] === "string"
+                      ? variant.images[0]
+                      : variant.images?.[0]?.url;
+
                   setSelectedVariant(variant);
-                  setMainImage(variant.images[0]?.url || product.image);
+                  setMainImage(img || product.image);
                 }}
                 className={`px-3 py-1 border rounded ${
                   selectedVariant?.id === variant.id
@@ -105,7 +124,7 @@ const SingleProductClient = ({ product }: Props) => {
                     : "bg-white text-black"
                 }`}
               >
-                {variant.specification.color}
+                {variant.specification?.colour ?? "Default"}
               </button>
             ))}
           </div>
