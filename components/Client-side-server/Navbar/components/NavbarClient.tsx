@@ -470,7 +470,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 </div>
               ) : (
                 <div className="relative cursor-pointer">
-                  <Link href="/login" className="flex items-center gap-1">
+                  <Link href="/auth" className="flex items-center gap-1">
                     <CircleUserRound
                       className="cursor-pointer"
                       size={24}
@@ -565,7 +565,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 </div>
               ) : (
                 <div className="relative cursor-pointer">
-                  <Link href="/login" className="flex items-center gap-1">
+                  <Link href="/auth" className="flex items-center gap-1">
                     <CircleUserRound size={24} color="black" />
                     <span className="text-sm font-semibold text-black hidden sm:inline">
                       Sign In / Sign Up
@@ -754,7 +754,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               </div>
             ) : (
               <div className="relative cursor-pointer">
-                <Link href="/login" className="flex items-center gap-1">
+                <Link href="/auth" className="flex items-center gap-1">
                   <CircleUserRound size={24} color="black" />
                   <span className="text-sm font-semibold text-black hidden sm:inline">
                     Sign In / Sign Up
