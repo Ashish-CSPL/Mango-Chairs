@@ -18,6 +18,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import CategoryCarousel from "@/components/Client-side-server/CategorySection/CategoryCarousel";
 import fetchSecondary from "@/api/fetchSecondary";
+import CategoryProductSection from "@/components/Client-side-server/CategorySection/CategoryProductSection";
 
 type BannerResponse = {
   banners?: {
@@ -84,7 +85,8 @@ const Home = async () => {
 
       {/* Category Carousel, no changes */}
       <CategoryCarousel />
-      <Speciality />
+      <CategoryProductSection />
+      {/* <Speciality /> */}
       <WhyChooseUsSection whyChooseUsData={whyChooseUsData} />
       <ProductList />
       <Stories />
