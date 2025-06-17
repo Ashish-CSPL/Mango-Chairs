@@ -9,16 +9,8 @@ interface Category {
   id: number;
   name: string;
   image: string | null;
-  productCount?: number; // optional, can be mocked
+  productCount?: number;
 }
-
-const bgColors = [
-  "bg-pink-600",
-  "bg-yellow-400",
-  "bg-green-600",
-  "bg-red-600",
-  "bg-blue-500",
-];
 
 export default function CategoryCarousel() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -30,10 +22,9 @@ export default function CategoryCarousel() {
           "/product/categories",
           "GET"
         );
-        // Mock productCount for demo
-        const enriched = data.map((cat, i) => ({
+        const enriched = data.map((cat) => ({
           ...cat,
-          productCount: Math.floor(Math.random() * 20 + 1),
+          productCount: Math.floor(Math.random() * 40 + 1),
         }));
         setCategories(enriched);
       } catch (error) {
@@ -49,42 +40,26 @@ export default function CategoryCarousel() {
     autoplay: true,
     autoplaySpeed: 3000,
     speed: 600,
-    slidesToShow: 3,
+    slidesToShow: 4,
     slidesToScroll: 1,
-    arrows: true,
+    arrows: false,
     responsive: [
-      {
-        breakpoint: 1024,
-        settings: { slidesToShow: 2 },
-      },
-      {
-        breakpoint: 768,
-        settings: { slidesToShow: 1 },
-      },
+      { breakpoint: 1280, settings: { slidesToShow: 5 } },
+      { breakpoint: 1024, settings: { slidesToShow: 4 } },
+      { breakpoint: 768, settings: { slidesToShow: 3 } },
+      { breakpoint: 480, settings: { slidesToShow: 2 } },
     ],
   };
 
   return (
-    <div className="py-12 px-2 md:px-0">
+    <div className="py-5 my-4 px-4 bg-zinc-100">
       <div className="max-w-7xl mx-auto">
         <Slider {...settings}>
-          {categories.map((category, index) => (
+          {categories.map((category) => (
             <div key={category.id} className="px-3">
-              <div
-                className={`flex justify-between items-center rounded-xl h-40 px-6 ${
-                  bgColors[index % bgColors.length]
-                }`}
-              >
-                <div className="text-white flex flex-col justify-center">
-                  <h3 className="text-lg md:text-xl font-bold uppercase">
-                    {category.name}
-                  </h3>
-                  <p className="text-sm md:text-base">
-                    {category.productCount} products
-                  </p>
-                </div>
-
-                <div className="relative w-24 h-24 md:w-30 md:h-30">
+              <div className="flex flex-col items-center text-center space-y-3">
+                {/* Perfectly filled round image */}
+                <div className="relative w-28 h-28 md:w-44 md:h-44 rounded-full bg-gray-100 overflow-hidden">
                   <Image
                     src={
                       category.image ||
@@ -92,9 +67,19 @@ export default function CategoryCarousel() {
                     }
                     alt={category.name}
                     fill
-                    className="object-contain"
+                    className="object-cover"
                   />
                 </div>
+
+                {/* Category Name */}
+                <h3 className="text-sm md:text-base font-semibold text-black">
+                  {category.name}
+                </h3>
+
+                {/* Product Count */}
+                <p className="text-xs md:text-sm text-gray-500">
+                  {category.productCount} products
+                </p>
               </div>
             </div>
           ))}

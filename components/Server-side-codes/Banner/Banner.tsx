@@ -28,7 +28,7 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
         >
           {banner.image && process.env.NEXT_PUBLIC_API_BASE_URL && (
             <Image
-              src={`${process.env.NEXT_PUBLIC_API_BASE_URL}${banner.image}`}
+              src={banner.image}
               alt={banner.heading || `Banner ${index + 1}`}
               fill
               priority={index === 0}
@@ -45,7 +45,7 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
               </p>
             )}
             {banner.description && (
-              <p className="text-white font-light max-w-3xl text-xl sm:text-2xl md:text-2xl lg:text-4xl xl:text-5xl leading-snug sm:leading-snug">
+              <p className="text-white font-light max-w-3xl text-xl sm:text-2xl md:text-2xl lg:text-4xl xl:text-4xl leading-snug sm:leading-snug">
                 {banner.description}
               </p>
             )}

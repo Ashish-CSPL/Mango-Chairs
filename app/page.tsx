@@ -9,7 +9,6 @@ import WhyChooseUsSection, {
 import Stories from "@/components/Server-side-codes/Stories/Stories";
 import TestimonialSliderClient from "@/components/Client-side-server/New-Arrival/Testimonials";
 import { getTestimonials } from "./API_Calls/Function";
-// import YouTubePlayer from "@/components/Server-side-codes/VideoPlayer/YouTubePlayer";
 import ProductList from "@/components/Server-side-codes/ProductSecondarySection/ProductList";
 
 import { BannerData } from "@/types/Banner_datatypes";
@@ -18,10 +17,18 @@ import { Category as CategoryType } from "@/components/Server-side-codes/Categor
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import CategoryCarousel from "@/components/Client-side-server/CategorySection/CategoryCarousel";
+import fetchSecondary from "@/api/fetchSecondary";
 
-// 👇 Define the expected API response types
 type BannerResponse = {
-  banners?: BannerData[];
+  banners?: {
+    id: number;
+    title: string;
+    image: string;
+    link: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }[];
 };
 
 type CategoryResponse = {
@@ -29,23 +36,32 @@ type CategoryResponse = {
 };
 
 const Home = async () => {
-  // 👇 Explicitly cast the fetched data
-  const [bannerData, categoryData, testimonials, whyChooseUsData] =
+  const [rawBannerData, categoryData, testimonials, whyChooseUsData] =
     await Promise.all([
-      fetchData("frontend/banners", "GET") as Promise<BannerResponse>,
+      fetchSecondary("/frontend/banners", "GET") as Promise<BannerResponse>,
       fetchData("frontend/categories", "GET") as Promise<CategoryResponse>,
       getTestimonials(),
       getWhyChooseUsData(),
     ]);
 
-  const categories = categoryData.product_categories || [];
-
-  const firstBannerImage = bannerData?.banners?.[0]?.image;
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  // 🔁 Transform raw API banner data into BannerData structure
+  const mappedBanners: BannerData[] =
+    rawBannerData.banners?.map((item) => ({
+      id: item.id,
+      heading: item.title, // 🔁 match expected prop
+      description: item.link, // 🔁 match expected prop
+      image: item.image,
+      isActive: item.isActive,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    })) || [];
+
+  const firstBannerImage = mappedBanners?.[0]?.image;
 
   return (
     <>
-      {/* Preload banner image for LCP */}
       <Head>
         {firstBannerImage && baseUrl && (
           <link
@@ -56,7 +72,8 @@ const Home = async () => {
         )}
       </Head>
 
-      <Banner bannerEndpoint={bannerData} />
+      {/* ✅ No design impact — banner format matched */}
+      <Banner bannerEndpoint={{ banners: mappedBanners }} />
 
       <h1
         className="text-2xl md:text-[48px] mt-6 text-center font-playfair"
@@ -65,12 +82,11 @@ const Home = async () => {
         BROWSE THROUGH OUR CATEGORY
       </h1>
 
-      {/* <Category categories={categories} /> */}
+      {/* Category Carousel, no changes */}
       <CategoryCarousel />
       <Speciality />
       <WhyChooseUsSection whyChooseUsData={whyChooseUsData} />
       <ProductList />
-      {/* <YouTubePlayer /> */}
       <Stories />
       <TestimonialSliderClient testimonials={testimonials} />
     </>
