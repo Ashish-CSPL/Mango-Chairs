@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react"; // Import useEffect
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/app/Redux/Store/store";
+import { RootState } from "@/app/Redux/Store/store"; 
 import {
   setEmail,
   setOtp,
