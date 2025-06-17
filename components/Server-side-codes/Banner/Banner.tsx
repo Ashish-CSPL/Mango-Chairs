@@ -24,7 +24,7 @@ const Banner: React.FC<BannerProps> = ({ bannerEndpoint }) => {
       {bannerDataArray.map((banner, index) => (
         <div
           key={index}
-          className="relative w-full h-[50vh] sm:h-[60vh] md:h-[55vh] lg:h-[90vh]"
+          className="relative w-full h-[50vh] sm:h-[60vh] md:h-[55vh] lg:h-[80vh]"
         >
           {banner.image && process.env.NEXT_PUBLIC_API_BASE_URL && (
             <Image

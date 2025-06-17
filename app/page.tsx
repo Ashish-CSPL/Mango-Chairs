@@ -9,7 +9,7 @@ import WhyChooseUsSection, {
 import Stories from "@/components/Server-side-codes/Stories/Stories";
 import TestimonialSliderClient from "@/components/Client-side-server/New-Arrival/Testimonials";
 import { getTestimonials } from "./API_Calls/Function";
-import YouTubePlayer from "@/components/Server-side-codes/VideoPlayer/YouTubePlayer";
+// import YouTubePlayer from "@/components/Server-side-codes/VideoPlayer/YouTubePlayer";
 import ProductList from "@/components/Server-side-codes/ProductSecondarySection/ProductList";
 
 import { BannerData } from "@/types/Banner_datatypes";
@@ -68,7 +68,7 @@ const Home = async () => {
       <Speciality />
       <WhyChooseUsSection whyChooseUsData={whyChooseUsData} />
       <ProductList />
-      <YouTubePlayer />
+      {/* <YouTubePlayer /> */}
       <Stories />
       <TestimonialSliderClient testimonials={testimonials} />
     </>

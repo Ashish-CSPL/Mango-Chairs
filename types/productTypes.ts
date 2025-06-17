@@ -1,5 +1,3 @@
-// types/productTypes.ts
-
 export interface VariantImage {
   id: number;
   url: string;
@@ -39,6 +37,9 @@ export interface Product {
   image: string;
   description: string;
   variants: Variant[];
+
+  // ✅ Added this line (safe & optional)
+  type?: "veg" | "non-veg";
 
   // Optional fields
   userId?: number;

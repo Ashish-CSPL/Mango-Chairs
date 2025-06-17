@@ -34,13 +34,29 @@ const ShopPage = () => {
     fetchCategories();
   }, []);
 
-  // Fetch products either by category or all
+  // Fetch products (based on category + sort)
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const endpoint = selectedCategory
-          ? `/product/category?category=${selectedCategory}`
-          : "/product";
+        let endpoint = "/product";
+
+        // Both category and sort applied
+        if (sortOption && selectedCategory) {
+          endpoint = `/product/filter?sort=${
+            sortOption === "lowToHigh" ? "asc" : "desc"
+          }&category=${selectedCategory}`;
+        }
+        // Only sort applied
+        else if (sortOption) {
+          endpoint = `/product/filter?sort=${
+            sortOption === "lowToHigh" ? "asc" : "desc"
+          }`;
+        }
+        // Only category applied
+        else if (selectedCategory) {
+          endpoint = `/product/category?category=${selectedCategory}`;
+        }
+
         const data = await fetchSecondary<{ items: Product[] } | Product[]>(
           endpoint,
           "GET"
@@ -53,32 +69,7 @@ const ShopPage = () => {
     };
 
     fetchProducts();
-  }, [selectedCategory]);
-
-  // Get min & max variant price helpers
-  const getMinVariantPrice = (product: Product): number => {
-    const prices = product.variants
-      ?.map((v) => v.Price)
-      .filter((p): p is number => typeof p === "number");
-    return prices.length > 0 ? Math.min(...prices) : Infinity;
-  };
-
-  const getMaxVariantPrice = (product: Product): number => {
-    const prices = product.variants
-      ?.map((v) => v.Price)
-      .filter((p): p is number => typeof p === "number");
-    return prices.length > 0 ? Math.max(...prices) : -Infinity;
-  };
-
-  // Apply sorting
-  const sortedProducts = [...products].sort((a, b) => {
-    if (sortOption === "lowToHigh") {
-      return getMinVariantPrice(a) - getMinVariantPrice(b);
-    } else if (sortOption === "highToLow") {
-      return getMaxVariantPrice(b) - getMaxVariantPrice(a);
-    }
-    return 0;
-  });
+  }, [selectedCategory, sortOption]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10 mt-20">
@@ -131,9 +122,9 @@ const ShopPage = () => {
             </select>
           </div>
 
-          {sortedProducts.length > 0 ? (
+          {products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-              {sortedProducts.map((product) => (
+              {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

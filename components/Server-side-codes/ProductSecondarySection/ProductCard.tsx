@@ -1,13 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import toast from "react-hot-toast";
-import { useDispatch } from "react-redux";
-import { addToCart } from "@/app/Redux/Store/cartSlice";
 import Link from "next/link";
-import { Product, Variant } from "@/types/productTypes"; // ✅ UPDATED HERE
+import { useDispatch } from "react-redux";
+import toast from "react-hot-toast";
 import { ShoppingCart } from "lucide-react";
+import { Product, Variant } from "@/types/productTypes";
+import { addToCart } from "@/app/Redux/Store/cartSlice";
+import { useState } from "react";
 
 interface ProductCardProps {
   product: Product;
@@ -15,35 +15,32 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const dispatch = useDispatch();
-  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(
+  const [selectedVariant] = useState<Variant | null>(
     product.variants?.[0] || null
   );
 
-  const mainImage =
+  const imageUrl =
     selectedVariant?.images?.[0] &&
     typeof selectedVariant.images[0] !== "string"
       ? selectedVariant.images[0].url
       : product.image || "/default.png";
 
   const handleAddToCart = () => {
-    if (!selectedVariant) {
-      toast.error("Please select a variant");
-      return;
-    }
-
     const cartItem = {
       id: product.id,
       name: product.name,
-      title: selectedVariant.description || product.name,
-      image: mainImage,
-      price: selectedVariant.Price || product.price,
+      title: selectedVariant?.description || product.name,
+      image: imageUrl,
+      price: selectedVariant?.Price || product.price,
       quantity: 1,
       isRare: false,
       regularPrice: product.price,
-      isOnSale: (selectedVariant.Price || 0) < product.price,
-      selectedVariantId: selectedVariant.id,
-      stock: selectedVariant.stock,
-      variant: selectedVariant.description ?? "",
+      isOnSale: selectedVariant?.Price
+        ? selectedVariant.Price < product.price
+        : false,
+      selectedVariantId: selectedVariant?.id,
+      stock: selectedVariant?.stock || 0,
+      variant: selectedVariant?.description || "",
     };
 
     dispatch(addToCart(cartItem));
@@ -51,73 +48,85 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="relative bg-white shadow-xl rounded-2xl border border-gray-200 p-4 transition-transform hover:-translate-y-1 hover:shadow-2xl duration-300 max-w-sm w-full mx-auto group">
-      {/* Product image */}
+    <div className="bg-white rounded-2xl overflow-hidden shadow-md border border-gray-200 max-w-xs w-full mx-auto transition-all">
       <Link href={`/product/${product.slug}`}>
-        <div className="relative w-full h-60 rounded-xl overflow-hidden mb-3 bg-white">
-          <Image
-            src={mainImage}
-            alt={product.name}
-            fill
-            className="object-contain transition-transform duration-300 group-hover:scale-105"
-          />
+        {/* Image Container with hover fill effect */}
+        <div className="relative w-full h-60 overflow-hidden group rounded-t-2xl">
+          <div className="absolute inset-0 bg-yellow-400 origin-bottom transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 ease-in-out z-0" />
+          <div className="relative z-10 flex justify-center items-center h-full">
+            <div className="w-[85%] h-[85%] relative">
+              <Image
+                src={imageUrl}
+                alt={product.name}
+                fill
+                className="object-contain"
+              />
+            </div>
+          </div>
         </div>
       </Link>
 
-      {/* Title */}
-      <h3 className="text-gray-900 text-lg font-semibold truncate mb-1">
-        {product.name}
-      </h3>
-
-      {/* Price */}
-      {selectedVariant?.Price && (
-        <p className="text-indigo-600 font-bold text-sm mb-4">
-          ₹ {selectedVariant.Price.toFixed(2)}
-        </p>
-      )}
-
-      {/* Variant selectors & Cart icon */}
-      <div className="flex justify-between items-center">
-        <div className="flex gap-2 flex-wrap">
-          {product.variants?.map((variant) => {
-            const variantImage =
-              variant.images?.[0] &&
-              typeof variant.images[0] !== "string" &&
-              variant.images[0].url
-                ? variant.images[0].url
-                : product.image;
-
-            const isActive = selectedVariant?.id === variant.id;
-
-            return (
-              <button
-                key={variant.id}
-                onClick={() => setSelectedVariant(variant)}
-                className={`w-10 h-10 rounded-lg border-2 overflow-hidden p-[1px] transition-transform duration-200 hover:scale-105 ${
-                  isActive
-                    ? "border-indigo-500 ring-2 ring-indigo-300"
-                    : "border-gray-300"
-                }`}
-              >
-                <Image
-                  src={variantImage}
-                  alt={`Variant ${variant.id}`}
-                  width={40}
-                  height={40}
-                  className="object-cover rounded-md w-full h-full"
-                />
-              </button>
-            );
-          })}
+      {/* Text Content */}
+      <div className="p-4 space-y-2">
+        {/* Rating */}
+        <div className="flex gap-1 text-yellow-400 text-sm">
+          {[...Array(4)].map((_, i) => (
+            <span key={i}>★</span>
+          ))}
+          <span className="text-gray-300">★</span>
         </div>
 
-        <button
-          onClick={handleAddToCart}
-          title="Add to Cart"
-          className="p-2 border border-indigo-500 text-indigo-600 rounded-full hover:scale-110 hover:border-indigo-600 hover:text-indigo-700 transition duration-300 cursor-pointer"
-        >
-          <ShoppingCart className="w-5 h-5" />
-        </button>
+        {/* Title with Veg/Non-Veg Icon */}
+        <h3 className="text-lg font-bold text-gray-900 line-clamp-1 flex items-center gap-4">
+          {product.name}
+          {product.type === "veg" ? (
+            <span className="inline-flex items-center justify-center w-4 h-4 border border-green-600 rounded-sm">
+              <span className="w-2 h-2 bg-green-600 rounded-full" />
+            </span>
+          ) : (
+            <span className="inline-flex items-center justify-center w-4 h-4 border border-red-600 rounded-sm">
+              <span className="w-2 h-2 bg-red-600 rounded-full" />
+            </span>
+          )}
+        </h3>
+
+        {/* Description */}
+        <p className="text-gray-500 text-sm leading-snug line-clamp-2">
+          {product.description || "Delicious and cheesy delight..."}
+        </p>
+
+        {/* Variant Images */}
+        {product.variants?.[0]?.images?.length > 0 && (
+          <div className="flex gap-2 mt-2 overflow-x-auto">
+            {product.variants[0].images.map((img, idx) => (
+              <div
+                key={idx}
+                className="w-8 h-8 rounded-full border border-gray-300 overflow-hidden"
+              >
+                <Image
+                  src={typeof img === "string" ? img : img.url}
+                  alt={`Variant ${idx + 1}`}
+                  width={32}
+                  height={32}
+                  className="object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Price and Cart Button */}
+        <div className="flex items-center justify-between pt-3">
+          <div className="text-lg font-bold text-yellow-600">
+            ₹{selectedVariant?.Price?.toFixed(2) || product.price.toFixed(2)}
+          </div>
+          <button
+            onClick={handleAddToCart}
+            className="bg-yellow-400 hover:bg-yellow-500 p-2 rounded-full transition"
+          >
+            <ShoppingCart size={18} className="text-white" />
+          </button>
+        </div>
       </div>
     </div>
   );
