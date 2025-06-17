@@ -133,13 +133,13 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
     setShowMobileDropdown(false);
   };
 
-  const iconColor =
-    !isScrolled && !isMobileMenuOpen && !isAuthenticated ? "white" : "black";
-  const dynamicTextColor =
-    isScrolled || isMobileMenuOpen ? "text-black" : "text-white";
+  // Set all icons to black
+  const iconColor = "black";
+  // Set all text to black
+  const dynamicTextColor = "text-black";
 
   const renderCategoryDropdown = () => (
-    <div className="absolute left-1/2 top-full transform -translate-x-1/2 mt-2 z-50 w-[50vw] max-w-2xl bg-white/30 backdrop-blur-lg shadow-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl">
+    <div className="absolute left-1/2 top-full transform -translate-x-1/2 mt-2 z-50 w-[50vw] max-w-2xl bg-white shadow-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl">
       {categories?.map((cat) => {
         const imageSrc = cat.image.startsWith("http")
           ? cat.image
@@ -365,7 +365,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
       <nav
         className={`fixed left-0 right-0 z-50 transition-all duration-300
-        bg-white/10 backdrop-blur-md
+        bg-white shadow-md
         ${isScrolled || isMobileMenuOpen ? "shadow-md" : "shadow-none"}
         sm:top-[10px] sm:mt-[10px]
         md:top-[14px] md:mt-[8px]
@@ -379,9 +379,9 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 relative">
             <Link href="/">
-              <div className="relative w-40 h-16 lg:w-52 lg:h-20 ml-[-8px] sm:ml-0 lg:ml-[-40px]">
+              <div className="relative w-40 h-16 lg:w-46 lg:h-20 ml-[-8px] sm:ml-0 lg:ml-[-40px]">
                 <Image
-                  src="/MangoLogo.webp"
+                  src="/fazfood.svg"
                   alt="Mango Logo"
                   fill
                   className="object-contain"
@@ -403,7 +403,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   >
                     <Link
                       href={navItem.link}
-                      className={`cursor-pointer font-semibold hover:text-orange-500 ${dynamicTextColor}`}
+                      className={`cursor-pointer font-semibold hover:text-orange-500 text-black`}
                     >
                       {navItem.name}
                     </Link>
@@ -413,7 +413,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                   <li key={navItem.pk}>
                     <Link
                       href={navItem.link}
-                      className={`font-semibold hover:text-orange-500 ${dynamicTextColor}`}
+                      className={`font-semibold hover:text-orange-500 text-black`}
                     >
                       {navItem.name}
                     </Link>
@@ -439,7 +439,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               {/* Conditional User Display (Logged In vs. Logged Out) */}
               {isAuthenticated && user ? (
                 <div className="relative flex items-center gap-2">
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-white cursor-pointer">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-black cursor-pointer">
                     <Image
                       src={getProfileImageUrl(user.profile_picture)}
                       alt={user.first_name || user.name || "User Profile"}
@@ -452,13 +452,13 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                       }}
                     />
                   </div>
-                  <span className={`text-sm font-semibold ${dynamicTextColor}`}>
+                  <span className={`text-sm font-semibold text-black`}>
                     Hi, {user.first_name || user.name || "User"}{" "}
                   </span>
                   <div className="tooltip-container ml-1">
                     <button
                       onClick={handleLogout}
-                      className={`flex items-center gap-1 font-semibold hover:text-red-500 ${dynamicTextColor}`}
+                      className={`flex items-center gap-1 font-semibold hover:text-red-500 text-black`}
                       aria-label="Logout"
                     >
                       <LogOut size={20} />
@@ -474,10 +474,10 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                     <CircleUserRound
                       className="cursor-pointer"
                       size={24}
-                      color={iconColor}
+                      color={"black"} // Changed to black
                     />
                     <span
-                      className={`text-sm font-semibold ${dynamicTextColor} hidden sm:inline`}
+                      className={`text-sm font-semibold text-black hidden sm:inline`} // Changed to text-black
                     >
                       Sign In / Sign Up
                     </span>
@@ -489,7 +489,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               {/* <div className="relative cursor-pointer">
                 <Heart
                   size={24}
-                  color={iconColor}
+                  color={"black"} // Changed to black
                   onClick={handleWishlistClick}
                 />
                 {wishlistCount > 0 && (
@@ -506,7 +506,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 className="relative cursor-pointer"
               >
                 <Link href="/cart">
-                  <ShoppingBag size={24} color={iconColor} />
+                  <ShoppingBag size={24} color={"black"} />{" "}
+                  {/* Changed to black */}
                   {cartCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {cartCount}
@@ -605,7 +606,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
             {/* Mobile-only menu toggle (small screens) */}
             <button
-              className="md:hidden text-white"
+              className="md:hidden text-black" // Changed to text-black
               aria-label="Toggle menu"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >

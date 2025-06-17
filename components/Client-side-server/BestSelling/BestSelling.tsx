@@ -1,22 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ProductCard from "./ProductCard";
+import ProductCard from "@/components/Server-side-codes/ProductSecondarySection/ProductCard";
 import { Product } from "@/types/productTypes";
 import fetchSecondary from "@/api/fetchSecondary";
 import { Loader2 } from "lucide-react";
 import Slider from "react-slick";
 
-const FILTER_OPTIONS = [
-  { label: "All Products", value: "all" },
-  { label: "New Arrival", value: "new" },
-  { label: "Best Selling", value: "stock" },
+const FILTER_OPTIONS: any[] = [
+  //   { label: "All Products", value: "all" },
+  //   { label: "New Arrival", value: "new" },
+  //   { label: "Best Selling", value: "stock" },
 ];
 
-export default function ProductList() {
+export default function BestSelling() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [selectedFilter, setSelectedFilter] = useState<string>("stock"); // default to Best Selling
 
   const fetchProducts = async (filter: string) => {
     setLoading(true);
@@ -67,7 +67,7 @@ export default function ProductList() {
   return (
     <div className="px-4 md:px-10 mt-10">
       <h2 className="text-2xl md:text-3xl font-semibold text-center mb-6 text-gray-800">
-        Our Products
+        Best Selling Products
       </h2>
 
       {/* Filter Buttons */}
@@ -127,7 +127,7 @@ export default function ProductList() {
                     <path d="M12 2C9.243 2 7 4.243 7 7v2H5c-.552 0-1 .448-1 1v1h16v-1c0-.552-.448-1-1-1h-2V7c0-2.757-2.243-5-5-5zm0 2c1.654 0 3 1.346 3 3v2h-6V7c0-1.654 1.346-3 3-3zM4 13v6c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-6H4z" />
                   </svg>
                 );
-              case "bestselling":
+              case "stock":
                 return (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

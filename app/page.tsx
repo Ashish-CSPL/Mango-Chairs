@@ -19,6 +19,7 @@ import "slick-carousel/slick/slick-theme.css";
 import CategoryCarousel from "@/components/Client-side-server/CategorySection/CategoryCarousel";
 import fetchSecondary from "@/api/fetchSecondary";
 import CategoryProductSection from "@/components/Client-side-server/CategorySection/CategoryProductSection";
+import BestSelling from "@/components/Client-side-server/BestSelling/BestSelling";
 
 type BannerResponse = {
   banners?: {
@@ -76,15 +77,18 @@ const Home = async () => {
       {/* ✅ No design impact — banner format matched */}
       <Banner bannerEndpoint={{ banners: mappedBanners }} />
 
-      <h1
+      {/* <h1
         className="text-2xl md:text-[48px] mt-6 text-center font-playfair"
         style={{ color: "#3E3E3E" }}
       >
         BROWSE THROUGH OUR CATEGORY
-      </h1>
+      </h1> */}
 
       {/* Category Carousel, no changes */}
       <CategoryCarousel />
+
+      <BestSelling />
+
       <CategoryProductSection />
       {/* <Speciality /> */}
       <WhyChooseUsSection whyChooseUsData={whyChooseUsData} />

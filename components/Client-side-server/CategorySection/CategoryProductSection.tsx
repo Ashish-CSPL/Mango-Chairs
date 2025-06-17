@@ -37,9 +37,9 @@ export default function CategoryProductDisplay() {
     const fetchAllProducts = async () => {
       try {
         const data = (await fetchSecondary("/product", "GET")) as
-          | { products?: Product[] }
+          | { items?: Product[] }
           | Product[];
-        const extracted = Array.isArray(data) ? data : data.products || [];
+        const extracted = Array.isArray(data) ? data : data.items || [];
         setProducts(extracted);
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -57,9 +57,9 @@ export default function CategoryProductDisplay() {
         ? `/product/category?category=${category}`
         : "/product";
       const data = (await fetchSecondary(endpoint, "GET")) as
-        | { products?: Product[] }
+        | { items?: Product[] }
         | Product[];
-      const extracted = Array.isArray(data) ? data : data.products || [];
+      const extracted = Array.isArray(data) ? data : data.items || [];
       setProducts(extracted);
     } catch (error) {
       console.error("Error fetching category products:", error);
@@ -73,8 +73,10 @@ export default function CategoryProductDisplay() {
         <button
           onClick={() => handleCategoryClick("")}
           className={`px-4 py-2 rounded-full border ${
-            activeCategory === "" ? "bg-yellow-400 text-white" : "bg-white"
-          }`}
+            activeCategory === ""
+              ? "bg-[#FF9601] text-white border-[#FF9601]"
+              : "bg-white text-[#FF9601] border-[#FF9601] hover:bg-[#FF9601] hover:text-white"
+          } transition-colors duration-300`}
         >
           All
         </button>
@@ -84,9 +86,9 @@ export default function CategoryProductDisplay() {
             onClick={() => handleCategoryClick(category.name)}
             className={`px-4 py-2 rounded-full border ${
               activeCategory === category.name
-                ? "bg-yellow-400 text-white"
-                : "bg-white"
-            }`}
+                ? "bg-[#FF9601] text-white border-[#FF9601]"
+                : "bg-white text-[#FF9601] border-[#FF9601] hover:bg-[#FF9601] hover:text-white"
+            } transition-colors duration-300`}
           >
             {category.name}
           </button>

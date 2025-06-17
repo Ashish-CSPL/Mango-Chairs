@@ -1,3 +1,5 @@
+// types/productTypes.ts
+
 export interface VariantImage {
   id: number;
   url: string;
@@ -16,8 +18,8 @@ export interface Variant {
   id: number;
   description?: string;
   specification?: Specification;
-  Price?: number;
-  price?: number;
+  Price?: number; // Prefer using Price consistently if API uses this
+  price?: number; // Optional fallback
   stock: number;
   productId: number;
   images: VariantImage[] | string[];
@@ -27,28 +29,44 @@ export interface Category {
   id: number;
   name: string;
   parentId: number | null;
+  // Add image here if it's part of your Category object from the API
+  image?: string; 
 }
 
 export interface Product {
+  onSale?: boolean; // Changed from 'any' to 'boolean' or remove if not always present
   id: number;
   name: string;
   slug: string;
   price: number;
   image: string;
-  description: string;
-  variants: Variant[];
-
-  // ✅ Added this line (safe & optional)
+  description?: string;
   type?: "veg" | "non-veg";
+  variants?: Variant[];
 
-  // Optional fields
+  // --- THIS IS THE CRUCIAL CHANGE ---
+  // Change 'category' to 'categories' and make it an array of Category
+  categories?: Category[]; // Make it optional if a product might not always have categories
+  // If a product *always* has at least one category, remove the '?'
+  // categories: Category[];
+  // --- END CRUCIAL CHANGE ---
+
+  // Optional product metadata fields
+  reviewsCount?: number;
+  rating?: number;
+  ingredients?: string[];
+  short_description?: string;
+  size?: string;
+  energyKj?: number;
+  energyKcal?: number;
+  fat?: number;
+  gluxit?: number;
+  sugar?: number;
+  protein?: number;
+  // userId and is_active are present in your Postman response but missing from your Product type.
+  // Consider adding them if you use them:
   userId?: number;
-  stock?: number;
-  is_new_arrival?: boolean;
   is_active?: boolean;
-  tag?: string[];
-  categories?: Category[];
-  items?: any; // Optional for response compatibility
 }
 
 export interface ProductsApiResponse {
