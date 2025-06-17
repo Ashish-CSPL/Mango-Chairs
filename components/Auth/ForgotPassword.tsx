@@ -272,7 +272,7 @@ const ForgotPassword: React.FC = () => {
               Your password has been successfully reset!
             </p>
             <Link
-              href="/login"
+              href="/auth"
               className="text-blue-500 hover:underline font-medium"
             >
               Go to Login
