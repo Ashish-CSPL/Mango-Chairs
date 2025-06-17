@@ -34,7 +34,7 @@ export interface Category {
 }
 
 export interface Product {
-  onSale?: boolean; // Changed from 'any' to 'boolean' or remove if not always present
+  onSale?: boolean; // Existing property, will be used for 'Sale' badge
   id: number;
   name: string;
   slug: string;
@@ -67,6 +67,10 @@ export interface Product {
   // Consider adding them if you use them:
   userId?: number;
   is_active?: boolean;
+
+  // --- ADDED NEW PROPERTIES ---
+  isAvailable?: boolean; // Added for store availability (e.g., "Store will open")
+  availableTime?: string; // Added for the specific opening time
 }
 
 export interface ProductsApiResponse {

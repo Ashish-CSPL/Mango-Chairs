@@ -89,9 +89,10 @@ const Home = async () => {
 
       <BestSelling />
 
-      <CategoryProductSection />
+     
       {/* <Speciality /> */}
       <WhyChooseUsSection whyChooseUsData={whyChooseUsData} />
+       <CategoryProductSection />
       <ProductList />
       <Stories />
       <TestimonialSliderClient testimonials={testimonials} />

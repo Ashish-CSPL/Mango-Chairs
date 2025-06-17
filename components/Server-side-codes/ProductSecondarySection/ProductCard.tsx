@@ -114,7 +114,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   // --- END UPDATED FSSAI SVG Icons ---
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 w-full my-3 max-w-sm mx-auto hover:shadow-2xl transition duration-300 ease-in-out">
+    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 w-full my-4 max-w-sm mx-auto hover:shadow-2xl transition duration-300 ease-in-out">
       <Link href={`/product/${product.slug}`}>
         <div className="relative w-full h-56 rounded-t-2xl overflow-hidden group">
           <Image

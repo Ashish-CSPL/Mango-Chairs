@@ -31,6 +31,12 @@ export default function WhyChooseUsSection({
 
   return (
     <div className="bg-white w-full overflow-x-hidden">
+      <h1
+        className="text-2xl md:text-[48px] my-10 mt-18 text-center font-playfair"
+        style={{ color: "#3E3E3E" }}
+      >
+        WHY CHOOSE US
+      </h1>
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8 lg:grid lg:grid-cols-3">
           {(whyChooseUsData ?? []).map((item, index) => (
