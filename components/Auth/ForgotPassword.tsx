@@ -56,7 +56,9 @@ const ForgotPassword: React.FC = () => {
     dispatch(setError(null));
     try {
       await verifyOtpForResetPassword(email, otp);
-      toast.success("OTP verified successfully! You can now reset your password.");
+      toast.success(
+        "OTP verified successfully! You can now reset your password."
+      );
       dispatch(setNewPasswordStage("passwordResetForm"));
     } catch (err: any) {
       console.error("Error verifying OTP:", err.message);
@@ -255,7 +257,7 @@ const ForgotPassword: React.FC = () => {
             <p className="mt-4 text-center text-gray-600">
               Remembered your password?{" "}
               <Link
-                href="/login"
+                href="/auth"
                 className="text-blue-500 hover:underline font-medium"
               >
                 Back to Login
