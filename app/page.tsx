@@ -17,6 +17,7 @@ import { Category as CategoryType } from "@/components/Server-side-codes/Categor
 
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import CategoryCarousel from "@/components/Client-side-server/CategorySection/CategoryCarousel";
 
 // 👇 Define the expected API response types
 type BannerResponse = {
@@ -64,7 +65,8 @@ const Home = async () => {
         BROWSE THROUGH OUR CATEGORY
       </h1>
 
-      <Category categories={categories} />
+      {/* <Category categories={categories} /> */}
+      <CategoryCarousel />
       <Speciality />
       <WhyChooseUsSection whyChooseUsData={whyChooseUsData} />
       <ProductList />
