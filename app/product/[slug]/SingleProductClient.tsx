@@ -41,10 +41,9 @@ const SingleProductClient = ({ product }: Props) => {
   const [errorRelated, setErrorRelated] = useState<string | null>(null);
 
   const formatImageUrl = (url?: string) => {
+    console.log("url", url);
     if (!url) return "/default.png";
-    return url.startsWith("http")
-      ? url
-      : `${process.env.NEXT_PUBLIC_SECONDARY_API}${url}`;
+    return url;
   };
 
   useEffect(() => {

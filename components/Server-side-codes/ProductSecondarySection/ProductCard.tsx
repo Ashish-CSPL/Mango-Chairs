@@ -62,7 +62,6 @@ export default function ProductCard({ product }: ProductCardProps) {
     toast.success(`${product.name} added to cart!`);
   };
 
-  // --- UPDATED FSSAI SVG Icons (Transparent Background) ---
   const VegIcon = () => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -70,9 +69,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       width="20"
       height="20"
       fill="none"
-      stroke="none"
     >
-      {/* Changed fill to "none" */}
       <rect
         x="0"
         y="0"
@@ -81,10 +78,8 @@ export default function ProductCard({ product }: ProductCardProps) {
         fill="none"
         stroke="#008000"
         strokeWidth="2"
-      />{" "}
-      {/* Green border, transparent fill */}
-      <circle cx="15" cy="15" r="7" fill="#008000" />{" "}
-      {/* Green circle inside */}
+      />
+      <circle cx="15" cy="15" r="7" fill="#008000" />
     </svg>
   );
 
@@ -95,9 +90,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       width="20"
       height="20"
       fill="none"
-      stroke="none"
     >
-      {/* Changed fill to "none" */}
       <rect
         x="0"
         y="0"
@@ -106,12 +99,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         fill="none"
         stroke="#FF0000"
         strokeWidth="2"
-      />{" "}
-      {/* Red border, transparent fill */}
-      <circle cx="15" cy="15" r="7" fill="#FF0000" /> {/* Red circle inside */}
+      />
+      <circle cx="15" cy="15" r="7" fill="#FF0000" />
     </svg>
   );
-  // --- END UPDATED FSSAI SVG Icons ---
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 w-full my-4 max-w-sm mx-auto hover:shadow-2xl transition duration-300 ease-in-out">
@@ -130,11 +121,50 @@ export default function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       <div className="p-4 space-y-2">
-        <div className="flex items-center gap-1 text-sm text-yellow-500">
-          {[...Array(4)].map((_, i) => (
-            <span key={i}>★</span>
-          ))}
-          <span className="text-gray-300">★</span>
+        <div className="flex justify-between items-start">
+          {/* Left: Rating */}
+          <div className="flex items-center gap-1 text-sm text-yellow-500">
+            {[...Array(4)].map((_, i) => (
+              <span key={i}>★</span>
+            ))}
+            <span className="text-gray-300">★</span>
+          </div>
+
+          {/* Right: All Variant Images */}
+          {product.variants && product.variants.length > 0 && (
+            <div className="flex gap-1 flex-wrap justify-end">
+              {[
+                ...new Set(
+                  product.variants.flatMap((variant) =>
+                    (variant.images || []).map((img) =>
+                      typeof img === "string"
+                        ? img
+                        : (img as { url?: string })?.url || "/default.png"
+                    )
+                  )
+                ),
+              ].map((imageUrl, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleVariantImageClick(imageUrl)}
+                  className={`w-6 h-6 rounded-full border-2 ${
+                    mainImage === imageUrl
+                      ? "border-orange-500"
+                      : "border-gray-200"
+                  } overflow-hidden`}
+                >
+                  <Image
+                    src={imageUrl}
+                    alt={`variant-img-${idx}`}
+                    width={24}
+                    height={24}
+                    className="object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <h3 className="text-lg font-bold text-gray-800 truncate">
@@ -145,37 +175,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.description ||
             "Tasty, hot and fresh straight from our kitchen!"}
         </p>
-
-        {selectedVariant?.images && selectedVariant.images.length > 1 && (
-          <div className="flex gap-2 mt-2">
-            {selectedVariant.images.map((img, idx) => {
-              const imageUrl =
-                typeof img === "string"
-                  ? img
-                  : (img as { url?: string })?.url || "/default.png";
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleVariantImageClick(imageUrl)}
-                  className={`w-8 h-8 rounded-full border-2 ${
-                    mainImage === imageUrl
-                      ? "border-orange-500"
-                      : "border-gray-200"
-                  } overflow-hidden focus:outline-none`}
-                >
-                  <Image
-                    src={imageUrl}
-                    alt={`Variant ${idx + 1}`}
-                    width={32}
-                    height={32}
-                    className="object-cover"
-                  />
-                </button>
-              );
-            })}
-          </div>
-        )}
 
         <div className="flex items-center justify-between pt-3">
           <div className="text-lg font-bold text-orange-600">

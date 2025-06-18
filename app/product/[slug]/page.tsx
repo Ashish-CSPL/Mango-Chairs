@@ -24,6 +24,6 @@ export default async function ProductPage({
   if (!product) {
     return notFound();
   }
-
+  console.log(product, "slug product");
   return <SingleProductClient product={product} />;
 }

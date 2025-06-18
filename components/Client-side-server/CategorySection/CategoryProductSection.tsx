@@ -147,7 +147,10 @@ export default function CategoryProductDisplay() {
               {/* "All Day Snacks" button, now linked to the special key */}
               <li className="mb-1">
                 <button
-                  onClick={() => handleCategoryClick(ALL_PRODUCTS_CATEGORY_KEY)}
+                  onClick={() => (
+                    handleCategoryClick(ALL_PRODUCTS_CATEGORY_KEY),
+                    setProducts([])
+                  )}
                   className={`w-full text-left px-4 py-2 rounded-l-lg transition-colors duration-200
                     ${
                       activeCategory === ALL_PRODUCTS_CATEGORY_KEY
