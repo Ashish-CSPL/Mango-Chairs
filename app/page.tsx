@@ -20,6 +20,8 @@ import CategoryCarousel from "@/components/Client-side-server/CategorySection/Ca
 import fetchSecondary from "@/api/fetchSecondary";
 import CategoryProductSection from "@/components/Client-side-server/CategorySection/CategoryProductSection";
 import BestSelling from "@/components/Client-side-server/BestSelling/BestSelling";
+import PromoSection from "@/components/Client-side-server/PromoSection/PromoSection";
+// import SpecialComboOffer from "@/components/Client-side-server/SpecialComboOffer/SpecialComboOffer";
 
 type BannerResponse = {
   banners?: {
@@ -89,10 +91,11 @@ const Home = async () => {
 
       <BestSelling />
 
-     
       {/* <Speciality /> */}
-      <WhyChooseUsSection whyChooseUsData={whyChooseUsData} />
-       <CategoryProductSection />
+      {/* <WhyChooseUsSection whyChooseUsData={whyChooseUsData} /> */}
+
+      <PromoSection />
+      <CategoryProductSection />
       <ProductList />
       <Stories />
       <TestimonialSliderClient testimonials={testimonials} />

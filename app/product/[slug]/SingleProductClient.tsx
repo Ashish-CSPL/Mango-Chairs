@@ -268,9 +268,9 @@ const SingleProductClient = ({ product }: Props) => {
                 ? product.description.substring(0, 150) + "..."
                 : "View great tasting Tropicana Orange Juice and Juice Drink Products. Featuring Tropicana Orange Juice")}
           </p>
-          <p className="text-gray-700 leading-relaxed mb-6 text-sm font-semibold">
+          {/* <p className="text-gray-700 leading-relaxed mb-6 text-sm font-semibold">
             {product.name}
-          </p>
+          </p> */}
 
           <p className="text-3xl font-bold text-gray-900 mb-6">
             ₹
@@ -315,6 +315,8 @@ const SingleProductClient = ({ product }: Props) => {
             </button>
           </div>
 
+          {/* All cards accept */}
+          {/* 
           <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-100">
             <h3 className="font-semibold text-gray-800 mb-3">
               Guaranteed Safe Checkout
@@ -349,7 +351,7 @@ const SingleProductClient = ({ product }: Props) => {
                 className="h-auto object-contain"
               />
             </div>
-          </div>
+          </div> */}
 
           <ul className="text-sm text-gray-700 list-disc pl-5 space-y-2">
             <li>Free global shipping on all orders</li>
@@ -400,8 +402,8 @@ const SingleProductClient = ({ product }: Props) => {
                 </ul>
               </div>
             )}
-
-            <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 text-center text-sm">
+            {/* product nutrions facts static */}
+            {/* <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 text-center text-sm">
               <div className="p-3 border rounded-lg bg-gray-50">
                 <p className="font-semibold">{product.size || "28 cm size"}</p>
                 <p className="text-gray-600">Pizza</p>
@@ -430,9 +432,10 @@ const SingleProductClient = ({ product }: Props) => {
                 <p className="font-semibold">{product.protein || 548} g</p>
                 <p className="text-gray-600">protein/g</p>
               </div>
-            </div>
+            </div> */}
 
-            <div className="mt-8">
+            {/* Allergies static */}
+            {/* <div className="mt-8">
               <h3 className="font-semibold text-lg mb-3">Allergies</h3>
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-gray-700">
                 <span>Egg</span>
@@ -442,7 +445,7 @@ const SingleProductClient = ({ product }: Props) => {
                 <span>gluten</span>
                 <span>mustard</span>
               </div>
-            </div>
+            </div> */}
           </div>
         )}
 
