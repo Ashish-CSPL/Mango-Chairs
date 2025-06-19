@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Product } from "@/types/Products";
 import fetchSecondary from "@/api/fetchSecondary";
 import ProductCard from "@/components/Server-side-codes/ProductSecondarySection/ProductCard";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 interface Category {
   id: number;
@@ -14,7 +17,7 @@ interface Category {
 const ShopPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -38,25 +41,29 @@ const ShopPage = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        let endpoint = "/product";
-        if (sortOption && selectedCategory) {
-          endpoint = `/product/filter?sort=${
-            sortOption === "lowToHigh" ? "asc" : "desc"
-          }&category=${selectedCategory}`;
-        } else if (sortOption) {
-          endpoint = `/product/filter?sort=${
-            sortOption === "lowToHigh" ? "asc" : "desc"
-          }`;
-        } else if (selectedCategory) {
-          endpoint = `/product/category?category=${selectedCategory}`;
+        let productsList: Product[] = [];
+
+        if (selectedCategories.length > 0) {
+          const allRequests = selectedCategories.map((category) =>
+            fetchSecondary(
+              `/product/category?category=${encodeURIComponent(category)}`,
+              "GET"
+            )
+          );
+          const responses = await Promise.all(allRequests);
+          responses.forEach((res) => {
+            const data = res as Product[] | { items?: Product[] };
+            const items = Array.isArray(data) ? data : data.items || [];
+            productsList.push(...items);
+          });
+        } else {
+          const allData = (await fetchSecondary("/product", "GET")) as
+            | Product[]
+            | { items?: Product[] };
+          productsList = Array.isArray(allData) ? allData : allData.items || [];
         }
 
-        const data = await fetchSecondary<{ items: Product[] } | Product[]>(
-          endpoint,
-          "GET"
-        );
-        const productsData = Array.isArray(data) ? data : data.items;
-        setProducts(productsData);
+        setProducts(productsList);
       } catch (error) {
         console.error("Failed to fetch products:", error);
       } finally {
@@ -65,7 +72,39 @@ const ShopPage = () => {
     };
 
     fetchProducts();
-  }, [selectedCategory, sortOption]);
+  }, [selectedCategories, sortOption]);
+
+  const handleCategoryClick = (category: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const sliderSettings = {
+    dots: false,
+    infinite: false,
+    speed: 500,
+    slidesToShow: 2,
+    slidesToScroll: 1,
+    responsive: [
+      {
+        breakpoint: 768,
+        settings: {
+          slidesToShow: 2,
+          slidesToScroll: 1,
+        },
+      },
+      {
+        breakpoint: 480,
+        settings: {
+          slidesToShow: 2,
+          slidesToScroll: 1,
+        },
+      },
+    ],
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10 mt-20 bg-[#FFF9F4]">
@@ -75,12 +114,34 @@ const ShopPage = () => {
           <h2 className="text-2xl font-bold text-[#F58721] mb-4 border-b-2 border-[#F58721] pb-2">
             Categories
           </h2>
-          <ul className="space-y-3">
+
+          {/* Mobile Slider */}
+          <div className="block md:hidden">
+            <Slider {...sliderSettings}>
+              {categories.map((category) => (
+                <div key={category.id} className="px-1">
+                  <button
+                    onClick={() => handleCategoryClick(category.name)}
+                    className={`w-full whitespace-nowrap px-4 py-2 rounded-full text-xs font-medium transition ${
+                      selectedCategories.includes(category.name)
+                        ? "bg-[#F58721] text-white shadow-md"
+                        : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
+                    }`}
+                  >
+                    {category.name}
+                  </button>
+                </div>
+              ))}
+            </Slider>
+          </div>
+
+          {/* Desktop List */}
+          <ul className="hidden md:block space-y-3 mt-4">
             <li>
               <button
-                onClick={() => setSelectedCategory("")}
+                onClick={() => setSelectedCategories([])}
                 className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
-                  selectedCategory === ""
+                  selectedCategories.length === 0
                     ? "bg-[#F58721] text-white shadow-md"
                     : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
                 }`}
@@ -91,9 +152,9 @@ const ShopPage = () => {
             {categories.map((category) => (
               <li key={category.id}>
                 <button
-                  onClick={() => setSelectedCategory(category.name)}
+                  onClick={() => handleCategoryClick(category.name)}
                   className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
-                    selectedCategory === category.name
+                    selectedCategories.includes(category.name)
                       ? "bg-[#F58721] text-white shadow-md"
                       : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
                   }`}
@@ -124,17 +185,20 @@ const ShopPage = () => {
 
           {/* Loader / Products */}
           {loading ? (
-            <div className="flex flex-col justify-center items-center h-[300px] text-center text-gray-600 space-y-4">
-              <div className="w-24 h-24 animate-spin-slow">
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/1404/1404945.png"
-                  alt="Loading pizza..."
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <p className="text-sm font-semibold tracking-wide text-[#F58721]">
-                Freshly preparing your menu...
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, index) => (
+                <div
+                  key={index}
+                  className="animate-pulse space-y-4 p-4 bg-white rounded-2xl shadow-md border border-gray-200"
+                >
+                  <div className="w-full h-48 bg-gray-200 rounded-xl shimmer"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 shimmer"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2 shimmer"></div>
+                  <div className="flex justify-end">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full shimmer"></div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : products.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">

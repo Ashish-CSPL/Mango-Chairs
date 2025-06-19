@@ -19,7 +19,9 @@ export default function CategoryProductDisplay() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeCategories, setActiveCategories] = useState<string[]>([]);
+  const [activeCategories, setActiveCategories] = useState<string[]>([
+    ALL_PRODUCTS_CATEGORY_KEY,
+  ]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -107,36 +109,18 @@ export default function CategoryProductDisplay() {
         breakpoint: 1280,
         settings: {
           slidesToShow: 3,
-          slidesToScroll: 1,
-          infinite: products.length > 3,
-          dots: true,
         },
       },
       {
         breakpoint: 1024,
         settings: {
           slidesToShow: 2,
-          slidesToScroll: 1,
-          infinite: products.length > 2,
-          dots: true,
         },
       },
       {
         breakpoint: 768,
         settings: {
           slidesToShow: 1,
-          slidesToScroll: 1,
-          infinite: products.length > 1,
-          dots: true,
-        },
-      },
-      {
-        breakpoint: 640,
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-          infinite: products.length > 1,
-          dots: true,
         },
       },
     ],
@@ -144,15 +128,42 @@ export default function CategoryProductDisplay() {
 
   return (
     <>
-      <h1
-        className="text-2xl md:text-[48px] my-8 text-center font-playfair"
-        style={{ color: "#3E3E3E" }}
-      >
+      <h1 className="text-2xl md:text-[48px] my-8 text-center font-playfair text-[#3E3E3E]">
         Trending Products
       </h1>
-      <div className="flex px-4 md:px-12 py-8 h-[80vh] bg-white">
-        {/* Sidebar Categories */}
-        <div className="w-60 flex-shrink-0 bg-white rounded-lg border border-gray-200 mr-8 py-4">
+
+      {/* Mobile Horizontal Scrollable Category Tabs */}
+      <div className="lg:hidden flex gap-2 overflow-x-auto px-4 pb-4 scrollbar-hide">
+        <button
+          onClick={() => handleCategoryClick(ALL_PRODUCTS_CATEGORY_KEY)}
+          className={`flex-shrink-0 px-4 py-2 rounded-full border text-sm whitespace-nowrap transition
+            ${
+              activeCategories.includes(ALL_PRODUCTS_CATEGORY_KEY)
+                ? "bg-[#f58721] text-white"
+                : "border-gray-300 text-gray-700"
+            }`}
+        >
+          All Day Snacks
+        </button>
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => handleCategoryClick(category.name)}
+            className={`flex-shrink-0 px-4 py-2 rounded-full border text-sm whitespace-nowrap transition
+              ${
+                activeCategories.includes(category.name)
+                  ? "bg-[#f58721] text-white"
+                  : "border-gray-300 text-gray-700"
+              }`}
+          >
+            {category.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-col lg:flex-row px-4 md:px-12 py-8 bg-white gap-6">
+        {/* Sidebar Categories for Desktop */}
+        <div className="hidden lg:block w-60 flex-shrink-0 bg-white rounded-lg border border-gray-200 py-4">
           <h2 className="text-lg font-semibold text-gray-900 text-center px-4 mb-2">
             Categories
           </h2>
@@ -161,7 +172,7 @@ export default function CategoryProductDisplay() {
               <li className="mb-1">
                 <button
                   onClick={() => handleCategoryClick(ALL_PRODUCTS_CATEGORY_KEY)}
-                  className={`w-full text-left px-4 py-2 rounded-l-lg transition-colors duration-200
+                  className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200
                     ${
                       activeCategories.includes(ALL_PRODUCTS_CATEGORY_KEY)
                         ? "bg-[#f58721] text-white"
@@ -175,7 +186,7 @@ export default function CategoryProductDisplay() {
                 <li key={category.id} className="mb-1">
                   <button
                     onClick={() => handleCategoryClick(category.name)}
-                    className={`w-full text-left px-4 py-2 rounded-l-lg transition-colors duration-200
+                    className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200
                       ${
                         activeCategories.includes(category.name)
                           ? "bg-[#f58721] text-white"
