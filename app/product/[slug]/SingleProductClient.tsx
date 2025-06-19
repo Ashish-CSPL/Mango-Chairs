@@ -110,7 +110,7 @@ const SingleProductClient = ({ product }: Props) => {
         id: product.id,
         name: product.name,
         image: formatImageUrl(mainImage),
-        price: variant.Price ?? variant.price ?? product.price ?? 0,
+        price: variant.price ?? variant.price ?? product.price ?? 0,
         variant: variant.description ?? "Default",
         quantity,
       })
