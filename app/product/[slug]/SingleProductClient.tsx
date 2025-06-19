@@ -1,5 +1,3 @@
-// components/SingleProductClient.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -41,7 +39,6 @@ const SingleProductClient = ({ product }: Props) => {
   const [errorRelated, setErrorRelated] = useState<string | null>(null);
 
   const formatImageUrl = (url?: string) => {
-    console.log("url", url);
     if (!url) return "/default.png";
     return url;
   };
@@ -57,10 +54,6 @@ const SingleProductClient = ({ product }: Props) => {
       }
 
       if (!categoryName) {
-        console.warn(
-          "No valid category name found for related products for product ID:",
-          product.id
-        );
         setRelatedProducts([]);
         setLoadingRelated(false);
         return;
@@ -70,9 +63,6 @@ const SingleProductClient = ({ product }: Props) => {
         const baseUrl = process.env.NEXT_PUBLIC_SECONDARY_API;
 
         if (!baseUrl) {
-          console.error(
-            "NEXT_PUBLIC_SECONDARY_API is not defined. Please set it in your .env.local file."
-          );
           setErrorRelated("API base URL is not configured.");
           setRelatedProducts([]);
           setLoadingRelated(false);
@@ -82,29 +72,21 @@ const SingleProductClient = ({ product }: Props) => {
         const apiUrl = `${baseUrl}/product/category?category=${encodeURIComponent(
           categoryName
         )}`;
-        console.log("Fetching related products from URL:", apiUrl);
 
         const response = await fetch(apiUrl);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(
-            `HTTP error! status: ${response.status}, response: ${errorText}`
-          );
           throw new Error(
             `Failed to fetch related products: ${response.status} - ${errorText}`
           );
         }
 
         const data: Product[] = await response.json();
-        console.log("API response data (raw):", data);
-
         const filteredData = data.filter((p) => p.id !== product.id);
-        console.log("Filtered related products:", filteredData);
 
         setRelatedProducts(filteredData);
       } catch (error: any) {
-        console.error("Error fetching related products:", error);
         setErrorRelated(
           `Failed to load related products: ${error.message || "Unknown error"}`
         );
@@ -118,31 +100,23 @@ const SingleProductClient = ({ product }: Props) => {
   }, [product.id, product.categories, product.image]);
 
   const handleAddToCart = () => {
-    if (!selectedVariant) {
-      toast.error("Please select a variant");
-      return;
-    }
-    if (quantity <= 0) {
-      toast.error("Quantity must be at least 1");
-      return;
-    }
-    if (selectedVariant.stock !== undefined && selectedVariant.stock <= 0) {
-      toast.error("Item is out of stock.");
-      return;
-    }
+    const variant = selectedVariant || {
+      description: "Default",
+      price: product.price ?? 0,
+    };
 
     dispatch(
       addToCart({
         id: product.id,
         name: product.name,
         image: formatImageUrl(mainImage),
-        price:
-          selectedVariant.Price ?? selectedVariant.price ?? product.price ?? 0,
-        variant: selectedVariant.description ?? "Default",
-        quantity: quantity,
+        price: variant.Price ?? variant.price ?? product.price ?? 0,
+        variant: variant.description ?? "Default",
+        quantity,
       })
     );
-    toast.success("Product added to cart!");
+
+    toast.success(`${product.name} added to cart!`);
   };
 
   const renderStars = (rating: number) => {
@@ -163,69 +137,46 @@ const SingleProductClient = ({ product }: Props) => {
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-8 mt-28 mb-12 overflow-hidden">
       <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-        {/* Left Section: Image Gallery */}
         <div className="w-full lg:w-3/5 h-[70vh] flex flex-col md:flex-row gap-4">
-          {" "}
-          {/* Changed to lg:w-3/5 */}
-          {/* Variant Thumbnails */}
           <div className="flex flex-row md:flex-col gap-3 max-h-[500px] overflow-x-auto md:overflow-y-auto pr-2 pb-2 md:pb-0">
-            {product.variants && product.variants.length > 0 ? (
-              product.variants.map((variant) =>
-                variant.images?.map((img, index) => {
-                  const imageUrl =
-                    typeof img === "string"
-                      ? img
-                      : (img as VariantImage)?.url ?? product.image;
+            {product.variants?.map((variant) =>
+              (variant.images || []).map((img, index) => {
+                const imageUrl =
+                  typeof img === "string"
+                    ? img
+                    : (img as VariantImage)?.url ||
+                      product.image ||
+                      "/default.png";
 
-                  const imageId =
-                    typeof img === "string"
-                      ? `${variant.id}-${index}`
-                      : (img as VariantImage)?.id?.toString() ??
-                        `${variant.id}-${index}`;
+                const imageId =
+                  typeof img === "string"
+                    ? `${variant.id}-${index}`
+                    : (img as VariantImage)?.id?.toString() ||
+                      `${variant.id}-${index}`;
 
-                  return (
-                    <div
-                      key={imageId}
-                      className={`relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 cursor-pointer rounded-lg overflow-hidden transition-all duration-200
-                        ${
-                          formatImageUrl(imageUrl) === mainImage
-                            ? "border-2 border-orange-500 shadow-md"
-                            : "border border-gray-200 hover:border-orange-300"
-                        }`}
-                      onClick={() => {
-                        setMainImage(imageUrl || product.image);
-                        setSelectedVariant(variant);
-                      }}
-                    >
-                      <Image
-                        src={formatImageUrl(imageUrl)}
-                        alt={`Variant thumbnail ${index + 1}`}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover"
-                      />
-                    </div>
-                  );
-                })
-              )
-            ) : (
-              <div
-                className={`relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 cursor-pointer rounded-lg overflow-hidden transition-all duration-200
-                  ${
-                    formatImageUrl(product.image) === mainImage
-                      ? "border-2 border-orange-500 shadow-md"
-                      : "border border-gray-200 hover:border-orange-300"
-                  }`}
-                onClick={() => setMainImage(product.image || "/default.png")}
-              >
-                <Image
-                  src={formatImageUrl(product.image)}
-                  alt="Product thumbnail"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                />
-              </div>
+                return (
+                  <div
+                    key={imageId}
+                    className={`relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 cursor-pointer rounded-lg overflow-hidden transition-all duration-200 ${
+                      formatImageUrl(imageUrl) === mainImage
+                        ? "border-2 border-orange-500 shadow-md"
+                        : "border border-gray-200 hover:border-orange-300"
+                    }`}
+                    onClick={() => {
+                      setMainImage(imageUrl);
+                      setSelectedVariant(variant);
+                    }}
+                  >
+                    <Image
+                      src={formatImageUrl(imageUrl)}
+                      alt={`Variant thumbnail ${index + 1}`}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-cover"
+                    />
+                  </div>
+                );
+              })
             )}
           </div>
           <div className="flex-1 flex items-center p-4 min-h-[350px] md:min-h-[450px] lg:min-h-[300px] rounded-lg border border-gray-200 overflow-hidden">
@@ -239,10 +190,7 @@ const SingleProductClient = ({ product }: Props) => {
           </div>
         </div>
 
-        {/* Right Section: Product Details */}
         <div className="w-full lg:w-2/5 lg:mt-10 space-y-10">
-          {" "}
-          {/* Changed to lg:w-2/5 */}
           <p className="text-sm text-gray-600 mb-1">
             <span className="font-semibold text-gray-800">Category:</span>{" "}
             {product.categories && product.categories.length > 0
@@ -305,7 +253,40 @@ const SingleProductClient = ({ product }: Props) => {
         </div>
       </div>
 
-      {/* Related Products Section */}
+      <div className="mt-10">
+        <div className="flex border-b border-gray-200 mb-4">
+          <button
+            className={`text-sm font-semibold px-4 py-2 ${
+              activeTab === "description"
+                ? "text-black border-b-2 border-orange-500"
+                : "text-gray-600"
+            }`}
+            onClick={() => setActiveTab("description")}
+          >
+            Description
+          </button>
+          <button
+            className={`text-sm font-semibold px-4 py-2 ${
+              activeTab === "reviews"
+                ? "text-black border-b-2 border-orange-500"
+                : "text-gray-600"
+            }`}
+            onClick={() => setActiveTab("reviews")}
+          >
+            Reviews (2)
+          </button>
+        </div>
+
+        {activeTab === "description" && product.description && (
+          <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-line">
+            {product.description}
+          </p>
+        )}
+        {activeTab === "reviews" && (
+          <p className="text-gray-600 text-sm">No reviews yet.</p>
+        )}
+      </div>
+
       <div className="mt-16 md:mt-15">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">
           RELATED PRODUCTS
@@ -319,13 +300,9 @@ const SingleProductClient = ({ product }: Props) => {
         ) : relatedProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {relatedProducts.map((p) => (
-              // --- ADDED MARGIN TOP AND BOTTOM HERE ---
               <div key={p.id} className="my-4">
-                {" "}
-                {/* Added a div wrapper with margin */}
                 <ProductCard product={p} />
               </div>
-              // --- END MARGIN ADDITION ---
             ))}
           </div>
         ) : (
