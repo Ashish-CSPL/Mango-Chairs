@@ -61,21 +61,27 @@ export default function CategoryCarousel() {
         <Slider {...settings}>
           {categories.map((category) => (
             <div key={category.id} className="px-3">
-              <div className="group flex flex-col items-center text-center space-y-3 transition-all duration-300 transform hover:scale-105 my-3">
-                {/* Round Category Image with spin animation */}
-                <div className="relative w-28 h-28 md:w-36 md:h-36 rounded-full bg-white border-4 border-orange-200 overflow-hidden shadow-lg group-hover:shadow-xl">
-                  <Image
-                    src={
-                      category.image ||
-                      "https://cdn-icons-png.flaticon.com/512/1046/1046784.png"
-                    }
-                    alt={category.name}
-                    fill
-                    className="object-cover spin-slow"
-                  />
+              <div className="group flex flex-col items-center text-center space-y-3 transition-transform duration-500 hover:scale-105 my-3">
+                {/* Rotating outer glossy glow */}
+                <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full animate-spin-slow z-0">
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-yellow-300 via-orange-300 to-red-300 blur-[6px] opacity-70"></div>
+                  </div>
+
+                  {/* Glassy image holder */}
+                  <div className="relative w-28 h-28 md:w-36 md:h-36 rounded-full overflow-hidden bg-white bg-opacity-70 backdrop-blur-sm shadow-lg border border-white/30 z-10">
+                    <Image
+                      src={
+                        category.image ||
+                        "https://cdn-icons-png.flaticon.com/512/1046/1046784.png"
+                      }
+                      alt={category.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
                 </div>
 
-                {/* Category Name */}
                 <h3 className="text-sm md:text-lg font-semibold text-orange-800 group-hover:text-orange-600">
                   {category.name}
                 </h3>

@@ -1,12 +1,7 @@
 import Head from "next/head";
 import Banner from "@/components/Server-side-codes/Banner/Banner";
-import fetchData from "../api/fetchdata";
 import Category from "@/components/Server-side-codes/Category/Category";
 import Speciality from "@/components/Server-side-codes/What-Make-Us-Special/Speciality";
-import WhyChooseUsSection, {
-  getWhyChooseUsData,
-} from "@/components/Server-side-codes/Why-Choose-Us/WhyChooseUS";
-import Stories from "@/components/Server-side-codes/Stories/Stories";
 import TestimonialSliderClient from "@/components/Client-side-server/New-Arrival/Testimonials";
 import { getTestimonials } from "./API_Calls/Function";
 import ProductList from "@/components/Server-side-codes/ProductSecondarySection/ProductList";
@@ -40,13 +35,9 @@ type CategoryResponse = {
 };
 
 const Home = async () => {
-  const [rawBannerData, categoryData, testimonials, whyChooseUsData] =
-    await Promise.all([
-      fetchSecondary("/frontend/banners", "GET") as Promise<BannerResponse>,
-      fetchData("frontend/categories", "GET") as Promise<CategoryResponse>,
-      getTestimonials(),
-      getWhyChooseUsData(),
-    ]);
+  const [rawBannerData] = await Promise.all([
+    fetchSecondary("/frontend/banners", "GET") as Promise<BannerResponse>,
+  ]);
 
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -97,8 +88,6 @@ const Home = async () => {
       <PromoSection />
       <CategoryProductSection />
       <ProductList />
-      <Stories />
-      <TestimonialSliderClient testimonials={testimonials} />
     </>
   );
 };

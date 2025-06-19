@@ -4,13 +4,11 @@ import { useEffect, useState } from "react";
 import ProductCard from "@/components/Server-side-codes/ProductSecondarySection/ProductCard";
 import { Product } from "@/types/productTypes";
 import fetchSecondary from "@/api/fetchSecondary";
-import { Loader2 } from "lucide-react";
 import Slider from "react-slick";
 
 const FILTER_OPTIONS: any[] = [
-  //   { label: "All Products", value: "all" },
-  //   { label: "New Arrival", value: "new" },
-  //   { label: "Best Selling", value: "stock" },
+  // { label: "", value: "" },
+  // { label: "", value: "" },
 ];
 
 export default function BestSelling() {
@@ -150,7 +148,7 @@ export default function BestSelling() {
               className={`relative fill-animate px-6 py-2 rounded-full text-sm font-semibold border-2 flex items-center transition-all duration-300 shadow-md ${
                 selectedFilter === option.value
                   ? "text-white border-[#FF9601] active"
-                  : "text-[#FF9601] border-[#FF9601] hover: hover:border-[#FF9601]"
+                  : "text-[#FF9601] border-[#FF9601] hover:border-[#FF9601]"
               } ${selectedFilter === option.value ? "active" : ""}`}
             >
               {getIcon(option.value)}
@@ -160,11 +158,20 @@ export default function BestSelling() {
         })}
       </div>
 
-      {/* Product Carousel */}
+      {/* Product Carousel or Loader */}
       <div className="max-w-screen-xl mx-auto">
         {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <Loader2 className="animate-spin w-8 h-8 text-[#FF9601]" />
+          <div className="flex flex-col justify-center items-center h-[300px] text-center text-gray-600 space-y-4">
+            <div className="w-24 h-24 animate-spin-slow">
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/1404/1404945.png"
+                alt="Loading pizza..."
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <p className="text-sm font-semibold tracking-wide text-[#F58721]">
+              Freshly preparing your menu...
+            </p>
           </div>
         ) : products.length > 0 ? (
           <Slider {...sliderSettings}>

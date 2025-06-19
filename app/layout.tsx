@@ -30,7 +30,7 @@ export default function RootLayout({
       <body className={`${playfairDisplay.variable} antialiased`}>
         <Providers>
           <Navbar
-            headerEndpoint="frontend/headers/"
+            
             categoryEndpoint="frontend/categories/"
           />
           {children}

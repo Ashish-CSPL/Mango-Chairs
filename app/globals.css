@@ -11,8 +11,6 @@
 
 /* globals.css */
 
-/* globals.css */
-
 :root {
   font-family: var(--font-playfair), serif;
 }
@@ -37,15 +35,6 @@ body {
   display: flex;
   animation: slide 20s linear infinite;
   margin: 0px 10px;
-}
-
-@keyframes slide {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
 }
 
 .animate-slide {
@@ -165,6 +154,7 @@ body {
     transform-origin: top;
   }
 }
+
 @keyframes scrollMarquee {
   0% {
     transform: translateX(0);
@@ -178,3 +168,24 @@ body {
   animation: scrollMarquee 18s linear infinite;
 }
 
+/* ✅ Added spin keyframes for rotate border effect */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@layer utilities {
+  .spin-slow {
+    animation: spin 40s linear infinite;
+  }
+}
+
+@layer utilities {
+  .animate-spin-slow {
+    animation: spin 3s linear infinite;
+  }
+}

@@ -15,7 +15,6 @@ import storage from "redux-persist/lib/storage";
 
 import authReducer from "../Slices/authSlice";
 import cartReducer from "../Store/cartSlice";
-import wishlistReducer from "../Slices/wishlistSlice"; // Ensure this import is present
 
 import forgotPasswordReducer from "../Slices/forgotPasswordSlice";
 import addressReducer from "../Slices/addressSlice";
@@ -24,7 +23,7 @@ import orderReducer from "../Slices/orderSlice";
 const rootReducer = combineReducers({
   auth: authReducer,
   cart: cartReducer,
-  wishlist: wishlistReducer, // Ensure 'wishlist' is included here
+
   forgotPassword: forgotPasswordReducer,
   address: addressReducer,
   order: orderReducer,

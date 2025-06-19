@@ -1,3 +1,5 @@
+// src/components/Client-side-codes/NavbarClient/NavbarClient.tsx
+
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -10,7 +12,7 @@ import {
   X,
   Search,
   LogOut,
-  Heart,
+  // Heart, // REMOVED: Heart icon for wishlist
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -19,7 +21,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/app/Redux/Store/store";
 import { CartItem } from "@/app/Redux/Store/cartSlice";
 import { logout } from "@/app/Redux/Slices/authSlice";
-import { fetchWishlistItems } from "@/app/Redux/Slices/wishlistSlice";
+// REMOVED: import { fetchWishlistItems } from "@/app/Redux/Slices/wishlistSlice";
 
 interface NavItem {
   pk: number;
@@ -34,7 +36,6 @@ interface Category {
 }
 
 interface NavbarClientProps {
-  navData: NavItem[];
   categories: Category[];
 }
 
@@ -54,16 +55,22 @@ const selectCartCount = (state: RootState): number => {
   );
 };
 
-const selectWishlistCount = (state: RootState): number => {
-  return state.wishlist.wishlistItems.length;
-};
+// REMOVED: selectWishlistCount is no longer needed
+// const selectWishlistCount = (state: RootState): number => {
+//   return state.wishlist.wishlistItems.length;
+// };
 
-const NavbarClient: React.FC<NavbarClientProps> = ({
-  navData = [],
-  categories = [],
-}) => {
+const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
   const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
+
+  // Hardcoded navigation items - now always used in the client component
+  const hardcodedNavItems: NavItem[] = [
+    { pk: 1, name: "Home", link: "/" },
+    { pk: 2, name: "Categories", link: "/categories" }, // This will trigger the dropdown
+    { pk: 3, name: "About Us", link: "/about" },
+    { pk: 4, name: "Contact", link: "/contact" },
+  ];
 
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth
@@ -92,26 +99,28 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
   const cartCount = useSelector(selectCartCount);
   const { cartItems } = useSelector((state: RootState) => state.cart);
 
-  const wishlistCount = useSelector(selectWishlistCount);
-  const wishlistStatus = useSelector(
-    (state: RootState) => state.wishlist.status
-  );
+  // REMOVED: Wishlist state and useEffect for fetching wishlist
+  // const wishlistCount = useSelector(selectWishlistCount);
+  // const wishlistStatus = useSelector(
+  //   (state: RootState) => state.wishlist.status
+  // );
 
-  useEffect(() => {
-    if (isAuthenticated && user?.id && wishlistStatus === "idle") {
-      dispatch(fetchWishlistItems(user.id.toString()));
-    }
-  }, [isAuthenticated, user?.id, wishlistStatus, dispatch]);
+  // useEffect(() => {
+  //   if (isAuthenticated && user?.id && wishlistStatus === "idle") {
+  //     dispatch(fetchWishlistItems(user.id.toString()));
+  //   }
+  // }, [isAuthenticated, user?.id, wishlistStatus, dispatch]);
 
   const handleLogout = () => {
     dispatch(logout());
     router.push("/auth");
   };
 
-  const handleWishlistClick = () => {
-    router.push("/wishlist");
-    handleCloseMenu();
-  };
+  // REMOVED: handleWishlistClick is no longer needed
+  // const handleWishlistClick = () => {
+  //   router.push("/wishlist");
+  //   handleCloseMenu();
+  // };
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -393,8 +402,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
             {/* Desktop Navigation Links */}
             <ul className="hidden lg:flex items-center space-x-8 group relative">
-              {navData?.map((navItem, index) =>
-                index === 1 ? (
+              {hardcodedNavItems.map((navItem, index) =>
+                navItem.name === "Categories" ? ( // Check specifically for "Categories"
                   <li
                     key={navItem.pk}
                     className="relative group"
@@ -422,7 +431,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               )}
             </ul>
 
-            {/* Desktop Right Section: Search, User, Wishlist, Cart */}
+            {/* Desktop Right Section: Search, User, Cart */}
             <div className="hidden lg:flex items-center space-x-6">
               <div className="flex items-center border border-transparent bg-white px-2 py-1 max-w-[280px] flex-shrink-0">
                 <Search color="black" size={18} />
@@ -474,30 +483,16 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                     <CircleUserRound
                       className="cursor-pointer"
                       size={24}
-                      color={"black"} // Changed to black
+                      color={"black"}
                     />
                     <span
-                      className={`text-sm font-semibold text-black hidden sm:inline`} // Changed to text-black
+                      className={`text-sm font-semibold text-black hidden sm:inline`}
                     >
                       Sign In / Sign Up
                     </span>
                   </Link>
                 </div>
               )}
-
-              {/* Wishlist Icon (Desktop) */}
-              {/* <div className="relative cursor-pointer">
-                <Heart
-                  size={24}
-                  color={"black"} // Changed to black
-                  onClick={handleWishlistClick}
-                />
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {wishlistCount}
-                  </span>
-                )}
-              </div> */}
 
               {/* Shopping Cart Icon (Desktop) */}
               <div
@@ -506,8 +501,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 className="relative cursor-pointer"
               >
                 <Link href="/cart">
-                  <ShoppingBag size={24} color={"black"} />{" "}
-                  {/* Changed to black */}
+                  <ShoppingBag size={24} color={"black"} />
                   {cartCount > 0 && (
                     <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                       {cartCount}
@@ -518,7 +512,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
               </div>
             </div>
 
-            {/* Mobile/Tablet Icons (Search, User, Wishlist, Cart, Menu Toggle) */}
+            {/* Mobile/Tablet Icons (Search, User, Cart, Menu Toggle) */}
             <div className="hidden md:flex lg:hidden items-center space-x-4 flex-1 justify-end">
               <div className="flex items-center border border-transparent bg-white px-2 py-1 max-w-[180px] flex-shrink-0">
                 <Search color="black" size={18} />
@@ -575,10 +569,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 </div>
               )}
 
-              {/* Wishlist Icon (Tablet) */}
-              {/*
-               */}
-
               <div
                 onMouseEnter={() => setShowMiniCart(true)}
                 onMouseLeave={() => setShowMiniCart(false)}
@@ -606,7 +596,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
 
             {/* Mobile-only menu toggle (small screens) */}
             <button
-              className="md:hidden text-black" // Changed to text-black
+              className="md:hidden text-black"
               aria-label="Toggle menu"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
@@ -632,8 +622,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
           style={{ top: 64 }}
         >
           <ul className="flex flex-col space-y-6">
-            {navData?.map((navItem, index) =>
-              index === 1 ? (
+            {hardcodedNavItems.map((navItem, index) =>
+              navItem.name === "Categories" ? ( // Check specifically for "Categories"
                 <li key={navItem.pk}>
                   <button
                     className="flex items-center justify-between w-full font-semibold text-black hover:text-orange-500"
@@ -763,16 +753,6 @@ const NavbarClient: React.FC<NavbarClientProps> = ({
                 </Link>
               </div>
             )}
-
-            {/* Wishlist Icon (Mobile Menu) */}
-            {/* <div className="relative cursor-pointer">
-              <Heart size={24} color="black" onClick={handleWishlistClick} />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {wishlistCount}
-                </span>
-              )}
-            </div> */}
 
             <Link href="/cart" className="relative">
               <ShoppingBag size={24} color="black" />

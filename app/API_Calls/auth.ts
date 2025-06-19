@@ -1,4 +1,4 @@
-import fetchData from "@/api/fetchdata"; // Assuming this is for authenticated calls
+
 import fetchSecondary from "@/api/fetchSecondary"; // Assuming this is for public calls
 
 import {

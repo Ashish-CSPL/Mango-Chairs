@@ -56,9 +56,6 @@ const SingleProductClient = ({ product }: Props) => {
         categoryName = product.categories[0].name;
       }
 
-      console.log("Current product ID:", product.id);
-      console.log("Current product category for API call:", categoryName);
-
       if (!categoryName) {
         console.warn(
           "No valid category name found for related products for product ID:",
@@ -71,7 +68,6 @@ const SingleProductClient = ({ product }: Props) => {
 
       try {
         const baseUrl = process.env.NEXT_PUBLIC_SECONDARY_API;
-        console.log("NEXT_PUBLIC_SECONDARY_API:", baseUrl);
 
         if (!baseUrl) {
           console.error(
@@ -168,7 +164,9 @@ const SingleProductClient = ({ product }: Props) => {
     <div className="max-w-7xl mx-auto px-4 md:px-8 mt-28 mb-12 overflow-hidden">
       <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
         {/* Left Section: Image Gallery */}
-        <div className="w-full lg:w-2/5 flex flex-col md:flex-row gap-4">
+        <div className="w-full lg:w-3/5 h-[70vh] flex flex-col md:flex-row gap-4">
+          {" "}
+          {/* Changed to lg:w-3/5 */}
           {/* Variant Thumbnails */}
           <div className="flex flex-row md:flex-col gap-3 max-h-[500px] overflow-x-auto md:overflow-y-auto pr-2 pb-2 md:pb-0">
             {product.variants && product.variants.length > 0 ? (
@@ -230,48 +228,39 @@ const SingleProductClient = ({ product }: Props) => {
               </div>
             )}
           </div>
-
-          <div className="flex-1 w-full flex items-center p-4 min-h-[350px] md:min-h-[450px] lg:min-h-[400px] rounded-lg border border-gray-200 overflow-hidden">
+          <div className="flex-1 flex items-center p-4 min-h-[350px] md:min-h-[450px] lg:min-h-[300px] rounded-lg border border-gray-200 overflow-hidden">
             <Image
               src={formatImageUrl(mainImage)}
               alt={product.name}
-              width={500}
+              width={800}
               height={400}
-              className="object-contain max-w-full max-h-full"
+              className="object-cover h-full"
             />
           </div>
         </div>
 
         {/* Right Section: Product Details */}
-        <div className="w-full lg:w-3/5">
+        <div className="w-full lg:w-2/5 lg:mt-10 space-y-10">
+          {" "}
+          {/* Changed to lg:w-2/5 */}
           <p className="text-sm text-gray-600 mb-1">
             <span className="font-semibold text-gray-800">Category:</span>{" "}
             {product.categories && product.categories.length > 0
               ? product.categories[0].name
               : "Uncategorized"}
           </p>
-
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
             {product.name}
           </h1>
-
-          <div className="flex items-center gap-2 mb-4 text-gray-600">
+          <div className="flex items-center gap-2 mb-4 text-gray-600 mt-5">
             <div className="flex">{renderStars(product.rating || 4)}</div>
-            <span className="text-sm">
-              ({product.reviewsCount || 5} Customer Reviews)
-            </span>
           </div>
-
           <p className="text-gray-700 leading-relaxed mb-4 text-sm">
             {product.short_description ||
               (product.description
-                ? product.description.substring(0, 150) + "..."
+                ? product.description
                 : "View great tasting Tropicana Orange Juice and Juice Drink Products. Featuring Tropicana Orange Juice")}
           </p>
-          {/* <p className="text-gray-700 leading-relaxed mb-6 text-sm font-semibold">
-            {product.name}
-          </p> */}
-
           <p className="text-3xl font-bold text-gray-900 mb-6">
             ₹
             {(
@@ -281,7 +270,6 @@ const SingleProductClient = ({ product }: Props) => {
               0
             ).toFixed(2)}
           </p>
-
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
             <div className="flex items-center border border-gray-300 rounded-md p-1">
               <button
@@ -314,167 +302,11 @@ const SingleProductClient = ({ product }: Props) => {
               <span>ADD TO CART</span>
             </button>
           </div>
-
-          {/* All cards accept */}
-          {/* 
-          <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-100">
-            <h3 className="font-semibold text-gray-800 mb-3">
-              Guaranteed Safe Checkout
-            </h3>
-            <div className="flex flex-wrap items-center gap-3">
-              <Image
-                src="/visa.png"
-                alt="Visa"
-                width={40}
-                height={25}
-                className="h-auto object-contain"
-              />
-              <Image
-                src="/mastercard.png"
-                alt="MasterCard"
-                width={40}
-                height={25}
-                className="h-auto object-contain"
-              />
-              <Image
-                src="/amex.png"
-                alt="American Express"
-                width={40}
-                height={25}
-                className="h-auto object-contain"
-              />
-              <Image
-                src="/discover.png"
-                alt="Discover"
-                width={40}
-                height={25}
-                className="h-auto object-contain"
-              />
-            </div>
-          </div> */}
-
-          <ul className="text-sm text-gray-700 list-disc pl-5 space-y-2">
-            <li>Free global shipping on all orders</li>
-            <li>30 days easy returns if you change your mind</li>
-            <li>Order before noon for same day dispatch</li>
-          </ul>
         </div>
-      </div>
-
-      {/* Description & Reviews Tabs */}
-      <div className="mt-16 md:mt-24">
-        <div className="flex border-b border-gray-200 mb-6">
-          <button
-            className={`px-6 py-3 text-lg font-semibold ${
-              activeTab === "description"
-                ? "text-orange-500 border-b-2 border-orange-500"
-                : "text-gray-600 hover:text-orange-500"
-            }`}
-            onClick={() => setActiveTab("description")}
-          >
-            Description
-          </button>
-          <button
-            className={`px-6 py-3 text-lg font-semibold ${
-              activeTab === "reviews"
-                ? "text-orange-500 border-b-2 border-orange-500"
-                : "text-gray-600 hover:text-orange-500"
-            }`}
-            onClick={() => setActiveTab("reviews")}
-          >
-            Reviews ({product.reviewsCount || 5})
-          </button>
-        </div>
-
-        {activeTab === "description" && (
-          <div className="prose max-w-none text-gray-700 leading-relaxed">
-            <p>
-              {product.description ||
-                "Although the legendary Double Burger really needs no introduction, please allow us... Tucked in between three soft buns are two all-beef patties, cheddar cheese, ketchup, onion, pickles and iceberg lettuce. Hesburger's own paprika and cucumber mayonnaise add the crowning touch. Oh baby!"}
-            </p>
-            {product.ingredients && product.ingredients.length > 0 && (
-              <div className="mt-4">
-                <span className="font-semibold">Ingredients:</span>{" "}
-                <ul className="list-disc list-inside mt-2">
-                  {product.ingredients.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {/* product nutrions facts static */}
-            {/* <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 text-center text-sm">
-              <div className="p-3 border rounded-lg bg-gray-50">
-                <p className="font-semibold">{product.size || "28 cm size"}</p>
-                <p className="text-gray-600">Pizza</p>
-              </div>
-              <div className="p-3 border rounded-lg bg-gray-50">
-                <p className="font-semibold">{product.energyKj || 728}</p>
-                <p className="text-gray-600">Energy/Kj</p>
-              </div>
-              <div className="p-3 border rounded-lg bg-gray-50">
-                <p className="font-semibold">{product.energyKcal || 1054}</p>
-                <p className="text-gray-600">energy/kcal</p>
-              </div>
-              <div className="p-3 border rounded-lg bg-gray-50">
-                <p className="font-semibold">{product.fat || 68} g</p>
-                <p className="text-gray-600">fat/g</p>
-              </div>
-              <div className="p-3 border rounded-lg bg-gray-50">
-                <p className="font-semibold">{product.gluxit || 25}</p>
-                <p className="text-gray-600">gluxit</p>
-              </div>
-              <div className="p-3 border rounded-lg bg-gray-50">
-                <p className="font-semibold">{product.sugar || 48} g</p>
-                <p className="text-gray-600">sugar/g</p>
-              </div>
-              <div className="p-3 border rounded-lg bg-gray-50">
-                <p className="font-semibold">{product.protein || 548} g</p>
-                <p className="text-gray-600">protein/g</p>
-              </div>
-            </div> */}
-
-            {/* Allergies static */}
-            {/* <div className="mt-8">
-              <h3 className="font-semibold text-lg mb-3">Allergies</h3>
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-gray-700">
-                <span>Egg</span>
-                <span>milk protein</span>
-                <span>sesame</span>
-                <span>lactose</span>
-                <span>gluten</span>
-                <span>mustard</span>
-              </div>
-            </div> */}
-          </div>
-        )}
-
-        {activeTab === "reviews" && (
-          <div className="py-4">
-            <h3 className="text-xl font-semibold mb-4">
-              Customer Reviews ({product.reviewsCount || 5})
-            </h3>
-            <div className="border-b border-gray-200 pb-4 mb-4">
-              <div className="flex items-center mb-2">
-                <div className="flex text-yellow-500">{renderStars(5)}</div>
-                <span className="ml-2 text-sm text-gray-600">
-                  by John Doe on 2025-06-17
-                </span>
-              </div>
-              <p className="text-gray-700">
-                "This juice is absolutely delicious! Highly recommend it for a
-                refreshing drink."
-              </p>
-            </div>
-            <p className="text-gray-500">
-              No more reviews for now. Be the first to review!
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Related Products Section */}
-      <div className="mt-16 md:mt-24">
+      <div className="mt-16 md:mt-15">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-8">
           RELATED PRODUCTS
         </h2>
