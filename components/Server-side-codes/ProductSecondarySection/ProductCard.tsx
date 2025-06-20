@@ -21,6 +21,8 @@ export default function ProductCard({ product }: ProductCardProps) {
     product.image || "/default.png"
   );
 
+  console.log("vari", product.variants);
+
   useEffect(() => {
     if (product.variants && product.variants.length > 0) {
       const firstVariant = product.variants[0];
@@ -132,7 +134,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* Right: All Variant Images */}
           {product.variants && product.variants.length > 0 && (
-            <div className="flex gap-1 flex-wrap justify-end">
+            <div className="flex flex-wrap gap-2 w-full justify-end ">
               {[
                 ...new Set(
                   product.variants.flatMap((variant) =>
@@ -148,18 +150,18 @@ export default function ProductCard({ product }: ProductCardProps) {
                   key={idx}
                   type="button"
                   onClick={() => handleVariantImageClick(imageUrl)}
-                  className={`w-6 h-6 rounded-full border-2 ${
+                  className={`w-12 h-12 sm:w-11 sm:h-11 rounded-full border-2 ${
                     mainImage === imageUrl
-                      ? "border-orange-500"
+                      ? "border-orange-500" 
                       : "border-gray-200"
-                  } overflow-hidden`}
+                  } overflow-hidden flex-shrink-0`}
                 >
                   <Image
                     src={imageUrl}
                     alt={`variant-img-${idx}`}
-                    width={24}
-                    height={24}
-                    className="object-cover"
+                    width={60}
+                    height={60}
+                    className="object-cover w-full h-full"
                   />
                 </button>
               ))}

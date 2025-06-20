@@ -64,7 +64,7 @@ export default function CategoryProductDisplay() {
             productsList.push(...items);
           });
         }
-
+        console.log("productsList", productsList);
         setProducts(productsList);
       } catch (error) {
         console.error("Error fetching category products:", error);
