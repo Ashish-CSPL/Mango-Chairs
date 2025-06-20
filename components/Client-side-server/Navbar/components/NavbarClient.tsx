@@ -74,7 +74,8 @@ const NavbarClient: React.FC<
     // or keep it but it will just link to a static /categories page without a dropdown.
     { pk: 2, name: "Categories", link: "/categories" },
     { pk: 3, name: "About Us", link: "/about" },
-    { pk: 4, name: "Contact", link: "/contact" },
+    { pk: 4, name: "Shop", link: "/shop" },
+    { pk: 5, name: "Contact", link: "/contact" },
   ];
 
   const { user, isAuthenticated } = useSelector(

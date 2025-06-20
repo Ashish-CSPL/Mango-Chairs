@@ -4,7 +4,11 @@ import { Mail, MapPin, Phone } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="bg-white text-black text-sm">
+    <footer className="bg-white text-black text-sm mt-20">
+      {/* Thin Gray Divider at the Top */}
+      <div className="w-[85%] h-[1px] bg-gray-300 mx-auto mb-2" />
+
+      {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
         {/* Logo and Description */}
         <div>
@@ -92,14 +96,9 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Bottom bar */}
+      {/* Bottom Bar */}
       <div className="border-t border-gray-200 pt-4 pb-6 text-center text-xs text-gray-500">
         <p>© Copyright PatioTime WordPress Theme for Restaurant & Cafe.</p>
-        {/* <div className="flex justify-center gap-6 mt-2">
-          <span className="hover:underline cursor-pointer">PRIVACY</span>
-          <span className="hover:underline cursor-pointer">TERM OF USE</span>
-          <span className="hover:underline cursor-pointer">POLICY</span>
-        </div> */}
       </div>
     </footer>
   );

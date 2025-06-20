@@ -4,7 +4,7 @@ import Link from "next/link";
 
 const DeliveryBanner = () => {
   return (
-    <section className="bg-[#FCF6EA] py-12 px-4 overflow-hidden">
+    <section className="bg-[#FCF6EA] py-12 px-4 overflow-hidden mt-15">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col-reverse lg:flex-row items-center justify-between gap-10">
           {/* Left: Pizza Image */}
