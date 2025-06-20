@@ -29,10 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${playfairDisplay.variable} antialiased`}>
         <Providers>
-          <Navbar
-            
-            categoryEndpoint="frontend/categories/"
-          />
+          <Navbar />
           {children}
           <Toaster
             position="top-center"

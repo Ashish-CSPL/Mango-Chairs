@@ -1,5 +1,3 @@
-// src/components/Client-side-codes/NavbarClient/NavbarClient.tsx
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -29,14 +27,16 @@ interface NavItem {
   link: string;
 }
 
-interface Category {
-  id: number;
-  title: string;
-  image: string;
-}
+// REMOVED: Category interface is no longer needed
+// interface Category {
+//   id: number;
+//   title: string;
+//   image: string;
+// }
 
+// REMOVED: NavbarClientProps no longer accepts categories
 interface NavbarClientProps {
-  categories: Category[];
+  // categories: Category[];
 }
 
 interface UserData {
@@ -60,14 +60,19 @@ const selectCartCount = (state: RootState): number => {
 //   return state.wishlist.wishlistItems.length;
 // };
 
-const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
+// REMOVED: categories prop from the component
+const NavbarClient: React.FC<
+  NavbarClientProps
+> = (/* { categories = [] } */) => {
   const router = useRouter();
   const dispatch: AppDispatch = useDispatch();
 
   // Hardcoded navigation items - now always used in the client component
   const hardcodedNavItems: NavItem[] = [
     { pk: 1, name: "Home", link: "/" },
-    { pk: 2, name: "Categories", link: "/categories" }, // This will trigger the dropdown
+    // You can choose to remove this "Categories" link entirely if you don't need it at all,
+    // or keep it but it will just link to a static /categories page without a dropdown.
+    { pk: 2, name: "Categories", link: "/categories" },
     { pk: 3, name: "About Us", link: "/about" },
     { pk: 4, name: "Contact", link: "/contact" },
   ];
@@ -100,7 +105,9 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
   const { cartItems } = useSelector((state: RootState) => state.cart);
 
   // REMOVED: Wishlist state and useEffect for fetching wishlist
-  // const wishlistCount = useSelector(selectWishlistCount);
+  // const wishlistCount = useSelector(
+  //   (state: RootState) => state.wishlist.wishlistItems.length
+  // );
   // const wishlistStatus = useSelector(
   //   (state: RootState) => state.wishlist.status
   // );
@@ -124,8 +131,10 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [showMobileDropdown, setShowMobileDropdown] = useState(false);
-  const [showDesktopDropdown, setShowDesktopDropdown] = useState(false);
+  // REMOVED: showMobileDropdown and setShowMobileDropdown as category dropdown is gone
+  // const [showMobileDropdown, setShowMobileDropdown] = useState(false);
+  // REMOVED: showDesktopDropdown and setShowDesktopDropdown as category dropdown is gone
+  // const [showDesktopDropdown, setShowDesktopDropdown] = useState(false);
   const [showMiniCart, setShowMiniCart] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -139,7 +148,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
 
   const handleCloseMenu = () => {
     setIsMobileMenuOpen(false);
-    setShowMobileDropdown(false);
+    // REMOVED: setShowMobileDropdown(false)
+    // setShowMobileDropdown(false);
   };
 
   // Set all icons to black
@@ -147,36 +157,37 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
   // Set all text to black
   const dynamicTextColor = "text-black";
 
-  const renderCategoryDropdown = () => (
-    <div className="absolute left-1/2 top-full transform -translate-x-1/2 mt-2 z-50 w-[50vw] max-w-2xl bg-white shadow-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl">
-      {categories?.map((cat) => {
-        const imageSrc = cat.image.startsWith("http")
-          ? cat.image
-          : `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api/v1", "")}${
-              cat.image
-            }`;
-        return (
-          <Link
-            key={cat.id}
-            href={`/category/${cat.id}`}
-            className="flex items-center gap-3 hover:text-orange-500"
-          >
-            <div className="w-26 h-26 relative">
-              <Image
-                src={imageSrc}
-                alt={cat.title}
-                fill
-                className="rounded-md object-cover"
-                priority
-                unoptimized
-              />
-            </div>
-            <p className="text-sm font-semibold">{cat.title}</p>
-          </Link>
-        );
-      })}
-    </div>
-  );
+  // REMOVED: renderCategoryDropdown function
+  // const renderCategoryDropdown = () => (
+  //   <div className="absolute left-1/2 top-full transform -translate-x-1/2 mt-2 z-50 w-[50vw] max-w-2xl bg-white shadow-lg p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl">
+  //     {categories?.map((cat) => {
+  //       const imageSrc = cat.image.startsWith("http")
+  //         ? cat.image
+  //         : `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace("/api/v1", "")}${
+  //             cat.image
+  //           }`;
+  //       return (
+  //         <Link
+  //           key={cat.id}
+  //           href={`/category/${cat.id}`}
+  //           className="flex items-center gap-3 hover:text-orange-500"
+  //         >
+  //           <div className="w-26 h-26 relative">
+  //             <Image
+  //               src={imageSrc}
+  //               alt={cat.title}
+  //               fill
+  //               className="rounded-md object-cover"
+  //               priority
+  //               unoptimized
+  //             />
+  //           </div>
+  //           <p className="text-sm font-semibold">{cat.title}</p>
+  //         </Link>
+  //       );
+  //     })}
+  //   </div>
+  // );
 
   const renderMiniCart = () => (
     <div
@@ -326,7 +337,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
           pointer-events: auto;
         }
 
-        /* Mobile category dropdown fade + slide */
+        /* REMOVED: Mobile category dropdown fade + slide */
+        /*
         .mobile-category-dropdown {
           max-height: 0;
           overflow: hidden;
@@ -337,6 +349,7 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
           max-height: 1000px;
           opacity: 1;
         }
+        */
 
         /* Search input placeholder black */
         input::placeholder {
@@ -407,8 +420,9 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
                   <li
                     key={navItem.pk}
                     className="relative group"
-                    onMouseEnter={() => setShowDesktopDropdown(true)}
-                    onMouseLeave={() => setShowDesktopDropdown(false)}
+                    // REMOVED: onMouseEnter and onMouseLeave handlers as dropdown is gone
+                    // onMouseEnter={() => setShowDesktopDropdown(true)}
+                    // onMouseLeave={() => setShowDesktopDropdown(false)}
                   >
                     <Link
                       href={navItem.link}
@@ -416,7 +430,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
                     >
                       {navItem.name}
                     </Link>
-                    {showDesktopDropdown && renderCategoryDropdown()}
+                    {/* REMOVED: Conditional rendering of category dropdown */}
+                    {/* {showDesktopDropdown && renderCategoryDropdown()} */}
                   </li>
                 ) : (
                   <li key={navItem.pk}>
@@ -625,6 +640,8 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
             {hardcodedNavItems.map((navItem, index) =>
               navItem.name === "Categories" ? ( // Check specifically for "Categories"
                 <li key={navItem.pk}>
+                  {/* REMOVED: Category dropdown toggle logic */}
+                  {/*
                   <button
                     className="flex items-center justify-between w-full font-semibold text-black hover:text-orange-500"
                     onClick={() => setShowMobileDropdown(!showMobileDropdown)}
@@ -683,6 +700,15 @@ const NavbarClient: React.FC<NavbarClientProps> = ({ categories = [] }) => {
                       );
                     })}
                   </div>
+                  */}
+                  {/* If you want to keep the "Categories" link but without a dropdown, use this: */}
+                  <Link
+                    href={navItem.link}
+                    className="font-semibold text-black hover:text-orange-500"
+                    onClick={handleCloseMenu}
+                  >
+                    {navItem.name}
+                  </Link>
                 </li>
               ) : (
                 <li key={navItem.pk}>

@@ -7,6 +7,7 @@ import ProductCard from "@/components/Server-side-codes/ProductSecondarySection/
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import DeliveryBanner from "@/components/Client-side-server/DeliveryBanner/DeliveryBanner";
 
 interface Category {
   id: number;
@@ -107,22 +108,55 @@ const ShopPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10 mt-20 bg-[#FFF9F4]">
-      <div className="flex flex-col md:flex-row gap-10">
-        {/* Left - Categories */}
-        <div className="w-full md:w-1/4 bg-[#FFF4E6] p-5 rounded-xl shadow-md">
-          <h2 className="text-2xl font-bold text-[#F58721] mb-4 border-b-2 border-[#F58721] pb-2">
-            Categories
-          </h2>
+    <>
+      <DeliveryBanner />
+      <div className="max-w-7xl mx-auto px-4 bg-[#FFF9F4]">
+        <div className="flex flex-col md:flex-row gap-10">
+          {/* Left - Categories */}
+          <div className="w-full md:w-1/4 bg-[#FFF4E6] p-5 rounded-xl shadow-md">
+            <h2 className="text-2xl font-bold text-[#F58721] mb-4 border-b-2 border-[#F58721] pb-2">
+              Categories
+            </h2>
 
-          {/* Mobile Slider */}
-          <div className="block md:hidden">
-            <Slider {...sliderSettings}>
+            {/* Mobile Slider */}
+            <div className="block md:hidden">
+              <Slider {...sliderSettings}>
+                {categories.map((category) => (
+                  <div key={category.id} className="px-1">
+                    <button
+                      onClick={() => handleCategoryClick(category.name)}
+                      className={`w-full whitespace-nowrap px-4 py-2 rounded-full text-xs font-medium transition ${
+                        selectedCategories.includes(category.name)
+                          ? "bg-[#F58721] text-white shadow-md"
+                          : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
+                      }`}
+                    >
+                      {category.name}
+                    </button>
+                  </div>
+                ))}
+              </Slider>
+            </div>
+
+            {/* Desktop List */}
+            <ul className="hidden md:block space-y-3 mt-4">
+              <li>
+                <button
+                  onClick={() => setSelectedCategories([])}
+                  className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
+                    selectedCategories.length === 0
+                      ? "bg-[#F58721] text-white shadow-md"
+                      : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
+                  }`}
+                >
+                  All Items
+                </button>
+              </li>
               {categories.map((category) => (
-                <div key={category.id} className="px-1">
+                <li key={category.id}>
                   <button
                     onClick={() => handleCategoryClick(category.name)}
-                    className={`w-full whitespace-nowrap px-4 py-2 rounded-full text-xs font-medium transition ${
+                    className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
                       selectedCategories.includes(category.name)
                         ? "bg-[#F58721] text-white shadow-md"
                         : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
@@ -130,90 +164,60 @@ const ShopPage = () => {
                   >
                     {category.name}
                   </button>
-                </div>
+                </li>
               ))}
-            </Slider>
+            </ul>
           </div>
 
-          {/* Desktop List */}
-          <ul className="hidden md:block space-y-3 mt-4">
-            <li>
-              <button
-                onClick={() => setSelectedCategories([])}
-                className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
-                  selectedCategories.length === 0
-                    ? "bg-[#F58721] text-white shadow-md"
-                    : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
-                }`}
+          {/* Right - Products */}
+          <div className="flex-1">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+              <h1 className="text-4xl font-extrabold text-[#F58721] tracking-wide">
+                Shop Your Favorite Bites
+              </h1>
+              <select
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+                className="border border-[#F58721] rounded-full px-5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F58721] bg-white shadow-sm"
               >
-                All Items
-              </button>
-            </li>
-            {categories.map((category) => (
-              <li key={category.id}>
-                <button
-                  onClick={() => handleCategoryClick(category.name)}
-                  className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
-                    selectedCategories.includes(category.name)
-                      ? "bg-[#F58721] text-white shadow-md"
-                      : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
-                  }`}
-                >
-                  {category.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+                <option value="">Sort by Price</option>
+                <option value="lowToHigh">Low to High</option>
+                <option value="highToLow">High to Low</option>
+              </select>
+            </div>
 
-        {/* Right - Products */}
-        <div className="flex-1">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-            <h1 className="text-4xl font-extrabold text-[#F58721] tracking-wide">
-              Shop Your Favorite Bites
-            </h1>
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="border border-[#F58721] rounded-full px-5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F58721] bg-white shadow-sm"
-            >
-              <option value="">Sort by Price</option>
-              <option value="lowToHigh">Low to High</option>
-              <option value="highToLow">High to Low</option>
-            </select>
-          </div>
-
-          {/* Loader / Products */}
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, index) => (
-                <div
-                  key={index}
-                  className="animate-pulse space-y-4 p-4 bg-white rounded-2xl shadow-md border border-gray-200"
-                >
-                  <div className="w-full h-48 bg-gray-200 rounded-xl shimmer"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4 shimmer"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2 shimmer"></div>
-                  <div className="flex justify-end">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full shimmer"></div>
+            {/* Loader / Products */}
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(8)].map((_, index) => (
+                  <div
+                    key={index}
+                    className="animate-pulse space-y-4 p-4 bg-white rounded-2xl shadow-md border border-gray-200"
+                  >
+                    <div className="w-full h-48 bg-gray-200 rounded-xl shimmer"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 shimmer"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 shimmer"></div>
+                    <div className="flex justify-end">
+                      <div className="w-8 h-8 bg-gray-200 rounded-full shimmer"></div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : products.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-600 text-center mt-10 text-lg">
-              No delicious items found. Try another filter!
-            </p>
-          )}
+                ))}
+              </div>
+            ) : products.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-600 text-center mt-10 text-lg">
+                No delicious items found. Try another filter!
+              </p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -4,7 +4,7 @@ import Category from "@/components/Server-side-codes/Category/Category";
 import Speciality from "@/components/Server-side-codes/What-Make-Us-Special/Speciality";
 import TestimonialSliderClient from "@/components/Client-side-server/New-Arrival/Testimonials";
 import { getTestimonials } from "./API_Calls/Function";
-import ProductList from "@/components/Server-side-codes/ProductSecondarySection/ProductList";
+import ProductList from "@/components/Server-side-codes/ProductSecondarySection/NewArrival";
 
 import { BannerData } from "@/types/Banner_datatypes";
 import { Category as CategoryType } from "@/components/Server-side-codes/Category/Category";
@@ -16,6 +16,7 @@ import fetchSecondary from "@/api/fetchSecondary";
 import CategoryProductSection from "@/components/Client-side-server/CategorySection/CategoryProductSection";
 import BestSelling from "@/components/Client-side-server/BestSelling/BestSelling";
 import PromoSection from "@/components/Client-side-server/PromoSection/PromoSection";
+import FeatureSection from "@/components/Client-side-server/featureSection/FeatureSection";
 // import SpecialComboOffer from "@/components/Client-side-server/SpecialComboOffer/SpecialComboOffer";
 
 type BannerResponse = {
@@ -87,6 +88,7 @@ const Home = async () => {
 
       <PromoSection />
       <CategoryProductSection />
+      <FeatureSection />
       <ProductList />
     </>
   );
