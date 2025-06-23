@@ -97,7 +97,7 @@ export default function CategoryProductDisplay() {
 
   const sliderSettings = {
     dots: true,
-    infinite: products.length > 3,
+    infinite: products.length > 4,
     speed: 500,
     autoplay: true,
     autoplaySpeed: 3000,
@@ -182,7 +182,7 @@ export default function CategoryProductDisplay() {
         </div>
 
         {/* Product Slider */}
-        <div className="flex-1 overflow-hidden relative">
+        <div className="flex-1 overflow-hidden relative pb-10">
           {loading ? (
             <div className="flex flex-col justify-center items-center h-[300px] space-y-4 text-center text-gray-600">
               <div className="w-24 h-24 animate-spin-slow">

@@ -34,6 +34,7 @@ export interface Category {
 }
 
 export interface Product {
+  is_new_arrival: boolean;
   onSale?: boolean; // Existing property, will be used for 'Sale' badge
   id: number;
   name: string;

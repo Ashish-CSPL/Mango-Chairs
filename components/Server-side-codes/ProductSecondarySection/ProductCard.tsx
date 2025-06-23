@@ -30,7 +30,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         firstVariant?.images?.[0] &&
         (typeof firstVariant.images[0] === "string"
           ? firstVariant.images[0]
-          : (firstVariant.images[0] as { url?: string })?.url);
+          : typeof firstVariant.images[0] === "object" &&
+            "url" in firstVariant.images[0]
+          ? (firstVariant.images[0] as { url: string }).url
+          : null);
 
       if (defaultImg) setMainImage(defaultImg);
     } else {
@@ -98,11 +101,11 @@ export default function ProductCard({ product }: ProductCardProps) {
   const variantImages: string[] = [
     ...new Set(
       product.variants?.flatMap((variant) =>
-        (variant.images || []).map((img) =>
-          typeof img === "string"
-            ? img
-            : (img as { url?: string })?.url || "/default.png"
-        )
+        (variant.images || []).map((img) => {
+          if (typeof img === "string") return img;
+          if (typeof img === "object" && "url" in img) return img.url;
+          return "/default.png";
+        })
       ) || []
     ),
   ];
@@ -138,9 +141,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       <div className="p-4 space-y-2 box-border">
-        {/* ⭐ Rating and Variant Images Row */}
         <div className="flex items-center justify-between gap-2">
-          {/* Rating */}
           <div className="flex items-center gap-1 text-sm text-yellow-500">
             {[...Array(4)].map((_, i) => (
               <span key={i}>★</span>
@@ -148,7 +149,6 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-gray-300">★</span>
           </div>
 
-          {/* Variant Images (Slider if > 2) */}
           {variantImages.length > 0 && (
             <div className="max-w-[120px] overflow-hidden">
               {variantImages.length > 2 ? (
@@ -203,7 +203,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        {/* Title & Description */}
         <h3 className="text-lg font-bold text-gray-800 truncate">
           {product.name}
         </h3>
@@ -213,7 +212,6 @@ export default function ProductCard({ product }: ProductCardProps) {
             "Tasty, hot and fresh straight from our kitchen!"}
         </p>
 
-        {/* Price and Add to Cart */}
         <div className="flex items-center justify-between pt-3">
           <div className="text-lg font-bold text-orange-600">
             ₹

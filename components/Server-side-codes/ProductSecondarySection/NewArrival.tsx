@@ -1,33 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ProductCard from "./ProductCard";
+import ProductCard from "@/components/Server-side-codes/ProductSecondarySection/ProductCard";
 import { Product } from "@/types/productTypes";
 import fetchSecondary from "@/api/fetchSecondary";
-import { Loader2 } from "lucide-react";
 import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
-// No FILTER_OPTIONS needed if no buttons are displayed
-// const FILTER_OPTIONS = [
-//   { label: "New Arrival", value: "new" },
-// ];
-
-export default function ProductList() {
+export default function NewArrival() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  // No longer need selectedFilter state if there are no buttons to change it
-  // const [selectedFilter, setSelectedFilter] = useState<string>("new");
 
   const fetchNewArrivalProducts = async () => {
-    // Renamed function for clarity
     setLoading(true);
     try {
-      // Directly fetch new arrival products
-      const data = await fetchSecondary<Product[]>(
-        "/product/newarrival",
+      const data = await fetchSecondary<{ items: Product[] }>(
+        "/product",
         "GET"
       );
-      setProducts(data);
+
+      const filteredProducts = data?.items?.filter(
+        (item) => item.is_new_arrival === true
+      );
+
+      setProducts(filteredProducts || []);
     } catch (error) {
       console.error("Error fetching new arrival products:", error);
       setProducts([]);
@@ -37,50 +34,64 @@ export default function ProductList() {
   };
 
   useEffect(() => {
-    fetchNewArrivalProducts(); // Call the specific fetch function
-  }, []); // Empty dependency array means it runs once on mount
+    fetchNewArrivalProducts();
+  }, []);
 
   const sliderSettings = {
     dots: true,
     infinite: true,
-    speed: 800,
+    speed: 500,
     autoplay: true,
     autoplaySpeed: 2500,
     slidesToShow: 4,
     slidesToScroll: 1,
     arrows: false,
     responsive: [
-      { breakpoint: 1280, settings: { slidesToShow: 3 } },
-      { breakpoint: 1024, settings: { slidesToShow: 2 } },
-      { breakpoint: 640, settings: { slidesToShow: 1 } },
+      {
+        breakpoint: 1280,
+        settings: { slidesToShow: 3 },
+      },
+      {
+        breakpoint: 1024,
+        settings: { slidesToShow: 2 },
+      },
+      {
+        breakpoint: 640,
+        settings: { slidesToShow: 1 },
+      },
     ],
   };
 
   return (
-    <div className="px-4 md:px-10 mt-10">
+    <div className="px-4 md:px-10 mt-10 bg-[#FFF9F4] py-10">
       <h2 className="text-2xl md:text-3xl font-semibold text-center mb-6 text-gray-800">
-        New Arrival Products {/* Changed heading to reflect content */}
+        New Arrival Products
       </h2>
 
-      {/* Removed the <style jsx> block as it's no longer needed */}
-      {/* Removed the filter buttons rendering div */}
-
-      {/* Product Carousel */}
       <div className="max-w-screen-xl mx-auto">
         {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <Loader2 className="animate-spin w-8 h-8 text-[#FF9601]" />
+          <div className="flex flex-col justify-center items-center h-[300px] space-y-4 text-center text-gray-600">
+            <div className="w-24 h-24 animate-spin-slow">
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/1404/1404945.png"
+                alt="Loading pizza..."
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <p className="text-sm font-semibold tracking-wide text-[#F58721]">
+              Freshly preparing your menu...
+            </p>
           </div>
         ) : products.length > 0 ? (
           <Slider {...sliderSettings}>
-            {products.map((product: Product) => (
+            {products.map((product) => (
               <div key={product.id} className="px-2">
                 <ProductCard product={product} />
               </div>
             ))}
           </Slider>
         ) : (
-          <p className="text-center text-gray-500">
+          <p className="text-center text-gray-500 mt-10 text-lg">
             No new arrival products found.
           </p>
         )}
