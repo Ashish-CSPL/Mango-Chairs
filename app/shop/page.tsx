@@ -19,8 +19,18 @@ const ShopPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
+
+  const availableTags = [
+    "Snack",
+    "Paneer",
+    "Popular",
+    "Sweet",
+    "Pizza",
+    "Nonveg",
+  ];
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -57,10 +67,20 @@ const ShopPage = () => {
             const items = Array.isArray(data) ? data : data.items || [];
             productsList.push(...items);
           });
+        } else if (selectedTags.length > 0) {
+          const tagsQuery = selectedTags.join(",");
+          const res = await fetchSecondary<{ items: Product[] }>(
+            `/product/by-tags/`,
+            "GET",
+            {
+              queryParams: { tags: tagsQuery },
+            }
+          );
+          productsList = res.items;
         } else {
-          const allData = (await fetchSecondary("/product", "GET")) as
-            | Product[]
-            | { items?: Product[] };
+          const allData = await fetchSecondary<
+            Product[] | { items?: Product[] }
+          >("/product", "GET");
           productsList = Array.isArray(allData) ? allData : allData.items || [];
         }
 
@@ -73,13 +93,19 @@ const ShopPage = () => {
     };
 
     fetchProducts();
-  }, [selectedCategories, sortOption]);
+  }, [selectedCategories, selectedTags, sortOption]);
 
   const handleCategoryClick = (category: string) => {
     setSelectedCategories((prev) =>
       prev.includes(category)
         ? prev.filter((c) => c !== category)
         : [...prev, category]
+    );
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
 
@@ -112,20 +138,53 @@ const ShopPage = () => {
       <DeliveryBanner />
       <div className="max-w-7xl mx-auto px-4 bg-[#FFF9F4]">
         <div className="flex flex-col md:flex-row gap-10">
-          {/* Left - Categories */}
-          <div className="w-full md:w-1/4 bg-[#FFF4E6] p-5 rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold text-[#F58721] mb-4 border-b-2 border-[#F58721] pb-2">
-              Categories
-            </h2>
+          {/* Left Sidebar */}
+          <div className="w-full md:w-1/4 bg-[#FFF4E6] p-5 rounded-xl shadow-md space-y-6">
+            {/* Categories */}
+            <div>
+              <h2 className="text-2xl font-bold text-[#F58721] mb-4 border-b-2 border-[#F58721] pb-2">
+                Categories
+              </h2>
 
-            {/* Mobile Slider */}
-            <div className="block md:hidden">
-              <Slider {...sliderSettings}>
+              {/* Mobile slider for categories */}
+              <div className="block md:hidden">
+                <Slider {...sliderSettings}>
+                  {categories.map((category) => (
+                    <div key={category.id} className="px-1">
+                      <button
+                        onClick={() => handleCategoryClick(category.name)}
+                        className={`w-full whitespace-nowrap px-4 py-2 rounded-full text-xs font-medium transition ${
+                          selectedCategories.includes(category.name)
+                            ? "bg-[#F58721] text-white shadow-md"
+                            : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
+                        }`}
+                      >
+                        {category.name}
+                      </button>
+                    </div>
+                  ))}
+                </Slider>
+              </div>
+
+              {/* Desktop list for categories */}
+              <ul className="hidden md:block space-y-3 mt-4">
+                <li>
+                  <button
+                    onClick={() => setSelectedCategories([])}
+                    className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
+                      selectedCategories.length === 0
+                        ? "bg-[#F58721] text-white shadow-md"
+                        : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
+                    }`}
+                  >
+                    All Items
+                  </button>
+                </li>
                 {categories.map((category) => (
-                  <div key={category.id} className="px-1">
+                  <li key={category.id}>
                     <button
                       onClick={() => handleCategoryClick(category.name)}
-                      className={`w-full whitespace-nowrap px-4 py-2 rounded-full text-xs font-medium transition ${
+                      className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
                         selectedCategories.includes(category.name)
                           ? "bg-[#F58721] text-white shadow-md"
                           : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
@@ -133,40 +192,30 @@ const ShopPage = () => {
                     >
                       {category.name}
                     </button>
-                  </div>
+                  </li>
                 ))}
-              </Slider>
+              </ul>
             </div>
 
-            {/* Desktop List */}
-            <ul className="hidden md:block space-y-3 mt-4">
-              <li>
-                <button
-                  onClick={() => setSelectedCategories([])}
-                  className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
-                    selectedCategories.length === 0
-                      ? "bg-[#F58721] text-white shadow-md"
-                      : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
-                  }`}
-                >
-                  All Items
-                </button>
-              </li>
-              {categories.map((category) => (
-                <li key={category.id}>
+            {/* Tags */}
+            <div>
+              <h2 className="text-2xl font-bold text-[#F58721] mb-3">Tags</h2>
+              <div className="flex flex-wrap gap-2">
+                {availableTags.map((tag) => (
                   <button
-                    onClick={() => handleCategoryClick(category.name)}
-                    className={`w-full text-left px-4 py-2 rounded-full text-sm font-medium transition ${
-                      selectedCategories.includes(category.name)
+                    key={tag}
+                    onClick={() => handleTagClick(tag)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                      selectedTags.includes(tag)
                         ? "bg-[#F58721] text-white shadow-md"
                         : "bg-white text-[#333] hover:bg-[#FFE8D1] border border-[#F58721]"
                     }`}
                   >
-                    {category.name}
+                    {tag}
                   </button>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Right - Products */}
@@ -186,7 +235,7 @@ const ShopPage = () => {
               </select>
             </div>
 
-            {/* Loader / Products */}
+            {/* Loader or Product List */}
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
                 {[...Array(8)].map((_, index) => (
