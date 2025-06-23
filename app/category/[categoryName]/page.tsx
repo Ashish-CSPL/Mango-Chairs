@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import ProductCard from "@/components/Server-side-codes/ProductSecondarySection/ProductCard";
 import fetchSecondary from "@/api/fetchSecondary";
 import { Product } from "@/types/productTypes";
 
 const CategoryPage = () => {
   const { categoryName } = useParams();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const sort = searchParams.get("sort");
-
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,15 +15,9 @@ const CategoryPage = () => {
     const fetchCategoryProducts = async () => {
       setLoading(true);
       try {
-        let endpoint = `/product/category?category=${encodeURIComponent(
+        const endpoint = `/product/category?category=${encodeURIComponent(
           categoryName as string
         )}`;
-
-        if (sort === "asc" || sort === "desc") {
-          endpoint = `/product/filter?sort=${sort}&category=${encodeURIComponent(
-            categoryName as string
-          )}`;
-        }
 
         const data = await fetchSecondary<Product[] | { items?: Product[] }>(
           endpoint,
@@ -44,12 +34,7 @@ const CategoryPage = () => {
     };
 
     fetchCategoryProducts();
-  }, [categoryName, sort]);
-
-  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    router.push(`/category/${categoryName}?sort=${value}`);
-  };
+  }, [categoryName]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10 mt-20 bg-[#FFF9F4]">
@@ -57,15 +42,6 @@ const CategoryPage = () => {
         <h1 className="text-3xl font-bold text-[#F58721] capitalize">
           {decodeURIComponent(categoryName as string)} Products
         </h1>
-        <select
-          value={sort || ""}
-          onChange={handleSortChange}
-          className="border border-[#F58721] rounded-full px-5 py-2 text-sm bg-white shadow-sm"
-        >
-          <option value="">Sort by</option>
-          <option value="asc">Price: Low to High</option>
-          <option value="desc">Price: High to Low</option>
-        </select>
       </div>
 
       {loading ? (

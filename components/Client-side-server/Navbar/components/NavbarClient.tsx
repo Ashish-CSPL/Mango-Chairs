@@ -427,7 +427,7 @@ const NavbarClient: React.FC<
                   >
                     <Link
                       href={navItem.link}
-                      className={`cursor-pointer font-semibold hover:text-orange-500 text-black`}
+                      className={`cursor-pointer font-semibold hover:text-[#C33130] text-black`}
                     >
                       {navItem.name}
                     </Link>
@@ -438,7 +438,7 @@ const NavbarClient: React.FC<
                   <li key={navItem.pk}>
                     <Link
                       href={navItem.link}
-                      className={`font-semibold hover:text-orange-500 text-black`}
+                      className={`font-semibold hover:text-[#C33130] text-black`}
                     >
                       {navItem.name}
                     </Link>
@@ -502,7 +502,7 @@ const NavbarClient: React.FC<
                       color={"black"}
                     />
                     <span
-                      className={`text-sm font-semibold text-black hidden sm:inline`}
+                      className={`text-sm font-semibold text-black hidden sm:inline hover:text-[#C33130]`}
                     >
                       Sign In / Sign Up
                     </span>

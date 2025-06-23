@@ -8,6 +8,7 @@ import { ShoppingCart } from "lucide-react";
 import { Product, Variant } from "@/types/productTypes";
 import { addToCart } from "@/app/Redux/Store/cartSlice";
 import { useState, useEffect } from "react";
+import Slider from "react-slick";
 
 interface ProductCardProps {
   product: Product;
@@ -15,13 +16,10 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const dispatch = useDispatch();
-
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [mainImage, setMainImage] = useState<string>(
     product.image || "/default.png"
   );
-
-  console.log("vari", product.variants);
 
   useEffect(() => {
     if (product.variants && product.variants.length > 0) {
@@ -35,6 +33,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           : (firstVariant.images[0] as { url?: string })?.url);
 
       if (defaultImg) setMainImage(defaultImg);
+    } else {
+      setSelectedVariant(null);
+      setMainImage(product.image || "/default.png");
     }
   }, [product]);
 
@@ -65,13 +66,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   const VegIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 30 30"
-      width="20"
-      height="20"
-      fill="none"
-    >
+    <svg viewBox="0 0 30 30" width="20" height="20" fill="none">
       <rect
         x="0"
         y="0"
@@ -86,13 +81,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   );
 
   const NonVegIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 30 30"
-      width="20"
-      height="20"
-      fill="none"
-    >
+    <svg viewBox="0 0 30 30" width="20" height="20" fill="none">
       <rect
         x="0"
         y="0"
@@ -106,8 +95,34 @@ export default function ProductCard({ product }: ProductCardProps) {
     </svg>
   );
 
+  const variantImages: string[] = [
+    ...new Set(
+      product.variants?.flatMap((variant) =>
+        (variant.images || []).map((img) =>
+          typeof img === "string"
+            ? img
+            : (img as { url?: string })?.url || "/default.png"
+        )
+      ) || []
+    ),
+  ];
+
+  const sliderSettings = {
+    dots: false,
+    arrows: false,
+    infinite: false,
+    speed: 300,
+    slidesToShow: 2,
+    slidesToScroll: 1,
+    responsive: [
+      { breakpoint: 1024, settings: { slidesToShow: 2 } },
+      { breakpoint: 768, settings: { slidesToShow: 2 } },
+      { breakpoint: 480, settings: { slidesToShow: 2 } },
+    ],
+  };
+
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 w-full my-4 max-w-sm mx-auto hover:shadow-2xl transition duration-300 ease-in-out">
+    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 w-full my-4 max-w-sm mx-auto hover:shadow-2xl transition duration-300 ease-in-out box-border">
       <Link href={`/product/${product.slug}`}>
         <div className="relative w-full h-56 rounded-t-2xl overflow-hidden group">
           <Image
@@ -122,9 +137,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
       </Link>
 
-      <div className="p-4 space-y-2">
-        <div className="flex justify-between items-start">
-          {/* Left: Rating */}
+      <div className="p-4 space-y-2 box-border">
+        {/* ⭐ Rating and Variant Images Row */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Rating */}
           <div className="flex items-center gap-1 text-sm text-yellow-500">
             {[...Array(4)].map((_, i) => (
               <span key={i}>★</span>
@@ -132,43 +148,62 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-gray-300">★</span>
           </div>
 
-          {/* Right: All Variant Images */}
-          {product.variants && product.variants.length > 0 && (
-            <div className="flex flex-wrap gap-2 w-full justify-end ">
-              {[
-                ...new Set(
-                  product.variants.flatMap((variant) =>
-                    (variant.images || []).map((img) =>
-                      typeof img === "string"
-                        ? img
-                        : (img as { url?: string })?.url || "/default.png"
-                    )
-                  )
-                ),
-              ].map((imageUrl, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleVariantImageClick(imageUrl)}
-                  className={`w-12 h-12 sm:w-11 sm:h-11 rounded-full border-2 ${
-                    mainImage === imageUrl
-                      ? "border-orange-500" 
-                      : "border-gray-200"
-                  } overflow-hidden flex-shrink-0`}
-                >
-                  <Image
-                    src={imageUrl}
-                    alt={`variant-img-${idx}`}
-                    width={60}
-                    height={60}
-                    className="object-cover w-full h-full"
-                  />
-                </button>
-              ))}
+          {/* Variant Images (Slider if > 2) */}
+          {variantImages.length > 0 && (
+            <div className="max-w-[120px] overflow-hidden">
+              {variantImages.length > 2 ? (
+                <Slider {...sliderSettings}>
+                  {variantImages.map((imageUrl, idx) => (
+                    <div key={idx} className="px-1">
+                      <button
+                        type="button"
+                        onClick={() => handleVariantImageClick(imageUrl)}
+                        className={`w-10 h-10 sm:w-10 sm:h-10 rounded-full border-2 ${
+                          mainImage === imageUrl
+                            ? "border-orange-500"
+                            : "border-gray-200"
+                        } overflow-hidden flex-shrink-0`}
+                      >
+                        <Image
+                          src={imageUrl}
+                          alt={`variant-img-${idx}`}
+                          width={40}
+                          height={40}
+                          className="object-cover w-full h-full"
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </Slider>
+              ) : (
+                <div className="flex gap-2">
+                  {variantImages.map((imageUrl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleVariantImageClick(imageUrl)}
+                      className={`w-10 h-10 sm:w-10 sm:h-10 rounded-full border-2 ${
+                        mainImage === imageUrl
+                          ? "border-orange-500"
+                          : "border-gray-200"
+                      } overflow-hidden flex-shrink-0`}
+                    >
+                      <Image
+                        src={imageUrl}
+                        alt={`variant-img-${idx}`}
+                        width={40}
+                        height={40}
+                        className="object-cover w-full h-full"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
 
+        {/* Title & Description */}
         <h3 className="text-lg font-bold text-gray-800 truncate">
           {product.name}
         </h3>
@@ -178,6 +213,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             "Tasty, hot and fresh straight from our kitchen!"}
         </p>
 
+        {/* Price and Add to Cart */}
         <div className="flex items-center justify-between pt-3">
           <div className="text-lg font-bold text-orange-600">
             ₹
