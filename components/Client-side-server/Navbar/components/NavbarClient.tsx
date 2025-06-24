@@ -449,7 +449,7 @@ const NavbarClient: React.FC<
 
             {/* Desktop Right Section: Search, User, Cart */}
             <div className="hidden lg:flex items-center space-x-6">
-              <div className="flex items-center border border-transparent bg-white px-2 py-1 max-w-[280px] flex-shrink-0">
+              <div className="flex items-center border border-black rounded-md bg-white px-2 py-1 max-w-[280px] flex-shrink-0">
                 <Search color="black" size={18} />
                 <input
                   type="text"
